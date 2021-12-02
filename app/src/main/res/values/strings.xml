@@ -1,0 +1,18 @@
+<resources>
+    <string name="app_name">GlideIM</string>
+    <string name="login">Login</string>
+    <string name="account">Account</string>
+    <string name="password">Password</string>
+    <string name="sign_in">Sign In</string>
+    <string name="submit">submit</string>
+    <string name="sign_up">Sign Up</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="or">or</string>
+    <string name="register">Register</string>
+    <string name="password_again">Password again</string>
+    <string name="signin">SignIn</string>
+    <string name="home">Home</string>
+    <string name="messages">Messages</string>
+    <string name="contacts">Contacts</string>
+    <string name="profile">Profile</string>
+</resources>
