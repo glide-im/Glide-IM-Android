@@ -7,7 +7,7 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.GlideIM">
+        android:theme="@style/AppThemeNoActionBar">
         <activity
             android:name=".ui.SplashActivity"
             android:exported="true">
@@ -18,8 +18,10 @@
             </intent-filter>
         </activity>
         <activity android:name=".ui.MainActivity" />
-        <activity android:name=".ui.LoginActivity" />
-        <activity android:name=".ui.RegisterActivity" />
+        <activity
+            android:name=".ui.LoginActivity" />
+        <activity
+            android:name=".ui.RegisterActivity"/>
     </application>
 
 </manifest>

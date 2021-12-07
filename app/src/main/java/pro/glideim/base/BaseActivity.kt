@@ -1,10 +1,10 @@
 package pro.glideim.base
 
-import android.app.Activity
 import android.os.Bundle
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 
-abstract class BaseActivity : Activity() {
+abstract class BaseActivity : AppCompatActivity() {
     abstract val layoutResId: Int
 
     override fun onCreate(savedInstanceState: Bundle?) {

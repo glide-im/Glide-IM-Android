@@ -10,7 +10,6 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="100dp"
         android:text="@string/sign_in"
-        android:textColor="@color/black"
         android:textSize="20pt"/>
 
     <com.google.android.material.textfield.TextInputLayout

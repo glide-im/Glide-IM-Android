@@ -7,6 +7,7 @@
     tools:context=".ui.MainActivity">
 
     <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/view_pager"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         app:layout_constraintBottom_toTopOf="@id/bnv_nav"
@@ -16,9 +17,10 @@
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bnv_nav"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="60dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
+        app:labelVisibilityMode="unlabeled"
         app:menu="@menu/menu_home_nav" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -15,4 +15,5 @@
     <string name="messages">Messages</string>
     <string name="contacts">Contacts</string>
     <string name="profile">Profile</string>
+    <string name="sign_out">Sign Out</string>
 </resources>
