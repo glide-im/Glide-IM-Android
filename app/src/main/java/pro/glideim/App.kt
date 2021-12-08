@@ -7,6 +7,6 @@ class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        GlideIM.init(this, "", "")
+
     }
 }

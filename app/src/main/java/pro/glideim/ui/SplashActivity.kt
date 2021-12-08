@@ -1,8 +1,8 @@
 package pro.glideim.ui
 
-import android.content.Intent
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
+import pro.glideim.ui.chat.ChatActivity
 
 class SplashActivity : BaseActivity() {
 
@@ -11,7 +11,7 @@ class SplashActivity : BaseActivity() {
     override fun initView() {
 
         window.decorView.postDelayed({
-            startActivity(Intent(this, LoginActivity::class.java))
+            ChatActivity.start(this)
         }, 1000)
     }
 }
