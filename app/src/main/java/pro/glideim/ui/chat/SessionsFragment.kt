@@ -4,9 +4,12 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.dengzii.adapter.SuperAdapter
-import com.dengzii.adapter.addViewHolderForType
+import com.dengzii.ktx.android.content.getColorCompat
+import com.dengzii.ktx.android.px2dp
 import pro.glideim.R
 import pro.glideim.base.BaseFragment
+import pro.glideim.utils.ItemDecorationFactory
+import pro.glideim.utils.finishRefresh
 
 class SessionsFragment : BaseFragment() {
 
@@ -20,25 +23,73 @@ class SessionsFragment : BaseFragment() {
 
     override fun initView() {
 
-        mAdapter.addViewHolderForType<String>(R.layout.item_session) {
-            onBindData { _, _ ->
 
-            }
-        }
+        mSessionLise.add(
+            SessionViewData(
+                avatar = "https://dengzii.com/static/a.webp",
+                title = "Jack Tommy",
+                msg = "Hello, how are you",
+                unread = 1,
+                time = "10:29"
+            )
+        )
+        mSessionLise.add(
+            SessionViewData(
+                avatar = "https://dengzii.com/static/b.webp",
+                title = "Adved Tommy",
+                msg = "Yes",
+                unread = 2,
+                time = "11:29"
+            )
+        )
+        mSessionLise.add(
+            SessionViewData(
+                avatar = "https://dengzii.com/static/c.webp",
+                title = "Donal Jussy",
+                msg = "Hello, how are you",
+                unread = 0,
+                time = "10:29"
+            )
+        )
+        mSessionLise.add(
+            SessionViewData(
+                avatar = "https://dengzii.com/static/d.webp",
+                title = "Jack Tommy",
+                msg = "Hello, how are you",
+                unread = 0,
+                time = "10:29"
+            )
+        )
+        mSessionLise.add(
+            SessionViewData(
+                avatar = "https://dengzii.com/static/a.webp",
+                title = "Jack Tommy",
+                msg = "Hello, how are you",
+                unread = 0,
+                time = "10:29"
+            )
+        )
+
+
+        mAdapter.addViewHolderForType(SessionViewData::class.java, SessionViewHolder::class.java)
+
         mAdapter.setEnableEmptyView(true, SuperAdapter.EMPTY)
         mAdapter.setEnableEmptyViewOnInit(true)
         mRvSessions.adapter = mAdapter
         mRvSessions.layoutManager = LinearLayoutManager(requireContext())
+        mRvSessions.addItemDecoration(
+            ItemDecorationFactory.createDivider(
+                1f.px2dp(),
+                requireContext().getColorCompat(R.color.divider),
+                60f,
+                0f
+            )
+        )
 
         mSrfRefresh.setOnRefreshListener {
             view?.postDelayed({
 
-                mSessionLise.add("1")
-                mSessionLise.add("1")
-                mSessionLise.add("1")
-
-                mAdapter.notifyDataSetChanged()
-                mSrfRefresh.isRefreshing = false
+                mSrfRefresh.finishRefresh()
 
             }, 1000)
         }

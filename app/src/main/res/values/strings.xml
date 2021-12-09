@@ -13,7 +13,7 @@
     <string name="signin">SignIn</string>
     <string name="home">Home</string>
     <string name="messages">Messages</string>
-    <string name="contacts">Contacts</string>
     <string name="profile">Profile</string>
     <string name="sign_out">Sign Out</string>
+    <string name="contacts">Contacts</string>
 </resources>

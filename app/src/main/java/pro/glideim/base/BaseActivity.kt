@@ -7,6 +7,8 @@ import androidx.appcompat.app.AppCompatActivity
 abstract class BaseActivity : AppCompatActivity() {
     abstract val layoutResId: Int
 
+    private var inited = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(layoutResId)
@@ -14,7 +16,9 @@ abstract class BaseActivity : AppCompatActivity() {
 
     override fun onStart() {
         super.onStart()
-        initView()
+        if (!inited) {
+            initView()
+        }
     }
 
     abstract fun initView()

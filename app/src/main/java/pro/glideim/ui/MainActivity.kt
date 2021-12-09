@@ -62,8 +62,8 @@ class MainActivity : BaseActivity() {
             true
         }
 
-        val badge = mBnvNav.getOrCreateBadge(R.id.it_messages)
-        badge.isVisible = true
-        badge.number = 4
+//        val badge = mBnvNav.getOrCreateBadge(R.id.it_messages)
+//        badge.isVisible = true
+//        badge.number = 4
     }
 }

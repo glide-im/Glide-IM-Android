@@ -2,11 +2,9 @@ package pro.glideim.ui.chat
 
 import android.content.Context
 import android.content.Intent
-import android.widget.TextView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.dengzii.adapter.SuperAdapter
-import com.dengzii.adapter.addViewHolderForType
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import pro.glideim.R
@@ -18,7 +16,7 @@ class ChatActivity : BaseActivity() {
     private val mEtMessage by lazy { findViewById<TextInputEditText>(R.id.et_message) }
     private val mRvMessages by lazy { findViewById<RecyclerView>(R.id.rv_messages) }
 
-    private val mMessage = mutableListOf<String>()
+    private val mMessage = mutableListOf<Any>()
     private val mAdapter = SuperAdapter(mMessage)
 
     override val layoutResId = R.layout.activity_chat
@@ -33,57 +31,57 @@ class ChatActivity : BaseActivity() {
 
     override fun initView() {
 
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mMessage.add("")
-        mAdapter.addViewHolderForType<String>(R.layout.item_chat_message) {
-            onBindData { _, position ->
-                findView<TextView>(R.id.tv_msg).text = "this is message position = $position"
-            }
-        }
+        mMessage.add(MessageViewData().apply {
+            this.avatar = ""
+            this.content = "this is message."
+            this.fromMe = false
+            this.type = 1
+            this.time = "10:19"
+        })
+        mMessage.add(MessageViewData().apply {
+            this.avatar = ""
+            this.content = "this is message2."
+            this.fromMe = true
+            this.type = 1
+            this.time = "10:19"
+        })
+        mMessage.add(MessageViewData().apply {
+            this.avatar = ""
+            this.content = "this is message."
+            this.fromMe = false
+            this.type = 1
+            this.time = "10:19"
+        })
+
+        mAdapter.addViewHolderForType(
+            MessageViewData::class.java,
+            ChatMessageViewHolder::class.java
+        )
         mRvMessages.adapter = mAdapter
 
-        val layoutManager = LinearLayoutManager(this, RecyclerView.VERTICAL, true)
+        val layoutManager = LinearLayoutManager(this)
         layoutManager.stackFromEnd = true
         mRvMessages.layoutManager = layoutManager
+
+        mBtSend.setOnClickListener {
+            sendMessage()
+        }
+    }
+
+    private fun sendMessage() {
+        val msg = mEtMessage.text.toString()
+        if (msg.isBlank()) {
+            return
+        }
+
+        mMessage.add(MessageViewData().apply {
+            this.avatar = ""
+            this.content = msg
+            this.fromMe = true
+            this.type = 1
+            this.time = "10:19"
+        })
+        mAdapter.notifyItemInserted(mMessage.size - 1)
+        mEtMessage.setText("")
     }
 }

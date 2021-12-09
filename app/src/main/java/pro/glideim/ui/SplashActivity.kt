@@ -11,7 +11,8 @@ class SplashActivity : BaseActivity() {
     override fun initView() {
 
         window.decorView.postDelayed({
-            ChatActivity.start(this)
+            MainActivity.start(this)
+            finish()
         }, 1000)
     }
 }

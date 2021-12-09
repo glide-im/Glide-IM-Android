@@ -17,9 +17,10 @@
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bnv_nav"
         android:layout_width="match_parent"
-        android:layout_height="60dp"
+        android:layout_height="50dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
+        app:itemIconSize="20dp"
         app:labelVisibilityMode="unlabeled"
         app:menu="@menu/menu_home_nav" />
 
