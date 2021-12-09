@@ -16,4 +16,8 @@
     <string name="profile">Profile</string>
     <string name="sign_out">Sign Out</string>
     <string name="contacts">Contacts</string>
+    <string name="uid_or_group_id">UID or Group ID</string>
+    <string name="search">Search</string>
+    <string name="scan_qr_code">Scan QR Code</string>
+    <string name="qr_code">QR Code</string>
 </resources>

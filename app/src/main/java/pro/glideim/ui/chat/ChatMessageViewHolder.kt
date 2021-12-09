@@ -13,6 +13,7 @@ import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 
 class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<MessageViewData>(v) {
+
     private val mIvAvatarRight by lazy { findViewById<ImageView>(R.id.iv_avatar_right) }
     private val mTvTime by lazy { findViewById<MaterialTextView>(R.id.tv_time) }
     private val mTvMsg by lazy { findViewById<MaterialTextView>(R.id.tv_msg) }

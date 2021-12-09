@@ -33,5 +33,9 @@ class SessionViewHolder(v: ViewGroup) : AbsViewHolder<SessionViewData>(v) {
             mTvNewMessage.hide()
         }
         mTvTime.text = data.time
+
+        itemView.setOnClickListener {
+            ChatActivity.start(context)
+        }
     }
 }
