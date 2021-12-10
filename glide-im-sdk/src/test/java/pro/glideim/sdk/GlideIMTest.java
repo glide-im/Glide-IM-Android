@@ -1,12 +1,15 @@
 package pro.glideim.sdk;
 
+import androidx.annotation.NonNull;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
+import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import pro.glideim.sdk.api.user.UserInfoBean;
 
 class GlideIMTest {
 
@@ -25,11 +28,20 @@ class GlideIMTest {
 
     @Test
     void getContacts() {
+        GlideIM.getContacts();
     }
 
     @Test
-    void getUserInfo() {
-        GlideIM.getUserInfo(Arrays.asList(1L, 2L, 3L))
-        .subscribe(new TestObserver<>());
+    public void getUserInfo() {
+        GlideIM.getUserInfo(Arrays.asList(543602L, 543603L))
+                .subscribe(new TestResObserver<List<UserInfoBean>>() {
+                    @Override
+                    public void onNext(@NonNull List<UserInfoBean> userInfoBeans) {
+
+                        for (UserInfoBean datum : userInfoBeans) {
+                            System.out.println(datum.getNickname());
+                        }
+                    }
+                });
     }
 }

@@ -2,9 +2,9 @@ package pro.glideim.sdk.entity;
 
 public class User {
     public static class Contacts {
-        String title;
-        String avatar;
-        long id;
-        int type;
+        public String title;
+        public String avatar;
+        public long id;
+        public int type;
     }
 }

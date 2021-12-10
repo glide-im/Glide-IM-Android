@@ -5,6 +5,10 @@ public class Response<T> {
     private String msg;
     private T data;
 
+    public boolean success(){
+        return code == 100;
+    }
+
     public int getCode() {
         return code;
     }
