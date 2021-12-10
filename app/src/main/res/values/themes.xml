@@ -20,5 +20,6 @@
 
     <style name="AppThemeNoActionBar" parent="Theme.Material3.Light.NoActionBar">
 
+
     </style>
 </resources>

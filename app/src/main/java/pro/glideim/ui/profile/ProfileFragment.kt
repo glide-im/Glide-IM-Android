@@ -19,7 +19,7 @@ class ProfileFragment : BaseFragment() {
     override fun initView() {
 
         mBtLogout.setOnClickListener {
-            ChatActivity.start(requireContext())
+            toast("TODO")
         }
     }
 }

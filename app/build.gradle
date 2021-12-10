@@ -1,6 +1,11 @@
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
+    id 'com.blankj.bus'
+}
+
+bus {
+    busUtilsClass "pro.glideim.utils.BusUtils"
 }
 
 android {

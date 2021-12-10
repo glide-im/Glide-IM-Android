@@ -20,4 +20,6 @@
     <string name="search">Search</string>
     <string name="scan_qr_code">Scan QR Code</string>
     <string name="qr_code">QR Code</string>
+    <string name="new_contacts">New Contacts</string>
+    <string name="chat">Chat</string>
 </resources>

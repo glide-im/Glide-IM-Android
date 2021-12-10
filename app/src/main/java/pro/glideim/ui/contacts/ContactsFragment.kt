@@ -1,21 +1,26 @@
 package pro.glideim.ui.contacts
 
+import android.os.Bundle
 import android.widget.ImageView
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.dengzii.adapter.SuperAdapter
 import com.dengzii.adapter.addViewHolderForType
+import com.dengzii.ktx.android.content.getColorCompat
+import com.dengzii.ktx.android.px2dp
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.base.BaseFragment
+import pro.glideim.sdk.api.Response
+import pro.glideim.sdk.api.msg.GetSessionDto
+import pro.glideim.sdk.api.msg.MsgApi
 import pro.glideim.sdk.api.user.GetUserInfoDto
 import pro.glideim.sdk.api.user.UserApi
-import pro.glideim.utils.finishRefresh
-import pro.glideim.utils.loadImage
-import pro.glideim.utils.request
+import pro.glideim.ui.Events
+import pro.glideim.ui.chat.ChatActivity
+import pro.glideim.utils.*
 
 class ContactsFragment : BaseFragment() {
     private val mBtAdd by lazy { findViewById<MaterialButton>(R.id.bt_add) }
@@ -28,6 +33,17 @@ class ContactsFragment : BaseFragment() {
 
     override val layoutRes = R.layout.fragment_contacts
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        BusUtils.register(this)
+
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        BusUtils.unregister(this)
+    }
+
     override fun initView() {
 
         mAdapter.addViewHolderForType<ContactsViewData>(R.layout.item_contacts) {
@@ -35,23 +51,54 @@ class ContactsFragment : BaseFragment() {
             val tvNickname = findView<MaterialTextView>(R.id.tv_nickname)
             onBindData { data, _ ->
                 ivAvatar.loadImage(data.avatar)
-                tvNickname.text = data.nickname
+                tvNickname.text = "${data.nickname} (${data.id})"
+                itemView.setOnClickListener {
+                    if (data.type == 1) {
+                        startChat(data.id)
+                    }
+                }
             }
         }
         mAdapter.setEnableEmptyView(true, SuperAdapter.EMPTY)
         mAdapter.setEnableEmptyViewOnInit(true)
         mRvSessions.adapter = mAdapter
         mRvSessions.layoutManager = LinearLayoutManager(requireContext())
-
-        mSrfRefresh.setOnRefreshListener {
+        mRvSessions.addItemDecoration(
+            ItemDecorationFactory.createDivider(
+                1f.px2dp(),
+                requireContext().getColorCompat(R.color.divider),
+                60f,
+                0f
+            )
+        )
+        mSrfRefresh.onRefresh {
             requestData()
         }
         mBtAdd.setOnClickListener {
             AddContactsActivity.start(requireContext())
         }
+        mSrfRefresh.startRefresh()
+    }
+
+    override fun onRequestFinish() {
+        super.onRequestFinish()
+        mSrfRefresh.finishRefresh()
+    }
+
+    @BusUtils.Bus(tag = Events.EVENT_UPDATE_CONTACTS, sticky = false)
+    fun updateContacts() {
+        mSrfRefresh.startRefresh()
+    }
+
+    private fun startChat(uid: Long) {
+        MsgApi.API.getSession(GetSessionDto(uid))
+            .request(this) {
+                ChatActivity.start(requireContext(), uid)
+            }
     }
 
     private fun requestData() {
+
         UserApi.API.contactsList
             .flatMap {
                 if (it.code != 100) {
@@ -66,7 +113,17 @@ class ContactsFragment : BaseFragment() {
                     }
                 }
                 UserApi.API.getUserInfo(GetUserInfoDto(uid))
-            }.request(this) {
+            }
+            .map {
+                Response<List<ContactsViewData>>().apply {
+                    code = it.code
+                    msg = it.msg
+                    data = it.data.map {
+                        ContactsViewData(it.uid, it.avatar, it.nickname, 1)
+                    }
+                }
+            }
+            .request(this) {
                 mContacts.clear()
                 mContacts.addAll(it!!)
                 mAdapter.notifyDataSetChanged()

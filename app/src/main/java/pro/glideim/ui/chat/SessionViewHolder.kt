@@ -8,6 +8,7 @@ import com.dengzii.ktx.android.hide
 import com.dengzii.ktx.android.show
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
+import pro.glideim.sdk.GlideIM
 import pro.glideim.utils.loadImage
 
 class SessionViewHolder(v: ViewGroup) : AbsViewHolder<SessionViewData>(v) {
@@ -35,7 +36,11 @@ class SessionViewHolder(v: ViewGroup) : AbsViewHolder<SessionViewData>(v) {
         mTvTime.text = data.time
 
         itemView.setOnClickListener {
-            ChatActivity.start(context)
+            var id = data.session.uid2
+            if (data.session.uid1 == GlideIM.getMyUID()) {
+                id = data.session.uid1
+            }
+            ChatActivity.start(context, id)
         }
     }
 }

@@ -8,68 +8,22 @@ import com.dengzii.ktx.android.content.getColorCompat
 import com.dengzii.ktx.android.px2dp
 import pro.glideim.R
 import pro.glideim.base.BaseFragment
-import pro.glideim.utils.ItemDecorationFactory
-import pro.glideim.utils.finishRefresh
+import pro.glideim.sdk.api.Response
+import pro.glideim.sdk.api.msg.MsgApi
+import pro.glideim.sdk.api.msg.SessionBean
+import pro.glideim.utils.*
 
 class SessionsFragment : BaseFragment() {
 
     private val mRvSessions by lazy { findViewById<RecyclerView>(R.id.rv_sessions) }
     private val mSrfRefresh by lazy { findViewById<SwipeRefreshLayout>(R.id.srf_refresh) }
 
-    private val mSessionLise = mutableListOf<Any>()
-    private val mAdapter = SuperAdapter(mSessionLise)
+    private val mSessionList = mutableListOf<Any>()
+    private val mAdapter = SuperAdapter(mSessionList)
 
     override val layoutRes = R.layout.fragment_session
 
     override fun initView() {
-
-
-        mSessionLise.add(
-            SessionViewData(
-                avatar = "https://dengzii.com/static/a.webp",
-                title = "Jack Tommy",
-                msg = "Hello, how are you",
-                unread = 1,
-                time = "10:29"
-            )
-        )
-        mSessionLise.add(
-            SessionViewData(
-                avatar = "https://dengzii.com/static/b.webp",
-                title = "Adved Tommy",
-                msg = "Yes",
-                unread = 2,
-                time = "11:29"
-            )
-        )
-        mSessionLise.add(
-            SessionViewData(
-                avatar = "https://dengzii.com/static/c.webp",
-                title = "Donal Jussy",
-                msg = "Hello, how are you",
-                unread = 0,
-                time = "10:29"
-            )
-        )
-        mSessionLise.add(
-            SessionViewData(
-                avatar = "https://dengzii.com/static/d.webp",
-                title = "Jack Tommy",
-                msg = "Hello, how are you",
-                unread = 0,
-                time = "10:29"
-            )
-        )
-        mSessionLise.add(
-            SessionViewData(
-                avatar = "https://dengzii.com/static/a.webp",
-                title = "Jack Tommy",
-                msg = "Hello, how are you",
-                unread = 0,
-                time = "10:29"
-            )
-        )
-
 
         mAdapter.addViewHolderForType(SessionViewData::class.java, SessionViewHolder::class.java)
 
@@ -86,12 +40,31 @@ class SessionsFragment : BaseFragment() {
             )
         )
 
-        mSrfRefresh.setOnRefreshListener {
-            view?.postDelayed({
+        mSrfRefresh.onRefresh {
+            requestData()
+        }
 
-                mSrfRefresh.finishRefresh()
+        mSrfRefresh.startRefresh()
+    }
 
-            }, 1000)
+    override fun onRequestFinish() {
+        super.onRequestFinish()
+        mSrfRefresh.finishRefresh()
+    }
+
+    private fun requestData() {
+        MsgApi.API.recentSession.map {
+            Response<List<SessionViewData>>().apply {
+                msg = it.msg
+                code = it.code
+                data = it.data.map { s ->
+                    SessionViewData("", "${s.uid1}_${s.uid2}", "", "", 0, s)
+                }
+            }
+        }.request(this) {
+            mSessionList.clear()
+            mSessionList.addAll(it!!)
+            mAdapter.notifyDataSetChanged()
         }
     }
 }
