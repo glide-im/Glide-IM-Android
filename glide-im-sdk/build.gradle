@@ -33,6 +33,10 @@ android {
 }
 
 dependencies {
+
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.6.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
     implementation 'androidx.core:core-ktx:1.7.0'
     implementation 'io.netty:netty-all:4.1.70.Final'
 
