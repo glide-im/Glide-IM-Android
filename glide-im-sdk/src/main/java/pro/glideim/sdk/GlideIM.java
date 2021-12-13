@@ -1,7 +1,5 @@
 package pro.glideim.sdk;
 
-import androidx.annotation.NonNull;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -40,50 +38,51 @@ public class GlideIM {
 
 
     public static Observable<List<User.Contacts>> getContacts() {
-
-        Observable<List<User.Contacts>> result = UserApi.API.getContactsList()
+        return UserApi.API.getContactsList()
                 .map(bodyConverter())
                 .flatMap((Function<List<ContactsBean>, ObservableSource<ContactsBean>>) Observable::fromIterable)
-                .groupBy(ContactsBean::getType)
-                .switchMap(new Function<GroupedObservable<Integer, ContactsBean>, ObservableSource<?>>() {
-                    @Override
-                    public ObservableSource<?> apply(@NonNull GroupedObservable<Integer, ContactsBean> go) throws Exception {
-
-                        return null;
+                .groupBy(ContactsBean::getType, ContactsBean::getId)
+                .flatMap((Function<GroupedObservable<Integer, Long>, ObservableSource<List<User.Contacts>>>) group -> {
+                    if (group.getKey() == null) {
+                        return Observable.empty();
                     }
-                })
-                .flatMap((Function<List<ContactsBean>, ObservableSource<List<User.Contacts>>>) contactsBeans -> {
-//                    List<Long> uid = new ArrayList<>();
-//                    List<Long> gid = new ArrayList<>();
-//                    for (ContactsBean datum : contactsBeans) {
-//                        switch (datum.getType()) {
-//                            case 1:
-//                                uid.add(datum.getId());
-//                                break;
-//                            case 2:
-//                                gid.add(datum.getId());
-//                                break;
-//                        }
-//                    }
-//                    Observable<List<UserInfoBean>> s = getUserInfo(uid);
-//                    Observable<List<GroupInfoBean>> g = getGroupInfo(uid);
-//
-//                    return s.map(userInfoBeans -> {
-//                        List<User.Contacts> cs = new ArrayList<>();
-//                        for (UserInfoBean infoBean : userInfoBeans) {
-//                            User.Contacts c = new User.Contacts();
-//                            c.avatar = infoBean.getAvatar();
-//                            c.id = infoBean.getUid();
-//                            c.title = infoBean.getNickname();
-//                            c.type = 1;
-//                            cs.add(new User.Contacts());
-//                        }
-//                        return cs;
-//                    });
+                    Observable<List<Long>> idsOb = group.toList().toObservable();
+                    switch (group.getKey()) {
+                        case 1:
+                            return idsOb
+                                    .flatMap((Function<List<Long>, ObservableSource<List<UserInfoBean>>>) GlideIM::getUserInfo)
+                                    .map(userInfoBeans -> {
+                                        List<User.Contacts> r = new ArrayList<>();
+                                        for (UserInfoBean userInfoBean : userInfoBeans) {
+                                            User.Contacts c = new User.Contacts();
+                                            c.title = userInfoBean.getNickname();
+                                            c.avatar = userInfoBean.getAvatar();
+                                            c.id = userInfoBean.getUid();
+                                            c.type = 1;
+                                            r.add(c);
+                                        }
+                                        return r;
+                                    });
+                        case 2:
+                            return idsOb
+                                    .flatMap((Function<List<Long>, ObservableSource<List<GroupInfoBean>>>) GlideIM::getGroupInfo)
+                                    .map(groupInfoBeans -> {
+                                        List<User.Contacts> r = new ArrayList<>();
+                                        for (GroupInfoBean userInfoBean : groupInfoBeans) {
+                                            User.Contacts c = new User.Contacts();
+                                            c.title = userInfoBean.getName();
+                                            c.avatar = userInfoBean.getAvatar();
+                                            c.id = userInfoBean.getGid();
+                                            c.type = 2;
+                                            r.add(c);
+                                        }
+                                        return r;
+                                    });
+                        default:
+                            return Observable.empty();
+                    }
+
                 });
-
-
-        return result;
     }
 
     public static Observable<List<GroupInfoBean>> getGroupInfo(List<Long> gid) {

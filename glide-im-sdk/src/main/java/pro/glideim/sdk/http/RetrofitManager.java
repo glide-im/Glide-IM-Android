@@ -4,23 +4,30 @@ import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.WebSocket;
-import okhttp3.WebSocketListener;
-import retrofit2.Retrofit;
-import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
-import retrofit2.converter.gson.GsonConverterFactory;
 
 import java.lang.reflect.Type;
 import java.util.concurrent.TimeUnit;
 
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.WebSocket;
+import okhttp3.WebSocketListener;
+import okhttp3.logging.HttpLoggingInterceptor;
+import retrofit2.Retrofit;
+import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
+import retrofit2.converter.gson.GsonConverterFactory;
+
 public class RetrofitManager {
+    private static final HttpLoggingInterceptor sLoggerInterceptor = new HttpLoggingInterceptor(new HttpLoggingInterceptor.Logger() {
+        @Override
+        public void log(String message) {
+            System.out.println("RetrofitManager.log: " + message);
+        }
+    });
+    private static RetrofitManager sInstance;
     private Retrofit retrofit;
     private OkHttpClient httpClient;
     private Gson gson;
-
-    private static RetrofitManager sInstance;
 
     public static <T> T create(Class<T> c) {
         return sInstance.retrofit.create(c);
@@ -45,11 +52,13 @@ public class RetrofitManager {
                 .serializeNulls()
                 .create();
 
+        sLoggerInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
         OkHttpClient.Builder httpClient = new OkHttpClient.Builder()
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)
                 .writeTimeout(30, TimeUnit.SECONDS)
-                .hostnameVerifier((hostname, session) -> true);
+                .hostnameVerifier((hostname, session) -> true)
+                .addInterceptor(sLoggerInterceptor);
 
 //        if (cacheDir != null) {
 //            httpClient.cache(new Cache(cacheDir, 1024 * 1024 * 10));

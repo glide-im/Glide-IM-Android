@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import pro.glideim.sdk.api.user.UserInfoBean;
+import pro.glideim.sdk.entity.User;
 
 class GlideIMTest {
 
@@ -28,7 +29,14 @@ class GlideIMTest {
 
     @Test
     void getContacts() {
-        GlideIM.getContacts();
+        GlideIM.getContacts().subscribe(new TestResObserver<List<User.Contacts>>() {
+            @Override
+            public void onNext(@NonNull List<User.Contacts> contacts) {
+                for (User.Contacts contact : contacts) {
+                    System.out.println("getContacts.onNext: "+ contact);
+                }
+            }
+        });
     }
 
     @Test

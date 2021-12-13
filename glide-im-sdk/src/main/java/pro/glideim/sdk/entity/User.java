@@ -6,5 +6,15 @@ public class User {
         public String avatar;
         public long id;
         public int type;
+
+        @Override
+        public String toString() {
+            return "Contacts{" +
+                    "title='" + title + '\'' +
+                    ", avatar='" + avatar + '\'' +
+                    ", id=" + id +
+                    ", type=" + type +
+                    '}';
+        }
     }
 }
