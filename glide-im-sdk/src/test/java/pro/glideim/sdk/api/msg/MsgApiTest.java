@@ -16,12 +16,12 @@ class MsgApiTest {
 
     @Test
     void recentMsg() {
-        MsgApi.API.recentMsg(new GetRecentMsgDto(Arrays.asList(1, 2, 3, 4, 5, 6))).subscribe(new TestObserver<>());
+        MsgApi.API.getChatMessageByUsers(new GetUserMsgDto(Arrays.asList(1, 2, 3, 4, 5, 6))).subscribe(new TestObserver<>());
     }
 
     @Test
     void history() {
-        MsgApi.API.history(new GetChatHistoryDto(2)).subscribe(new TestObserver<>());
+        MsgApi.API.getChatMessageHistory(new GetChatHistoryDto(2)).subscribe(new TestObserver<>());
     }
 
     @Test

@@ -9,8 +9,10 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.List;
 
+import io.reactivex.Observable;
+import io.reactivex.functions.BiFunction;
 import pro.glideim.sdk.api.user.UserInfoBean;
-import pro.glideim.sdk.entity.User;
+import pro.glideim.sdk.entity.IMContacts;
 
 class GlideIMTest {
 
@@ -29,10 +31,10 @@ class GlideIMTest {
 
     @Test
     void getContacts() {
-        GlideIM.getContacts().subscribe(new TestResObserver<List<User.Contacts>>() {
+        GlideIM.getContacts().subscribe(new TestResObserver<List<IMContacts>>() {
             @Override
-            public void onNext(@NonNull List<User.Contacts> contacts) {
-                for (User.Contacts contact : contacts) {
+            public void onNext(@NonNull List<IMContacts> contacts) {
+                for (IMContacts contact : contacts) {
                     System.out.println("getContacts.onNext: "+ contact);
                 }
             }

@@ -13,11 +13,13 @@ import com.google.android.material.button.MaterialButton
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.base.BaseFragment
+import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.api.Response
 import pro.glideim.sdk.api.msg.GetSessionDto
 import pro.glideim.sdk.api.msg.MsgApi
 import pro.glideim.sdk.api.user.GetUserInfoDto
 import pro.glideim.sdk.api.user.UserApi
+import pro.glideim.sdk.entity.IMContacts
 import pro.glideim.ui.Events
 import pro.glideim.ui.chat.ChatActivity
 import pro.glideim.utils.*
@@ -46,12 +48,12 @@ class ContactsFragment : BaseFragment() {
 
     override fun initView() {
 
-        mAdapter.addViewHolderForType<ContactsViewData>(R.layout.item_contacts) {
+        mAdapter.addViewHolderForType<IMContacts>(R.layout.item_contacts) {
             val ivAvatar = findView<ImageView>(R.id.iv_avatar)
             val tvNickname = findView<MaterialTextView>(R.id.tv_nickname)
             onBindData { data, _ ->
                 ivAvatar.loadImage(data.avatar)
-                tvNickname.text = "${data.nickname} (${data.id})"
+                tvNickname.text = "${data.title} (${data.id})"
                 itemView.setOnClickListener {
                     if (data.type == 1) {
                         startChat(data.id)
@@ -99,31 +101,9 @@ class ContactsFragment : BaseFragment() {
 
     private fun requestData() {
 
-        UserApi.API.contactsList
-            .flatMap {
-                if (it.code != 100) {
-                    throw Exception("${it.code}, ${it.msg}")
-                }
-                val uid = mutableListOf<Long>()
-                val gid = mutableListOf<Long>()
-                it.data.forEach { c ->
-                    when (c.type) {
-                        1 -> uid.add(c.id)
-                        2 -> gid.add(c.id)
-                    }
-                }
-                UserApi.API.getUserInfo(GetUserInfoDto(uid))
-            }
-            .map {
-                Response<List<ContactsViewData>>().apply {
-                    code = it.code
-                    msg = it.msg
-                    data = it.data.map {
-                        ContactsViewData(it.uid, it.avatar, it.nickname, 1)
-                    }
-                }
-            }
-            .request(this) {
+        GlideIM.getContacts()
+            .io2main()
+            .request2(this) {
                 mContacts.clear()
                 mContacts.addAll(it!!)
                 mAdapter.notifyDataSetChanged()

@@ -9,9 +9,10 @@ import com.dengzii.ktx.android.show
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.sdk.GlideIM
+import pro.glideim.sdk.entity.IMSession
 import pro.glideim.utils.loadImage
 
-class SessionViewHolder(v: ViewGroup) : AbsViewHolder<SessionViewData>(v) {
+class SessionViewHolder(v: ViewGroup) : AbsViewHolder<IMSession>(v) {
 
     private val mTvNewMessage by lazy { findViewById<TextView>(R.id.tv_new_message) }
     private val mTvTime by lazy { findViewById<MaterialTextView>(R.id.tv_time) }
@@ -23,24 +24,20 @@ class SessionViewHolder(v: ViewGroup) : AbsViewHolder<SessionViewData>(v) {
         setContentView(R.layout.item_session)
     }
 
-    override fun onBindData(data: SessionViewData, position: Int) {
+    override fun onBindData(data: IMSession, position: Int) {
         mIvAvatar.loadImage(data.avatar)
         mTvTitle.text = data.title
-        mTvContent.text = data.msg
+        mTvContent.text = data.lastMsg
         if (data.unread > 0) {
             mTvNewMessage.show()
             mTvNewMessage.text = data.unread.toString()
         } else {
             mTvNewMessage.hide()
         }
-        mTvTime.text = data.time
+        mTvTime.text = data.updateAt.toString()
 
         itemView.setOnClickListener {
-            var id = data.session.uid2
-            if (data.session.uid1 == GlideIM.getMyUID()) {
-                id = data.session.uid1
-            }
-            ChatActivity.start(context, id)
+            ChatActivity.start(context, data.to)
         }
     }
 }

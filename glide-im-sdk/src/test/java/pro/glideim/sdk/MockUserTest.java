@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 import pro.glideim.sdk.api.auth.LoginDto;
 import pro.glideim.sdk.api.auth.RegisterDto;
 import pro.glideim.sdk.api.auth.TokenBean;
-import pro.glideim.sdk.api.auth.UserApi;
+import pro.glideim.sdk.api.auth.AuthApi;
 import pro.glideim.sdk.http.RetrofitManager;
 import pro.glideim.sdk.protocol.AckMessage;
 import pro.glideim.sdk.protocol.ChatMessage;
@@ -39,7 +39,7 @@ public class MockUserTest {
 
     @Test
     void register() {
-        UserApi.API.register(new RegisterDto("aaa", "aaa")).subscribe(new TestObserver<>());
+        AuthApi.API.register(new RegisterDto("aaa", "aaa")).subscribe(new TestObserver<>());
     }
 
     @Test

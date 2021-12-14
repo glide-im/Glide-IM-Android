@@ -71,6 +71,30 @@ fun <T> Observable<Response<T>>.request(observer: ObserverBuilder<T>.() -> Unit)
         .subscribe(proxy)
 }
 
+fun <T> Observable<T>.request2(activity: RequestStateCallback, callback: (r: T?) -> Unit) {
+
+    val proxy = ProxyObserver<T>()
+    val b: ObserverBuilder<T>.() -> Unit = {
+        onStart {
+            activity.onRequestStart()
+        }
+        onFinish {
+            activity.onRequestFinish()
+        }
+        onError {
+            activity.onRequestError(it)
+        }
+        onSuccess {
+            callback(it)
+        }
+        onSuccessNull {
+            callback(null)
+        }
+    }
+    b.invoke(ObserverBuilder(proxy))
+    this.subscribe(proxy)
+}
+
 
 fun <T> Observable<Response<T>>.request(activity: RequestStateCallback, callback: (r: T?) -> Unit) {
 

@@ -15,17 +15,17 @@ class AuthApiTest {
     @Test
     void register() {
         RegisterDto d = new RegisterDto("love2", "password");
-        UserApi.API.register(d).subscribe(new TestObserver<>());
+        AuthApi.API.register(d).subscribe(new TestObserver<>());
     }
 
     @Test
     void login() {
         LoginDto d = new LoginDto("love2","password", 1);
-        UserApi.API.login(d).subscribe(new TestObserver<>());
+        AuthApi.API.login(d).subscribe(new TestObserver<>());
     }
 
     @Test
     void logout() {
-        UserApi.API.logout().subscribe(new TestObserver<>());
+        AuthApi.API.logout().subscribe(new TestObserver<>());
     }
 }

@@ -1,27 +1,37 @@
 package pro.glideim.sdk.api.msg;
 
+import java.util.List;
+
 import io.reactivex.Observable;
 import pro.glideim.sdk.api.Response;
 import pro.glideim.sdk.http.RetrofitManager;
 import retrofit2.http.Body;
 import retrofit2.http.POST;
 
-import java.util.List;
-
 public interface MsgApi {
 
     MsgApi API = RetrofitManager.create(MsgApi.class);
 
-    @POST("msg/recent")
-    Observable<Response<List<RecentMsgBean>>> recentMsg(@Body GetRecentMsgDto d);
+    @POST("msg/chat/recent")
+    Observable<Response<List<UserMsgBean>>> getRecentChatMessage();
 
-    @POST("msg/history")
-    Observable<Response<List<MessageBean>>> history(@Body GetChatHistoryDto d);
+    @POST("msg/chat/user")
+    Observable<Response<List<UserMsgBean>>> getChatMessageByUsers(@Body GetUserMsgDto d);
 
-    @POST("msg/offline")
+    @POST("msg/chat/history")
+    Observable<Response<List<MessageBean>>> getChatMessageHistory(@Body GetChatHistoryDto d);
+
+    @POST("msg/group/history")
+    Observable<Response<List<GroupMessageBean>>> getGroupMessageHistory(@Body GetGroupMsgHistoryDto d);
+
+    @POST("msg/group/state")
+    Observable<Response<GroupMessageStateBean>> getGroupMessageState(@Body GetGroupMessageStateDto d);
+
+
+    @POST("msg/chat/offline")
     Observable<Response<List<MessageBean>>> getOfflineMsg();
 
-    @POST("msg/offline/ack")
+    @POST("msg/chat/offline/ack")
     Observable<Response<Object>> ackOfflineMsg(@Body AckOfflineMsgDto d);
 
     @POST("session/recent")

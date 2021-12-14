@@ -8,9 +8,11 @@ import com.dengzii.ktx.android.content.getColorCompat
 import com.dengzii.ktx.android.px2dp
 import pro.glideim.R
 import pro.glideim.base.BaseFragment
+import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.api.Response
 import pro.glideim.sdk.api.msg.MsgApi
 import pro.glideim.sdk.api.msg.SessionBean
+import pro.glideim.sdk.entity.IMSession
 import pro.glideim.utils.*
 
 class SessionsFragment : BaseFragment() {
@@ -25,7 +27,7 @@ class SessionsFragment : BaseFragment() {
 
     override fun initView() {
 
-        mAdapter.addViewHolderForType(SessionViewData::class.java, SessionViewHolder::class.java)
+        mAdapter.addViewHolderForType(IMSession::class.java, SessionViewHolder::class.java)
 
         mAdapter.setEnableEmptyView(true, SuperAdapter.EMPTY)
         mAdapter.setEnableEmptyViewOnInit(true)
@@ -53,18 +55,12 @@ class SessionsFragment : BaseFragment() {
     }
 
     private fun requestData() {
-        MsgApi.API.recentSession.map {
-            Response<List<SessionViewData>>().apply {
-                msg = it.msg
-                code = it.code
-                data = it.data.map { s ->
-                    SessionViewData("", "${s.uid1}_${s.uid2}", "", "", 0, s)
-                }
+        GlideIM.getSessionList()
+            .io2main()
+            .request2(this){
+                mSessionList.clear()
+                mSessionList.addAll(it!!)
+                mAdapter.notifyDataSetChanged()
             }
-        }.request(this) {
-            mSessionList.clear()
-            mSessionList.addAll(it!!)
-            mAdapter.notifyDataSetChanged()
-        }
     }
 }

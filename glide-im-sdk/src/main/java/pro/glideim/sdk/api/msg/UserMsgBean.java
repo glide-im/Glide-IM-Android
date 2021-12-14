@@ -2,7 +2,7 @@ package pro.glideim.sdk.api.msg;
 
 import java.util.List;
 
-public class RecentMsgBean {
+public class UserMsgBean {
     private long uid;
     private List<MessageBean> messages;
 

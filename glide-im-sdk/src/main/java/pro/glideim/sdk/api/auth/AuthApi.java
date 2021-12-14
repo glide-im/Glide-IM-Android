@@ -6,9 +6,9 @@ import pro.glideim.sdk.http.RetrofitManager;
 import retrofit2.http.Body;
 import retrofit2.http.POST;
 
-public interface UserApi {
+public interface AuthApi {
 
-    UserApi API = RetrofitManager.create(UserApi.class);
+    AuthApi API = RetrofitManager.create(AuthApi.class);
 
     @POST("auth/register")
     Observable<Response<Object>> register(@Body RegisterDto d);

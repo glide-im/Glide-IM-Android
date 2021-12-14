@@ -2,10 +2,10 @@ package pro.glideim.sdk.api.msg;
 
 import java.util.List;
 
-public class GetRecentMsgDto {
+public class GetUserMsgDto {
     private List<Integer> uid;
 
-    public GetRecentMsgDto(List<Integer> uid) {
+    public GetUserMsgDto(List<Integer> uid) {
         this.uid = uid;
     }
 
