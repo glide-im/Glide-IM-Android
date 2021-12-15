@@ -9,9 +9,6 @@ import com.dengzii.ktx.android.px2dp
 import pro.glideim.R
 import pro.glideim.base.BaseFragment
 import pro.glideim.sdk.GlideIM
-import pro.glideim.sdk.api.Response
-import pro.glideim.sdk.api.msg.MsgApi
-import pro.glideim.sdk.api.msg.SessionBean
 import pro.glideim.sdk.entity.IMSession
 import pro.glideim.utils.*
 
@@ -57,10 +54,16 @@ class SessionsFragment : BaseFragment() {
     private fun requestData() {
         GlideIM.getSessionList()
             .io2main()
-            .request2(this){
+            .request2(this) {
                 mSessionList.clear()
                 mSessionList.addAll(it!!)
                 mAdapter.notifyDataSetChanged()
+
+                GlideIM.updateRecentMessage()
+                    .io2main()
+                    .request2(this) {
+                        mAdapter.notifyDataSetChanged()
+                    }
             }
     }
 }

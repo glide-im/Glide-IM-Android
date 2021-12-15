@@ -1,5 +1,7 @@
 package pro.glideim.sdk;
 
+import androidx.annotation.NonNull;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -8,23 +10,32 @@ import java.util.Map;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
+import io.reactivex.Observer;
+import io.reactivex.Single;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.Response;
 import pro.glideim.sdk.api.auth.AuthApi;
 import pro.glideim.sdk.api.auth.LoginDto;
+import pro.glideim.sdk.api.group.CreateGroupBean;
+import pro.glideim.sdk.api.group.CreateGroupDto;
 import pro.glideim.sdk.api.group.GetGroupInfoDto;
 import pro.glideim.sdk.api.group.GroupApi;
 import pro.glideim.sdk.api.group.GroupInfoBean;
+import pro.glideim.sdk.api.msg.AckOfflineMsgDto;
+import pro.glideim.sdk.api.msg.GetChatHistoryDto;
 import pro.glideim.sdk.api.msg.GetGroupMessageStateDto;
+import pro.glideim.sdk.api.msg.GetGroupMsgHistoryDto;
+import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.GroupMessageStateBean;
 import pro.glideim.sdk.api.msg.MessageBean;
 import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.msg.SessionBean;
-import pro.glideim.sdk.api.user.ContactsBean;
 import pro.glideim.sdk.api.user.GetUserInfoDto;
 import pro.glideim.sdk.api.user.UserApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.entity.IMContacts;
+import pro.glideim.sdk.entity.IMMessage;
 import pro.glideim.sdk.entity.IMSession;
 import pro.glideim.sdk.entity.IdTag;
 import pro.glideim.sdk.http.RetrofitManager;
@@ -61,6 +72,28 @@ public class GlideIM {
                 });
     }
 
+    public static Single<List<IMMessage>> updateRecentMessage() {
+
+        Observable<IMMessage> chat = MsgApi.API.getRecentChatMessage()
+                .map(bodyConverter())
+                .flatMap(Observable::fromIterable)
+                .map(IMMessage::fromMessage);
+
+        List<Observable<Response<List<GroupMessageBean>>>> gob = new ArrayList<>();
+        for (Long gid : sUserInfo.getContactsGroup()) {
+            GetGroupMsgHistoryDto d = new GetGroupMsgHistoryDto(gid);
+            gob.add(MsgApi.API.getRecentGroupMessage(d));
+        }
+        Observable<IMMessage> group = Observable.merge(gob)
+                .map(bodyConverter())
+                .flatMap(Observable::fromIterable)
+                .map(IMMessage::fromGroupMessage);
+
+        return Observable.merge(chat, group)
+                .toList()
+                .doOnSuccess(sUserInfo::setRecentMessages);
+    }
+
     public static void subscribeSessionChange(SessionUpdateListener listener) {
         sUserInfo.sessionUpdateListener = listener;
     }
@@ -71,7 +104,40 @@ public class GlideIM {
 
     public static Observable<List<MessageBean>> getOfflineMessage() {
         return MsgApi.API.getOfflineMsg()
-                .map(bodyConverter());
+                .map(bodyConverter())
+                .doOnNext(messageBeans -> {
+                    List<Long> mids = new ArrayList<>();
+                    for (MessageBean b : messageBeans) {
+                        mids.add(b.getMid());
+                    }
+                    MsgApi.API.ackOfflineMsg(new AckOfflineMsgDto(mids)).subscribe(new Observer<Response<Object>>() {
+                        @Override
+                        public void onSubscribe(@NonNull Disposable d) {
+                        }
+
+                        @Override
+                        public void onNext(@NonNull Response<Object> objectResponse) {
+                        }
+
+                        @Override
+                        public void onError(@NonNull Throwable e) {
+                        }
+
+                        @Override
+                        public void onComplete() {
+                        }
+                    });
+                });
+    }
+
+    public static Observable<List<IMMessage>> getChatMessageHistory(long uid, long beforeMid) {
+
+        return MsgApi.API.getChatMessageHistory(new GetChatHistoryDto(uid, beforeMid))
+                .map(bodyConverter())
+                .flatMap((Function<List<MessageBean>, ObservableSource<MessageBean>>) Observable::fromIterable)
+                .map(IMMessage::fromMessage)
+                .toList()
+                .toObservable();
     }
 
     public static Observable<List<IMSession>> getSessionList() {
@@ -124,15 +190,13 @@ public class GlideIM {
     public static Observable<List<IMContacts>> getContacts() {
         return UserApi.API.getContactsList()
                 .map(bodyConverter())
-                .map(contactsBeans -> {
-                    List<IMContacts> c = new ArrayList<>();
-                    for (ContactsBean contactsBean : contactsBeans) {
-                        c.add(IMContacts.fromContactsBean(contactsBean));
-                    }
-                    sUserInfo.addContacts(contactsBeans);
-                    return c;
-                })
-                .flatMap((Function<List<IMContacts>, ObservableSource<List<IMContacts>>>) contacts -> updateContactInfo());
+                .flatMap(Observable::fromIterable)
+                .map(IMContacts::fromContactsBean)
+                .toList()
+                .doOnSuccess(sUserInfo::addContacts)
+                .flatMapObservable((Function<List<IMContacts>, ObservableSource<List<IMContacts>>>) contacts ->
+                        updateContactInfo()
+                );
     }
 
     public static Observable<GroupInfoBean> getGroupInfo(long gid) {
@@ -206,6 +270,11 @@ public class GlideIM {
             temped.addAll(r);
             return r;
         });
+    }
+
+    public static Observable<CreateGroupBean> createGroup(String name) {
+        return GroupApi.API.createGroup(new CreateGroupDto(name))
+                .map(bodyConverter());
     }
 
     public static Observable<List<IMContacts>> updateContactInfo() {

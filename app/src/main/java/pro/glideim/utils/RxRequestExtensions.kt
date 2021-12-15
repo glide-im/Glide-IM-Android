@@ -5,10 +5,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.LifecycleOwner
 import io.reactivex.Observable
 import io.reactivex.Observer
+import io.reactivex.Single
+import io.reactivex.SingleObserver
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
-import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.api.Response
 
 
@@ -19,6 +20,14 @@ interface RequestStateCallback {
 }
 
 fun <T> Observable<T>.io2main(): Observable<T> {
+    return compose { observable ->
+        observable
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+    }
+}
+
+fun <T> Single<T>.io2main(): Single<T> {
     return compose { observable ->
         observable
             .subscribeOn(Schedulers.io())
@@ -71,6 +80,30 @@ fun <T> Observable<Response<T>>.request(observer: ObserverBuilder<T>.() -> Unit)
         .subscribe(proxy)
 }
 
+fun <T> Single<T>.request2(activity: RequestStateCallback, callback: (r: T?) -> Unit) {
+
+    val proxy = ProxyObserver<T>()
+    val b: ObserverBuilder<T>.() -> Unit = {
+        onStart {
+            activity.onRequestStart()
+        }
+        onFinish {
+            activity.onRequestFinish()
+        }
+        onError {
+            activity.onRequestError(it)
+        }
+        onSuccess {
+            callback(it)
+        }
+        onSuccessNull {
+            callback(null)
+        }
+    }
+    b.invoke(ObserverBuilder(proxy))
+    this.subscribe(proxy)
+}
+
 fun <T> Observable<T>.request2(activity: RequestStateCallback, callback: (r: T?) -> Unit) {
 
     val proxy = ProxyObserver<T>()
@@ -121,7 +154,7 @@ fun <T> Observable<Response<T>>.request(activity: RequestStateCallback, callback
         .subscribe(proxy)
 }
 
-open class ProxyObserver<T> : Observer<T>, LifecycleEventObserver {
+open class ProxyObserver<T> : Observer<T>, LifecycleEventObserver, SingleObserver<T> {
 
     internal var start: (Disposable) -> Unit = {}
     internal var success: (T) -> Unit = {}
@@ -167,6 +200,11 @@ open class ProxyObserver<T> : Observer<T>, LifecycleEventObserver {
                 source.lifecycle.removeObserver(this)
             }
         }
+    }
+
+    override fun onSuccess(t: T) {
+        nexted++
+        success.invoke(t)
     }
 }
 

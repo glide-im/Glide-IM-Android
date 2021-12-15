@@ -9,10 +9,10 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.List;
 
-import io.reactivex.Observable;
-import io.reactivex.functions.BiFunction;
+import pro.glideim.sdk.api.group.CreateGroupBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.entity.IMContacts;
+import pro.glideim.sdk.entity.IMMessage;
 
 class GlideIMTest {
 
@@ -35,10 +35,48 @@ class GlideIMTest {
             @Override
             public void onNext(@NonNull List<IMContacts> contacts) {
                 for (IMContacts contact : contacts) {
-                    System.out.println("getContacts.onNext: "+ contact);
+                    System.out.println("getContacts.onNext: " + contact);
                 }
             }
         });
+    }
+
+    @Test
+    void createGroup() {
+        GlideIM.createGroup("HelloGroup")
+                .subscribe(new TestResObserver<CreateGroupBean>() {
+                    @Override
+                    public void onNext(@NonNull CreateGroupBean createGroupBean) {
+                        System.out.println("createGroup.onNext: " + createGroupBean.getGid());
+                    }
+                });
+    }
+
+    @Test
+    void getRecentMessages() {
+        GlideIM.getContacts().subscribe(new TestObserver<>());
+        GlideIM.updateRecentMessage()
+                .subscribe(new TestResObserver<List<IMMessage>>() {
+                    @Override
+                    public void onNext(@NonNull List<IMMessage> messages) {
+                        for (IMMessage message : messages) {
+                            System.out.println(message);
+                        }
+                    }
+                });
+    }
+
+    @Test
+    void getMessageHistory() {
+        GlideIM.getChatMessageHistory(2, 1099)
+                .subscribe(new TestResObserver<List<IMMessage>>() {
+                    @Override
+                    public void onNext(@NonNull List<IMMessage> imMessages) {
+                        for (IMMessage imMessage : imMessages) {
+                            System.out.println(imMessage.toString());
+                        }
+                    }
+                });
     }
 
     @Test

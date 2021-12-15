@@ -2,11 +2,15 @@ package pro.glideim.sdk.api.msg;
 
 public class GetGroupMsgHistoryDto {
     private long gid;
-    private int page;
+    private long beforeSeq;
 
-    public GetGroupMsgHistoryDto(long gid, int page) {
+    public GetGroupMsgHistoryDto(long gid) {
         this.gid = gid;
-        this.page = page;
+    }
+
+    public GetGroupMsgHistoryDto(long gid, long beforeSeq) {
+        this.gid = gid;
+        this.beforeSeq = beforeSeq;
     }
 
     public long getGid() {
@@ -17,11 +21,11 @@ public class GetGroupMsgHistoryDto {
         this.gid = gid;
     }
 
-    public int getPage() {
-        return page;
+    public long getBeforeSeq() {
+        return beforeSeq;
     }
 
-    public void setPage(int page) {
-        this.page = page;
+    public void setBeforeSeq(long beforeSeq) {
+        this.beforeSeq = beforeSeq;
     }
 }

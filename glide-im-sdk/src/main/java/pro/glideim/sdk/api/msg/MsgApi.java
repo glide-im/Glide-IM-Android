@@ -13,7 +13,7 @@ public interface MsgApi {
     MsgApi API = RetrofitManager.create(MsgApi.class);
 
     @POST("msg/chat/recent")
-    Observable<Response<List<UserMsgBean>>> getRecentChatMessage();
+    Observable<Response<List<MessageBean>>> getRecentChatMessage();
 
     @POST("msg/chat/user")
     Observable<Response<List<UserMsgBean>>> getChatMessageByUsers(@Body GetUserMsgDto d);
@@ -21,12 +21,14 @@ public interface MsgApi {
     @POST("msg/chat/history")
     Observable<Response<List<MessageBean>>> getChatMessageHistory(@Body GetChatHistoryDto d);
 
+    @POST("msg/group/recent")
+    Observable<Response<List<GroupMessageBean>>> getRecentGroupMessage(@Body GetGroupMsgHistoryDto d);
+
     @POST("msg/group/history")
     Observable<Response<List<GroupMessageBean>>> getGroupMessageHistory(@Body GetGroupMsgHistoryDto d);
 
     @POST("msg/group/state")
     Observable<Response<GroupMessageStateBean>> getGroupMessageState(@Body GetGroupMessageStateDto d);
-
 
     @POST("msg/chat/offline")
     Observable<Response<List<MessageBean>>> getOfflineMsg();

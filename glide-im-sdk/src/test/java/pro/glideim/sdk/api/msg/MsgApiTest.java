@@ -21,7 +21,7 @@ class MsgApiTest {
 
     @Test
     void history() {
-        MsgApi.API.getChatMessageHistory(new GetChatHistoryDto(2)).subscribe(new TestObserver<>());
+        MsgApi.API.getChatMessageHistory(new GetChatHistoryDto(2,0)).subscribe(new TestObserver<>());
     }
 
     @Test

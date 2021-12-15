@@ -6,21 +6,18 @@ import java.util.List;
 import java.util.Map;
 
 import pro.glideim.sdk.api.group.GroupInfoBean;
-import pro.glideim.sdk.api.user.ContactsBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.entity.IMContacts;
+import pro.glideim.sdk.entity.IMMessage;
 import pro.glideim.sdk.entity.IMSession;
 import pro.glideim.sdk.entity.IdTag;
 
 public class UserInfo {
 
-    private final List<IMContacts> contacts = new ArrayList<>();
-
-    private final List<IMSession> sessions = new ArrayList<>();
-
-
     private final Map<IdTag, IMSession> sessionMap = new HashMap<>();
     private final Map<IdTag, IMContacts> contactsMap = new HashMap<>();
+
+    private final Map<IdTag, List<IMMessage>> messages = new HashMap<>();
 
     long uid;
     String avatar = "";
@@ -31,6 +28,11 @@ public class UserInfo {
 
     public void getContacts() {
 
+    }
+
+    public IMSession getSession(long id, int type) {
+        IdTag idTag = IdTag.get(type, id);
+        return sessionMap.get(idTag);
     }
 
     public List<IMContacts> updateContacts(List<UserInfoBean> userInfoBeans) {
@@ -53,7 +55,7 @@ public class UserInfo {
     public List<IMContacts> updateContactsGroup(List<GroupInfoBean> userInfoBeans) {
         List<IMContacts> res = new ArrayList<>();
         for (GroupInfoBean userInfoBean : userInfoBeans) {
-            IdTag idTag = IdTag.get(1, userInfoBean.getGid());
+            IdTag idTag = IdTag.get(2, userInfoBean.getGid());
             IMContacts c = contactsMap.get(idTag);
             if (c == null) {
                 continue;
@@ -61,17 +63,21 @@ public class UserInfo {
             c.title = userInfoBean.getName();
             c.avatar = userInfoBean.getAvatar();
             c.id = userInfoBean.getGid();
-            c.type = 1;
+            c.type = 2;
             res.add(c);
         }
         return res;
     }
 
-    public void addContacts(List<ContactsBean> contacts) {
-        for (ContactsBean c : contacts) {
-            IdTag tag = IdTag.get(c.getType(), c.getId());
-            contactsMap.put(tag, IMContacts.fromContactsBean(c));
+    public void addContacts(List<IMContacts> contacts) {
+        for (IMContacts c : contacts) {
+            addContacts(c);
         }
+    }
+
+    public void addContacts(IMContacts c) {
+        IdTag tag = IdTag.get(c.type, c.id);
+        contactsMap.put(tag, c);
     }
 
     public void addSession(List<IMSession> s) {
@@ -81,12 +87,33 @@ public class UserInfo {
         }
     }
 
-    public Iterable<IdTag> getContactsIdList() {
-        return contactsMap.keySet();
+    public void addMessage(IMMessage message) {
+
     }
 
-    public void getGroupSession() {
+    public void setRecentMessages(List<IMMessage> messages) {
+        Map<IdTag, List<IMMessage>> m = new HashMap<>();
+        for (IMMessage message : messages) {
+            IdTag idTag = IdTag.get(message.getTargetType(), message.getTargetId());
+            if (!m.containsKey(idTag)) {
+                m.put(idTag, new ArrayList<>());
+            }
+            m.get(idTag).add(message);
+        }
+        m.forEach((idTag, messages1) -> {
+            if (sessionMap.containsKey(idTag)) {
+                sessionMap.get(idTag).setLatestMessage(messages1);
+            } else {
+                IMSession newSession = IMSession.create(idTag.getId(), idTag.getType());
+                newSession.initTargetInfo();
+                newSession.setLatestMessage(messages1);
+                sessionMap.put(idTag, newSession);
+            }
+        });
+    }
 
+    public Iterable<IdTag> getContactsIdList() {
+        return contactsMap.keySet();
     }
 
     public IMSession[] getAllSessions() {
@@ -97,9 +124,9 @@ public class UserInfo {
 
     public List<Long> getContactsGroup() {
         List<Long> g = new ArrayList<>();
-        for (IMContacts contact : contacts) {
-            if (contact.type == 2) {
-                g.add(contact.id);
+        for (IdTag idTag : contactsMap.keySet()) {
+            if (idTag.getType() == 2) {
+                g.add(idTag.getId());
             }
         }
         return g;

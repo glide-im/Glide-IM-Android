@@ -2,10 +2,11 @@ package pro.glideim.sdk.api.msg;
 
 public class GetChatHistoryDto {
     private long uid;
-    private int page;
+    private long beforeMid;
 
-    public GetChatHistoryDto(long uid) {
+    public GetChatHistoryDto(long uid, long beforeMid) {
         this.uid = uid;
+        this.beforeMid = beforeMid;
     }
 
     public long getUid() {
@@ -16,11 +17,11 @@ public class GetChatHistoryDto {
         this.uid = uid;
     }
 
-    public int getPage() {
-        return page;
+    public long getBeforeMid() {
+        return beforeMid;
     }
 
-    public void setPage(int page) {
-        this.page = page;
+    public void setBeforeMid(long beforeMid) {
+        this.beforeMid = beforeMid;
     }
 }

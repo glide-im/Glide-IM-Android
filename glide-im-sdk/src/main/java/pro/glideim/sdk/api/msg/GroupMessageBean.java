@@ -5,6 +5,16 @@ public class GroupMessageBean {
     private long sender;
     private long gid;
     private int type;
+    private long seq;
+
+    public long getSeq() {
+        return seq;
+    }
+
+    public void setSeq(long seq) {
+        this.seq = seq;
+    }
+
     private long sentAt;
     private String content;
 

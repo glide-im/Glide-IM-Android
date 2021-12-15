@@ -5,9 +5,15 @@ import androidx.annotation.NonNull;
 import org.jetbrains.annotations.NotNull;
 
 import io.reactivex.Observer;
+import io.reactivex.SingleObserver;
 import io.reactivex.disposables.Disposable;
 
-public abstract class TestResObserver<T> implements Observer<T> {
+public abstract class TestResObserver<T> implements Observer<T>, SingleObserver<T> {
+    @Override
+    public void onSuccess(@NonNull T t) {
+        onNext(t);
+    }
+
     @Override
     public void onSubscribe(@NotNull Disposable d) {
         System.out.println("TestResObserver.onSubscribe");

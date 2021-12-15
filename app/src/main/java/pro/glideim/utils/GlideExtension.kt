@@ -19,6 +19,7 @@ fun ImageView.loadImage(@DrawableRes res: Int) {
 fun ImageView.loadImage(url: String?) {
 
     if (url.isNullOrEmpty()) {
+        loadImage(R.mipmap.ic_launcher)
         return
     }
     Glide.with(this)

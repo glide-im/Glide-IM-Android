@@ -81,7 +81,7 @@ class ChatActivity : BaseActivity() {
     }
 
     private fun requestData() {
-        MsgApi.API.getChatMessageHistory(GetChatHistoryDto(mUID))
+        MsgApi.API.getChatMessageHistory(GetChatHistoryDto(mUID, 0))
             .request(this) {
                 mMessage.clear()
                 mMessage.addAll(it!!.map {

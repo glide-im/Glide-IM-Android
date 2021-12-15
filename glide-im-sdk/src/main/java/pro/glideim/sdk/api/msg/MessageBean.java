@@ -6,7 +6,7 @@ public class MessageBean {
     private long from;
     private long to;
     private int type;
-    private long sentAt;
+    private long sendAt;
     private long createAt;
     private String content;
 
@@ -50,12 +50,12 @@ public class MessageBean {
         this.type = type;
     }
 
-    public long getSentAt() {
-        return sentAt;
+    public long getSendAt() {
+        return sendAt;
     }
 
-    public void setSentAt(long sentAt) {
-        this.sentAt = sentAt;
+    public void setSendAt(long sendAt) {
+        this.sendAt = sendAt;
     }
 
     public long getCreateAt() {
