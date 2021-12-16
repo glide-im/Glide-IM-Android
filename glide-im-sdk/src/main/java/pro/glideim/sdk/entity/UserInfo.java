@@ -4,25 +4,22 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
 
 public class UserInfo {
 
-    private final Map<String, IMContacts> contactsMap = new HashMap<>();
+    private final TreeMap<String, IMContacts> contactsMap = new TreeMap<>();
 
-    private final IMSessionList sessionList = new IMSessionList();
+    public final IMSessionList sessionList = new IMSessionList();
 
     public long uid;
     public String avatar = "";
     public String nickname = "-";
     public String token;
     public ContactsChangeListener contactsChangeListener;
-
-    public IMSessionList getSessions() {
-        return sessionList;
-    }
 
     public List<IMContacts> updateContacts(List<UserInfoBean> userInfoBeans) {
         List<IMContacts> res = new ArrayList<>();
@@ -66,8 +63,8 @@ public class UserInfo {
         contactsMap.put(c.type + "_" + c.id, c);
     }
 
-    public Iterable<IMContacts> getContacts() {
-        return contactsMap.values();
+    public List<IMContacts> getContacts() {
+        return new ArrayList<>(contactsMap.values());
     }
 
     public List<Long> getContactsGroup() {

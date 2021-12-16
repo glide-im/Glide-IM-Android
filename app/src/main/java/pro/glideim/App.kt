@@ -9,7 +9,16 @@ class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        UserPerf.init(this)
         GlideIM.init("ws://192.168.1.123:8080/ws", "http://192.168.1.123:8081/api/")
-        SuperAdapter.addDefaultViewHolderForType(SuperAdapter.Empty::class.java, EmptyViewHolder::class.java)
+        GlideIM.getInstance().setDataStorage(UserPerf.getInstance())
+        GlideIM.getInstance().setDevice(1)
+        GlideIM.getInstance()
+
+        SuperAdapter.addDefaultViewHolderForType(
+            SuperAdapter.Empty::class.java,
+            EmptyViewHolder::class.java
+        )
     }
 }

@@ -28,6 +28,8 @@ class GlideIMTest {
 
     @Test
     void init() {
+        GlideIM.login("abc","abc",1)
+                .subscribe(new TestObserver<>());
     }
 
     @Test

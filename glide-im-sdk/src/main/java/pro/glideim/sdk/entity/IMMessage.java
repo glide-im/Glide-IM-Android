@@ -31,7 +31,7 @@ public class IMMessage {
         m.setCreateAt(messageBean.getCreateAt());
         m.setContent(messageBean.getContent());
         m.targetType = 1;
-        if (m.from == GlideIM.getMyUID()) {
+        if (m.from == GlideIM.getInstance().getMyUID()) {
             m.targetId = m.to;
         } else {
             m.targetId = m.from;

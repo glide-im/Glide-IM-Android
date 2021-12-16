@@ -14,11 +14,7 @@ import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.base.BaseFragment
 import pro.glideim.sdk.GlideIM
-import pro.glideim.sdk.api.Response
-import pro.glideim.sdk.api.msg.GetSessionDto
-import pro.glideim.sdk.api.msg.MsgApi
-import pro.glideim.sdk.api.user.GetUserInfoDto
-import pro.glideim.sdk.api.user.UserApi
+import pro.glideim.sdk.IMClient
 import pro.glideim.sdk.entity.IMContacts
 import pro.glideim.ui.Events
 import pro.glideim.ui.chat.ChatActivity
@@ -55,9 +51,7 @@ class ContactsFragment : BaseFragment() {
                 ivAvatar.loadImage(data.avatar)
                 tvNickname.text = "${data.title} (${data.id})"
                 itemView.setOnClickListener {
-                    if (data.type == 1) {
-                        startChat(data.id)
-                    }
+                    startChat(data.id, data.type)
                 }
             }
         }
@@ -92,11 +86,16 @@ class ContactsFragment : BaseFragment() {
         mSrfRefresh.startRefresh()
     }
 
-    private fun startChat(uid: Long) {
-        MsgApi.API.getSession(GetSessionDto(uid))
-            .request(this) {
-                ChatActivity.start(requireContext(), uid)
+    private fun startChat(id: Long, type: Int) {
+        GlideIM.getSession(id, type)
+            .io2main()
+            .request2(this) {
+                when (type) {
+                    1 -> ChatActivity.start(requireContext(), id)
+                    else -> toast("TODO")
+                }
             }
+
     }
 
     private fun requestData() {

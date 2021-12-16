@@ -1,5 +1,7 @@
 package pro.glideim.ui
 
+import android.content.Context
+import android.content.Intent
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textview.MaterialTextView
@@ -15,6 +17,14 @@ class LoginActivity : BaseActivity() {
     private val mEtAccount by lazy { findViewById<TextInputEditText>(R.id.et_account) }
 
     override val layoutResId = R.layout.activity_login
+
+    companion object{
+        @JvmStatic
+        fun start(context: Context) {
+            val starter = Intent(context, LoginActivity::class.java)
+            context.startActivity(starter)
+        }
+    }
 
     override fun initView() {
         mBtSubmit.setOnClickListener {

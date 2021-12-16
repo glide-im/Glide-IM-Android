@@ -33,16 +33,20 @@ public class IMSessionList {
         return sessionMap.containsKey(SessionTag.get(type, id));
     }
 
+    public void updateSession(IMSession ses){
+        SessionTag tag = SessionTag.get(ses.type, ses.to);
+        tag.updateAt = ses.updateAt;
+        if (sessionMap.containsKey(tag)) {
+            sessionList.remove(sessionMap.remove(tag));
+        }
+        ses.setIMSessionList(this);
+        sessionMap.put(tag, ses);
+        sessionList.add(ses);
+    }
+
     public void updateSession(List<IMSession> s) {
         for (IMSession ses : s) {
-            SessionTag tag = SessionTag.get(ses.type, ses.to);
-            tag.updateAt = ses.updateAt;
-            if (sessionMap.containsKey(tag)) {
-                sessionList.remove(sessionMap.remove(tag));
-            }
-            ses.setIMSessionList(this);
-            sessionMap.put(tag, ses);
-            sessionList.add(ses);
+            updateSession(ses);
         }
     }
 

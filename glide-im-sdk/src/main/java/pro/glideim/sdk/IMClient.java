@@ -1,19 +1,9 @@
 package pro.glideim.sdk;
 
 import com.google.gson.reflect.TypeToken;
-import io.reactivex.Observable;
-import io.reactivex.ObservableEmitter;
-import io.reactivex.ObservableSource;
-import io.reactivex.functions.Function;
-import io.reactivex.internal.operators.observable.ObservableSubscribeOn;
-import okhttp3.Response;
-import okhttp3.WebSocket;
-import okhttp3.WebSocketListener;
+
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import pro.glideim.sdk.http.RetrofitManager;
-import pro.glideim.sdk.protocol.*;
-import pro.glideim.sdk.ws.WsClient;
 
 import java.lang.reflect.Type;
 import java.util.List;
@@ -22,7 +12,27 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.ObservableSource;
+import io.reactivex.functions.Function;
+import io.reactivex.internal.operators.observable.ObservableSubscribeOn;
+import okhttp3.Response;
+import okhttp3.WebSocket;
+import okhttp3.WebSocketListener;
+import pro.glideim.sdk.http.RetrofitManager;
+import pro.glideim.sdk.protocol.AckMessage;
+import pro.glideim.sdk.protocol.AckRequest;
+import pro.glideim.sdk.protocol.Actions;
+import pro.glideim.sdk.protocol.ChatMessage;
+import pro.glideim.sdk.protocol.CommMessage;
+import pro.glideim.sdk.ws.WsClient;
+
 public class IMClient {
+
+    public static final int STATE_CLOSED = 1;
+    public static final int STATE_OPENED = 2;
+    public static final int STATE_CONNECTING = 3;
 
     private static final int MESSAGE_VER = 1;
     private static final int TIMEOUT_REQUEST_SEC = 5;
@@ -31,91 +41,48 @@ public class IMClient {
 
     private final Logger logger;
     private final WsClient wsClient;
-
-    private MessageListener messageListener;
-
-    private boolean open;
-    private long seq;
-    private long uid;
-
     private final Map<Long, RequestEmitter> requests = new ConcurrentHashMap<>();
     private final Map<Long, MessageEmitter> messages = new ConcurrentHashMap<>();
-
     private final Type typeCommMsg = new TypeToken<CommMessage<Object>>() {
     }.getType();
+    private MessageListener messageListener;
+    private boolean open;
+    private long seq;
 
-    public interface MessageListener {
-        void onNewMessage(ChatMessage m);
-    }
+    private ConnStateListener connStateListener;
+    private final WebSocketListener webSocketListener = new WebSocketListener() {
 
-    private static class MessageSendState {
-        static final int ACK = 1;
-        static final int NOTIFY = 2;
-        static final int FAILED = 3;
-        static final int SUCCESS = 4;
-
-        int state;
-        CommMessage<AckMessage> msg;
-
-        public MessageSendState(int state, CommMessage<AckMessage> msg) {
-            this.state = state;
-            this.msg = msg;
-        }
-    }
-
-    private static class MessageEmitter {
-        private final ObservableEmitter<MessageSendState> emitter;
-        int retry;
-        boolean ack;
-        boolean notify;
-
-        public MessageEmitter(ObservableEmitter<MessageSendState> emitter) {
-            this.emitter = emitter;
+        @Override
+        public void onClosed(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
+            IMClient.this.disconnect();
+            IMClient.this.onConnStateChanged(STATE_CLOSED, reason);
         }
 
-        void onAck(CommMessage<AckMessage> a) {
-            switch (a.getAction()) {
-                case Actions.ACTION_ACK_MESSAGE:
-                    this.ack = true;
-                    emitter.onNext(new MessageSendState(MessageSendState.ACK, a));
-                    break;
-                case Actions.ACTION_ACK_GROUP_MSG:
-                case Actions.ACTION_ACK_NOTIFY:
-                    emitter.onNext(new MessageSendState(MessageSendState.NOTIFY, a));
-                    this.notify = true;
-                    emitter.onComplete();
-                    break;
-            }
-        }
-    }
-
-    @SuppressWarnings("rawtypes")
-    private static class RequestEmitter {
-        private final ObservableEmitter emitter;
-        private final Type type;
-
-        public RequestEmitter(ObservableEmitter emitter, Type t) {
-            this.emitter = emitter;
-            this.type = t;
+        @Override
+        public void onMessage(@NotNull WebSocket webSocket, @NotNull String text) {
+            System.out.println("IMClient.onMessage >>>>> " + text);
+            IMClient.this.onMessage(new Message(text));
         }
 
-        void respond(CommMessage<Object> m, Message msg) {
-            if (m.getAction().equals("api.success")) {
-                try {
-                    CommMessage<Object> o = deserialize(type, msg);
-                    //noinspection unchecked
-                    emitter.onNext(o);
-                } catch (Throwable e) {
-                    this.emitter.onError(new Exception("json parse error, " + e.getMessage()));
-                }
-            } else {
-                emitter.onError(new Exception(m.getData().toString()));
-            }
-            emitter.onComplete();
+        @Override
+        public void onClosing(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
+            open = false;
         }
-    }
 
-    public IMClient() {
+        @Override
+        public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
+            open = true;
+            IMClient.this.onConnStateChanged(STATE_OPENED, "");
+        }
+
+        @Override
+        public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
+            open = false;
+            IMClient.this.onConnStateChanged(STATE_CLOSED, t.getMessage());
+        }
+    };
+
+    IMClient() {
         wsClient = new WsClient();
         logger = new Logger() {
             @Override
@@ -129,6 +96,14 @@ public class IMClient {
                 t.printStackTrace();
             }
         };
+    }
+
+    private static <T> T deserialize(Type t, Message msg) {
+        return RetrofitManager.fromJson(t, msg.message);
+    }
+
+    public void setConnStateListener(ConnStateListener connStateListener) {
+        this.connStateListener = connStateListener;
     }
 
     public void setMessageListener(MessageListener messageListener) {
@@ -274,39 +249,83 @@ public class IMClient {
         messageListener.onNewMessage(cm);
         // ACK
         AckRequest a = new AckRequest(cm.getMid(), cm.getFrom(), 0);
-        send(new CommMessage<>(MESSAGE_VER, Actions.C.ACTION_ACK_REQUEST, 0, a));
+        send(new CommMessage<>(MESSAGE_VER, Actions.Cli.ACTION_ACK_REQUEST, 0, a));
     }
 
-    private static <T> T deserialize(Type t, Message msg) {
-        return RetrofitManager.fromJson(t, msg.message);
+    private void onConnStateChanged(int state, String msg) {
+        if (connStateListener != null) {
+            connStateListener.onStateChange(state, msg);
+        }
     }
 
-    private final WebSocketListener webSocketListener = new WebSocketListener() {
+    public interface MessageListener {
+        void onNewMessage(ChatMessage m);
+    }
 
-        @Override
-        public void onClosed(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
-            IMClient.this.disconnect();
+    private static class MessageSendState {
+        static final int ACK = 1;
+        static final int NOTIFY = 2;
+        static final int FAILED = 3;
+        static final int SUCCESS = 4;
+
+        int state;
+        CommMessage<AckMessage> msg;
+
+        public MessageSendState(int state, CommMessage<AckMessage> msg) {
+            this.state = state;
+            this.msg = msg;
+        }
+    }
+
+    private static class MessageEmitter {
+        private final ObservableEmitter<MessageSendState> emitter;
+        int retry;
+        boolean ack;
+        boolean notify;
+
+        public MessageEmitter(ObservableEmitter<MessageSendState> emitter) {
+            this.emitter = emitter;
         }
 
-        @Override
-        public void onMessage(@NotNull WebSocket webSocket, @NotNull String text) {
-            System.out.println("IMClient.onMessage >>>>> " + text);
-            IMClient.this.onMessage(new Message(text));
+        void onAck(CommMessage<AckMessage> a) {
+            switch (a.getAction()) {
+                case Actions.ACTION_ACK_MESSAGE:
+                    this.ack = true;
+                    emitter.onNext(new MessageSendState(MessageSendState.ACK, a));
+                    break;
+                case Actions.ACTION_ACK_GROUP_MSG:
+                case Actions.ACTION_ACK_NOTIFY:
+                    emitter.onNext(new MessageSendState(MessageSendState.NOTIFY, a));
+                    this.notify = true;
+                    emitter.onComplete();
+                    break;
+            }
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static class RequestEmitter {
+        private final ObservableEmitter emitter;
+        private final Type type;
+
+        public RequestEmitter(ObservableEmitter emitter, Type t) {
+            this.emitter = emitter;
+            this.type = t;
         }
 
-        @Override
-        public void onClosing(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
-            open = false;
+        void respond(CommMessage<Object> m, Message msg) {
+            if (m.getAction().equals("api.success")) {
+                try {
+                    CommMessage<Object> o = deserialize(type, msg);
+                    //noinspection unchecked
+                    emitter.onNext(o);
+                } catch (Throwable e) {
+                    this.emitter.onError(new Exception("json parse error, " + e.getMessage()));
+                }
+            } else {
+                emitter.onError(new Exception(m.getData().toString()));
+            }
+            emitter.onComplete();
         }
-
-        @Override
-        public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
-            open = true;
-        }
-
-        @Override
-        public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
-            open = false;
-        }
-    };
+    }
 }

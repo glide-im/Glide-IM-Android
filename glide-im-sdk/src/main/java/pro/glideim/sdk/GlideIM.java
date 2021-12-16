@@ -16,7 +16,9 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.Response;
 import pro.glideim.sdk.api.auth.AuthApi;
+import pro.glideim.sdk.api.auth.AuthDto;
 import pro.glideim.sdk.api.auth.LoginDto;
+import pro.glideim.sdk.api.auth.TokenBean;
 import pro.glideim.sdk.api.group.CreateGroupBean;
 import pro.glideim.sdk.api.group.CreateGroupDto;
 import pro.glideim.sdk.api.group.GetGroupInfoDto;
@@ -24,7 +26,9 @@ import pro.glideim.sdk.api.group.GroupApi;
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.msg.AckOfflineMsgDto;
 import pro.glideim.sdk.api.msg.GetChatHistoryDto;
+import pro.glideim.sdk.api.msg.GetGroupMessageStateDto;
 import pro.glideim.sdk.api.msg.GetGroupMsgHistoryDto;
+import pro.glideim.sdk.api.msg.GetSessionDto;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.MessageBean;
 import pro.glideim.sdk.api.msg.MsgApi;
@@ -38,6 +42,8 @@ import pro.glideim.sdk.entity.IMMessage;
 import pro.glideim.sdk.entity.IMSession;
 import pro.glideim.sdk.entity.UserInfo;
 import pro.glideim.sdk.http.RetrofitManager;
+import pro.glideim.sdk.protocol.Actions;
+import pro.glideim.sdk.protocol.CommMessage;
 
 public class GlideIM {
 
@@ -47,24 +53,47 @@ public class GlideIM {
     private static final Map<Long, GroupInfoBean> sTempGroupInfo = new HashMap<>();
     private static final Map<String, SessionBean> sTempSession = new HashMap<>();
 
-    public static Long getMyUID() {
-        return 1L;
+    static GlideIM sInstance;
+
+    DataStorage dataStorage;
+    int device = 1;
+
+    private GlideIM() {
+    }
+
+    public static GlideIM getInstance() {
+        return sInstance;
     }
 
     public static void init(String wsUrl, String baseUrlApi) {
         RetrofitManager.init(baseUrlApi);
-//        sIM.connect(wsUrl);
+        sIM.connect(wsUrl);
+        sInstance = new GlideIM();
+    }
+
+    public static Observable<Boolean> auth() {
+        String token = getInstance().dataStorage.loadToken();
+        if (token == null) {
+            return Observable.error(new Exception("invalid token"));
+        }
+        return loginWs(token, getInstance().device);
     }
 
     public static Observable<Boolean> login(String account, String password, int device) {
         return AuthApi.API.login(new LoginDto(account, password, device))
-                .map(tokenBeanResponse -> {
-                    if (tokenBeanResponse.success()) {
-                        sUserInfo.token = tokenBeanResponse.getData().getToken();
-                        sUserInfo.uid = tokenBeanResponse.getData().getUid();
-                        return true;
-                    }
-                    return false;
+                .map(bodyConverter())
+                .flatMap((Function<TokenBean, ObservableSource<Boolean>>) tokenBean -> {
+                    sUserInfo.uid = tokenBean.getUid();
+                    return loginWs(tokenBean.getToken(), getInstance().device);
+                });
+    }
+
+    private static Observable<Boolean> loginWs(String token, int device) {
+        return sIM.request(Actions.Cli.ACTION_USER_AUTH, TokenBean.class, false, new AuthDto(token, device))
+                .map(bodyConverterForWsMsg())
+                .map(tokenBean -> {
+                    sUserInfo.uid = tokenBean.getUid();
+                    return tokenBean.getUid() != 0;
                 });
     }
 
@@ -87,10 +116,9 @@ public class GlideIM {
 
         return Observable.merge(chat, group)
                 .toList()
-                .doOnSuccess(s -> sUserInfo.getSessions().setSessionRecentMessages(s))
-                .map(messages -> sUserInfo.getSessions().getAll());
+                .doOnSuccess(sUserInfo.sessionList::setSessionRecentMessages)
+                .map(messages -> sUserInfo.sessionList.getAll());
     }
-
 
     public static void onContactsChange(ContactsChangeListener listener) {
         sUserInfo.contactsChangeListener = listener;
@@ -134,6 +162,26 @@ public class GlideIM {
                 .toObservable();
     }
 
+    public static Observable<IMSession> getSession(long id, int type) {
+        if (sUserInfo.sessionList.containSession(type, id)) {
+            return Observable.just(sUserInfo.sessionList.getSession(type, id));
+        }
+        if (type == 2) {
+            return MsgApi.API.getGroupMessageState(new GetGroupMessageStateDto(id))
+                    .map(bodyConverter())
+                    .map(stateBean -> {
+                        IMSession imSession = IMSession.fromGroupState(stateBean);
+                        sUserInfo.sessionList.updateSession(imSession);
+                        return imSession;
+                    });
+        }
+        return MsgApi.API.getSession(new GetSessionDto(id)).map(bodyConverter()).map(sessionBean -> {
+            IMSession imSession = IMSession.fromSessionBean(getInstance().getMyUID(), sessionBean);
+            sUserInfo.sessionList.updateSession(imSession);
+            return imSession;
+        });
+    }
+
     public static Observable<List<IMSession>> getSessionList() {
 
         Observable<IMSession> groupSession = MsgApi.API.getAllGroupMessageState()
@@ -147,14 +195,14 @@ public class GlideIM {
         Observable<IMSession> chatSession = MsgApi.API.getRecentSession()
                 .map(bodyConverter())
                 .flatMap(Observable::fromIterable)
-                .map(sessionBean -> IMSession.fromSessionBean(getMyUID(), sessionBean))
+                .map(sessionBean -> IMSession.fromSessionBean(getInstance().getMyUID(), sessionBean))
                 .flatMap((Function<IMSession, ObservableSource<IMSession>>) imSession ->
                         getUserInfo(imSession.to).map(imSession::setUserInfo)
                 );
         return Observable.merge(groupSession, chatSession)
                 .toList()
                 .toObservable()
-                .doOnNext(s -> sUserInfo.getSessions().updateSession(s));
+                .doOnNext(sUserInfo.sessionList::updateSession);
     }
 
     public static Observable<List<IMContacts>> getContacts() {
@@ -273,7 +321,7 @@ public class GlideIM {
             obs.add(ob);
         });
 
-        return Observable.merge(obs).toList().toObservable();
+        return Observable.merge(obs).toList().map(s -> sUserInfo.getContacts()).toObservable();
     }
 
     private static <T> Function<Response<T>, T> bodyConverter() {
@@ -283,5 +331,26 @@ public class GlideIM {
             }
             return r.getData();
         };
+    }
+
+    private static <T> Function<CommMessage<T>, T> bodyConverterForWsMsg() {
+        return r -> {
+            if (!r.success()) {
+                throw new Exception("");
+            }
+            return r.getData();
+        };
+    }
+
+    public void setDevice(int device) {
+        this.device = device;
+    }
+
+    public Long getMyUID() {
+        return sUserInfo.uid;
+    }
+
+    public void setDataStorage(DataStorage dataStorage) {
+        this.dataStorage = dataStorage;
     }
 }

@@ -20,7 +20,13 @@ public interface Actions {
     String ACTION_HEARTBEAT = "heartbeat";
     String ACTION_NOTIFY = "notify";
 
-    interface C {
+    interface Srv {
+        String ACTION_API_SUCCESS = "api.success";
+    }
+
+    interface Cli {
         String ACTION_ACK_REQUEST = "ack.request";
+
+        String ACTION_USER_AUTH = "api.user.auth";
     }
 }
