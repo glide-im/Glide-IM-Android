@@ -31,6 +31,7 @@ public class IMSession {
 
     public static IMSession fromGroupState(GroupMessageStateBean stateBean) {
         IMSession s = new IMSession();
+        s.to = stateBean.getGid();
         s.unread = 0;
         s.updateAt = stateBean.getLastMsgAt();
         s.type = 2;
@@ -45,8 +46,19 @@ public class IMSession {
         } else {
             s.to = sessionBean.getUid1();
         }
+        s.type = 1;
         s.updateAt = sessionBean.getUpdateAt();
         s.lastMsgId = sessionBean.getLastMid();
+        return s;
+    }
+
+    public static IMSession fromIMMessage(IMMessage message) {
+        IMSession s = new IMSession();
+        s.type = message.getTargetType();
+        s.to = message.getTo();
+        s.updateAt = message.getSendAt();
+        s.lastMsgId = message.getMid();
+        s.lastMsgTitle = message.getContent();
         return s;
     }
 
@@ -127,13 +139,16 @@ public class IMSession {
     @Override
     public String toString() {
         return "IMSession{" +
-                "title='" + title + '\'' +
+                "to=" + to +
+                ", title='" + title + '\'' +
                 ", avatar='" + avatar + '\'' +
                 ", unread=" + unread +
                 ", updateAt=" + updateAt +
                 ", type=" + type +
                 ", lastMsg='" + lastMsg + '\'' +
                 ", lastMsgTitle='" + lastMsgTitle + '\'' +
+                ", lastMsgId=" + lastMsgId +
+                ", latestMessage=" + latestMessage +
                 '}';
     }
 

@@ -1,4 +1,4 @@
-package pro.glideim.sdk;
+package pro.glideim.sdk.entity;
 
 import java.util.List;
 

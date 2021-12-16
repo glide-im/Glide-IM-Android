@@ -34,22 +34,21 @@ import pro.glideim.sdk.api.msg.SessionBean;
 import pro.glideim.sdk.api.user.GetUserInfoDto;
 import pro.glideim.sdk.api.user.UserApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
+import pro.glideim.sdk.entity.ContactsChangeListener;
 import pro.glideim.sdk.entity.IMContacts;
 import pro.glideim.sdk.entity.IMMessage;
 import pro.glideim.sdk.entity.IMSession;
 import pro.glideim.sdk.entity.IdTag;
+import pro.glideim.sdk.entity.UserInfo;
 import pro.glideim.sdk.http.RetrofitManager;
 
 public class GlideIM {
 
+    public static final UserInfo sUserInfo = new UserInfo();
     private static final IMClient sIM = new IMClient();
-
     private static final Map<Long, UserInfoBean> sTempUserInfo = new HashMap<>();
     private static final Map<Long, GroupInfoBean> sTempGroupInfo = new HashMap<>();
-
     private static final Map<String, SessionBean> sTempSession = new HashMap<>();
-
-    private static final UserInfo sUserInfo = new UserInfo();
 
     public static Long getMyUID() {
         return 1L;
@@ -91,12 +90,9 @@ public class GlideIM {
 
         return Observable.merge(chat, group)
                 .toList()
-                .doOnSuccess(sUserInfo::setRecentMessages);
+                .doOnSuccess(s -> sUserInfo.getSessions().setSessionRecentMessages(s));
     }
 
-    public static void subscribeSessionChange(SessionUpdateListener listener) {
-        sUserInfo.sessionUpdateListener = listener;
-    }
 
     public static void onContactsChange(ContactsChangeListener listener) {
         sUserInfo.contactsChangeListener = listener;
@@ -142,49 +138,28 @@ public class GlideIM {
 
     public static Observable<List<IMSession>> getSessionList() {
 
-        List<Observable<Response<GroupMessageStateBean>>> st = new ArrayList<>();
+        List<Observable<Response<GroupMessageStateBean>>> groupMsgState = new ArrayList<>();
         for (Long id : sUserInfo.getContactsGroup()) {
-            st.add(MsgApi.API.getGroupMessageState(new GetGroupMessageStateDto(id)));
+            groupMsgState.add(MsgApi.API.getGroupMessageState(new GetGroupMessageStateDto(id)));
         }
-        Observable<IMSession> groupSession = Observable.merge(st)
+        Observable<IMSession> groupSession = Observable.merge(groupMsgState)
                 .map(bodyConverter())
                 .map(IMSession::fromGroupState)
                 .flatMap((Function<IMSession, ObservableSource<IMSession>>) session ->
                         getGroupInfo(session.to).map(session::setGroupInfo)
                 );
 
-        Observable<IMSession> listObservable = MsgApi.API.getRecentSession()
+        Observable<IMSession> chatSession = MsgApi.API.getRecentSession()
                 .map(bodyConverter())
-                .map(sessionBeans -> {
-                    List<IMSession> a = new ArrayList<>();
-                    long myUID = getMyUID();
-                    for (SessionBean sessionBean : sessionBeans) {
-                        a.add(IMSession.fromSessionBean(myUID, sessionBean));
-                    }
-                    return a;
-                })
-                .flatMap((Function<List<IMSession>, ObservableSource<IMSession>>) imSessions -> {
-                    List<Long> ids = new ArrayList<>();
-                    Map<Long, IMSession> s = new HashMap<>();
-                    for (IMSession imSession : imSessions) {
-                        ids.add(imSession.to);
-                        s.put(imSession.to, imSession);
-                    }
-                    return getUserInfo(ids)
-                            .flatMap((Function<List<UserInfoBean>, ObservableSource<IMSession>>) userInfoBeans -> {
-                                for (UserInfoBean userInfoBean : userInfoBeans) {
-                                    IMSession imSession = s.get(userInfoBean.getUid());
-                                    if (imSession == null) {
-                                        continue;
-                                    }
-                                    imSession.setUserInfo(userInfoBean);
-                                }
-                                return Observable.fromIterable(s.values());
-                            });
-                });
-        return Observable.merge(groupSession, listObservable)
+                .flatMap(Observable::fromIterable)
+                .map(sessionBean -> IMSession.fromSessionBean(getMyUID(), sessionBean))
+                .flatMap((Function<IMSession, ObservableSource<IMSession>>) imSession ->
+                        getUserInfo(imSession.to).map(imSession::setUserInfo)
+                );
+        return Observable.merge(groupSession, chatSession)
                 .toList()
-                .toObservable();
+                .toObservable()
+                .doOnNext(s-> sUserInfo.getSessions().addSession(s));
     }
 
     public static Observable<List<IMContacts>> getContacts() {

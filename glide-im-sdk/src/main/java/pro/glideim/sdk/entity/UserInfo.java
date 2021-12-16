@@ -1,4 +1,4 @@
-package pro.glideim.sdk;
+package pro.glideim.sdk.entity;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -7,32 +7,27 @@ import java.util.Map;
 
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
-import pro.glideim.sdk.entity.IMContacts;
-import pro.glideim.sdk.entity.IMMessage;
-import pro.glideim.sdk.entity.IMSession;
-import pro.glideim.sdk.entity.IdTag;
 
 public class UserInfo {
 
-    private final Map<IdTag, IMSession> sessionMap = new HashMap<>();
     private final Map<IdTag, IMContacts> contactsMap = new HashMap<>();
 
     private final Map<IdTag, List<IMMessage>> messages = new HashMap<>();
 
-    long uid;
-    String avatar = "";
-    String nickname = "-";
-    String token;
-    SessionUpdateListener sessionUpdateListener;
-    ContactsChangeListener contactsChangeListener;
+    private final IMSessionList sessionList = new IMSessionList();
+
+    public long uid;
+    public String avatar = "";
+    public String nickname = "-";
+    public String token;
+    public ContactsChangeListener contactsChangeListener;
 
     public void getContacts() {
 
     }
 
-    public IMSession getSession(long id, int type) {
-        IdTag idTag = IdTag.get(type, id);
-        return sessionMap.get(idTag);
+    public IMSessionList getSessions() {
+        return sessionList;
     }
 
     public List<IMContacts> updateContacts(List<UserInfoBean> userInfoBeans) {
@@ -80,46 +75,8 @@ public class UserInfo {
         contactsMap.put(tag, c);
     }
 
-    public void addSession(List<IMSession> s) {
-        for (IMSession ses : s) {
-            IdTag tag = IdTag.get(ses.type, ses.to);
-            sessionMap.put(tag, ses);
-        }
-    }
-
-    public void addMessage(IMMessage message) {
-
-    }
-
-    public void setRecentMessages(List<IMMessage> messages) {
-        Map<IdTag, List<IMMessage>> m = new HashMap<>();
-        for (IMMessage message : messages) {
-            IdTag idTag = IdTag.get(message.getTargetType(), message.getTargetId());
-            if (!m.containsKey(idTag)) {
-                m.put(idTag, new ArrayList<>());
-            }
-            m.get(idTag).add(message);
-        }
-        m.forEach((idTag, messages1) -> {
-            if (sessionMap.containsKey(idTag)) {
-                sessionMap.get(idTag).setLatestMessage(messages1);
-            } else {
-                IMSession newSession = IMSession.create(idTag.getId(), idTag.getType());
-                newSession.initTargetInfo();
-                newSession.setLatestMessage(messages1);
-                sessionMap.put(idTag, newSession);
-            }
-        });
-    }
-
     public Iterable<IdTag> getContactsIdList() {
         return contactsMap.keySet();
-    }
-
-    public IMSession[] getAllSessions() {
-        IMSession[] a = new IMSession[]{};
-        sessionMap.values().toArray(a);
-        return a;
     }
 
     public List<Long> getContactsGroup() {

@@ -13,6 +13,7 @@ import pro.glideim.sdk.api.group.CreateGroupBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.entity.IMContacts;
 import pro.glideim.sdk.entity.IMMessage;
+import pro.glideim.sdk.entity.IMSession;
 
 class GlideIMTest {
 
@@ -53,17 +54,26 @@ class GlideIMTest {
     }
 
     @Test
-    void getRecentMessages() {
-        GlideIM.getContacts().subscribe(new TestObserver<>());
-        GlideIM.updateRecentMessage()
-                .subscribe(new TestResObserver<List<IMMessage>>() {
+    void getRecentMessages() throws InterruptedException {
+        GlideIM.getContacts().subscribe(new TestResObserver<List<IMContacts>>() {
+            @Override
+            public void onNext(@NonNull List<IMContacts> contacts) {
+                GlideIM.getSessionList().subscribe(new TestResObserver<List<IMSession>>() {
                     @Override
-                    public void onNext(@NonNull List<IMMessage> messages) {
-                        for (IMMessage message : messages) {
-                            System.out.println(message);
-                        }
+                    public void onNext(@NonNull List<IMSession> sessions) {
+                        GlideIM.updateRecentMessage()
+                                .subscribe(new TestResObserver<List<IMMessage>>() {
+                                    @Override
+                                    public void onNext(@NonNull List<IMMessage> messages) {
+                                        for (IMSession s : GlideIM.sUserInfo.getSessions().getAll()) {
+                                            System.out.println(s.toString());
+                                        }
+                                    }
+                                });
                     }
                 });
+            }
+        });
     }
 
     @Test
