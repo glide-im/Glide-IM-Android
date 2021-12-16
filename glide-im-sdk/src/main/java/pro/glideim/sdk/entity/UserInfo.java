@@ -10,9 +10,7 @@ import pro.glideim.sdk.api.user.UserInfoBean;
 
 public class UserInfo {
 
-    private final Map<IdTag, IMContacts> contactsMap = new HashMap<>();
-
-    private final Map<IdTag, List<IMMessage>> messages = new HashMap<>();
+    private final Map<String, IMContacts> contactsMap = new HashMap<>();
 
     private final IMSessionList sessionList = new IMSessionList();
 
@@ -22,10 +20,6 @@ public class UserInfo {
     public String token;
     public ContactsChangeListener contactsChangeListener;
 
-    public void getContacts() {
-
-    }
-
     public IMSessionList getSessions() {
         return sessionList;
     }
@@ -33,8 +27,7 @@ public class UserInfo {
     public List<IMContacts> updateContacts(List<UserInfoBean> userInfoBeans) {
         List<IMContacts> res = new ArrayList<>();
         for (UserInfoBean userInfoBean : userInfoBeans) {
-            IdTag idTag = IdTag.get(1, userInfoBean.getUid());
-            IMContacts c = contactsMap.get(idTag);
+            IMContacts c = contactsMap.get(1 + "_" + userInfoBean.getUid());
             if (c == null) {
                 continue;
             }
@@ -47,17 +40,16 @@ public class UserInfo {
         return res;
     }
 
-    public List<IMContacts> updateContactsGroup(List<GroupInfoBean> userInfoBeans) {
+    public List<IMContacts> updateContactsGroup(List<GroupInfoBean> groupInfoBeans) {
         List<IMContacts> res = new ArrayList<>();
-        for (GroupInfoBean userInfoBean : userInfoBeans) {
-            IdTag idTag = IdTag.get(2, userInfoBean.getGid());
-            IMContacts c = contactsMap.get(idTag);
+        for (GroupInfoBean groupInfoBean : groupInfoBeans) {
+            IMContacts c = contactsMap.get(2 + "_" + groupInfoBean.getGid());
             if (c == null) {
                 continue;
             }
-            c.title = userInfoBean.getName();
-            c.avatar = userInfoBean.getAvatar();
-            c.id = userInfoBean.getGid();
+            c.title = groupInfoBean.getName();
+            c.avatar = groupInfoBean.getAvatar();
+            c.id = groupInfoBean.getGid();
             c.type = 2;
             res.add(c);
         }
@@ -71,19 +63,18 @@ public class UserInfo {
     }
 
     public void addContacts(IMContacts c) {
-        IdTag tag = IdTag.get(c.type, c.id);
-        contactsMap.put(tag, c);
+        contactsMap.put(c.type + "_" + c.id, c);
     }
 
-    public Iterable<IdTag> getContactsIdList() {
-        return contactsMap.keySet();
+    public Iterable<IMContacts> getContacts() {
+        return contactsMap.values();
     }
 
     public List<Long> getContactsGroup() {
         List<Long> g = new ArrayList<>();
-        for (IdTag idTag : contactsMap.keySet()) {
-            if (idTag.getType() == 2) {
-                g.add(idTag.getId());
+        for (IMContacts contact : getContacts()) {
+            if (contact.type == 2) {
+                g.add(contact.id);
             }
         }
         return g;

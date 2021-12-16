@@ -24,10 +24,8 @@ import pro.glideim.sdk.api.group.GroupApi;
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.msg.AckOfflineMsgDto;
 import pro.glideim.sdk.api.msg.GetChatHistoryDto;
-import pro.glideim.sdk.api.msg.GetGroupMessageStateDto;
 import pro.glideim.sdk.api.msg.GetGroupMsgHistoryDto;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
-import pro.glideim.sdk.api.msg.GroupMessageStateBean;
 import pro.glideim.sdk.api.msg.MessageBean;
 import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.msg.SessionBean;
@@ -38,7 +36,6 @@ import pro.glideim.sdk.entity.ContactsChangeListener;
 import pro.glideim.sdk.entity.IMContacts;
 import pro.glideim.sdk.entity.IMMessage;
 import pro.glideim.sdk.entity.IMSession;
-import pro.glideim.sdk.entity.IdTag;
 import pro.glideim.sdk.entity.UserInfo;
 import pro.glideim.sdk.http.RetrofitManager;
 
@@ -71,7 +68,7 @@ public class GlideIM {
                 });
     }
 
-    public static Single<List<IMMessage>> updateRecentMessage() {
+    public static Single<List<IMSession>> updateSessionList() {
 
         Observable<IMMessage> chat = MsgApi.API.getRecentChatMessage()
                 .map(bodyConverter())
@@ -90,7 +87,8 @@ public class GlideIM {
 
         return Observable.merge(chat, group)
                 .toList()
-                .doOnSuccess(s -> sUserInfo.getSessions().setSessionRecentMessages(s));
+                .doOnSuccess(s -> sUserInfo.getSessions().setSessionRecentMessages(s))
+                .map(messages -> sUserInfo.getSessions().getAll());
     }
 
 
@@ -138,12 +136,9 @@ public class GlideIM {
 
     public static Observable<List<IMSession>> getSessionList() {
 
-        List<Observable<Response<GroupMessageStateBean>>> groupMsgState = new ArrayList<>();
-        for (Long id : sUserInfo.getContactsGroup()) {
-            groupMsgState.add(MsgApi.API.getGroupMessageState(new GetGroupMessageStateDto(id)));
-        }
-        Observable<IMSession> groupSession = Observable.merge(groupMsgState)
+        Observable<IMSession> groupSession = MsgApi.API.getAllGroupMessageState()
                 .map(bodyConverter())
+                .flatMap(Observable::fromIterable)
                 .map(IMSession::fromGroupState)
                 .flatMap((Function<IMSession, ObservableSource<IMSession>>) session ->
                         getGroupInfo(session.to).map(session::setGroupInfo)
@@ -159,7 +154,7 @@ public class GlideIM {
         return Observable.merge(groupSession, chatSession)
                 .toList()
                 .toObservable()
-                .doOnNext(s-> sUserInfo.getSessions().addSession(s));
+                .doOnNext(s -> sUserInfo.getSessions().updateSession(s));
     }
 
     public static Observable<List<IMContacts>> getContacts() {
@@ -253,16 +248,16 @@ public class GlideIM {
     }
 
     public static Observable<List<IMContacts>> updateContactInfo() {
-        Iterable<IdTag> idList = sUserInfo.getContactsIdList();
+        Iterable<IMContacts> idList = sUserInfo.getContacts();
         List<Observable<IMContacts>> obs = new ArrayList<>();
 
         Map<Integer, List<Long>> typeIdsMap = new HashMap<>();
-        for (IdTag idTag : idList) {
-            if (!typeIdsMap.containsKey(idTag.getType())) {
-                typeIdsMap.put(idTag.getType(), new ArrayList<>());
+        for (IMContacts contacts : idList) {
+            if (!typeIdsMap.containsKey(contacts.type)) {
+                typeIdsMap.put(contacts.type, new ArrayList<>());
             }
             //noinspection ConstantConditions
-            typeIdsMap.get(idTag.getType()).add(idTag.getId());
+            typeIdsMap.get(contacts.type).add(contacts.id);
         }
 
         typeIdsMap.forEach((type, ids) -> {

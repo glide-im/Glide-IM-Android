@@ -61,13 +61,11 @@ class GlideIMTest {
                 GlideIM.getSessionList().subscribe(new TestResObserver<List<IMSession>>() {
                     @Override
                     public void onNext(@NonNull List<IMSession> sessions) {
-                        GlideIM.updateRecentMessage()
-                                .subscribe(new TestResObserver<List<IMMessage>>() {
+                        GlideIM.updateSessionList()
+                                .subscribe(new TestResObserver<List<IMSession>>() {
                                     @Override
-                                    public void onNext(@NonNull List<IMMessage> messages) {
-                                        for (IMSession s : GlideIM.sUserInfo.getSessions().getAll()) {
-                                            System.out.println(s.toString());
-                                        }
+                                    public void onNext(@NonNull List<IMSession> sessions) {
+
                                     }
                                 });
                     }

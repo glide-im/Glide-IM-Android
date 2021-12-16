@@ -30,6 +30,9 @@ public interface MsgApi {
     @POST("msg/group/state")
     Observable<Response<GroupMessageStateBean>> getGroupMessageState(@Body GetGroupMessageStateDto d);
 
+    @POST("msg/group/state/all")
+    Observable<Response<List<GroupMessageStateBean>>> getAllGroupMessageState();
+
     @POST("msg/chat/offline")
     Observable<Response<List<MessageBean>>> getOfflineMsg();
 

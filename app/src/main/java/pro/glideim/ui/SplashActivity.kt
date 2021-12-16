@@ -2,6 +2,7 @@ package pro.glideim.ui
 
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
+import pro.glideim.sdk.GlideIM
 import pro.glideim.ui.chat.ChatActivity
 
 class SplashActivity : BaseActivity() {

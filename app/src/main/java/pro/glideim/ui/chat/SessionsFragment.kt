@@ -55,13 +55,15 @@ class SessionsFragment : BaseFragment() {
         GlideIM.getSessionList()
             .io2main()
             .request2(this) {
-                mSessionList.clear()
-                mSessionList.addAll(it!!)
-                mAdapter.notifyDataSetChanged()
+//                mSessionList.clear()
+//                mSessionList.addAll(it!!)
+//                mAdapter.notifyDataSetChanged()
 
-                GlideIM.updateRecentMessage()
+                GlideIM.updateSessionList()
                     .io2main()
-                    .request2(this) {
+                    .request(this) { s2 ->
+                        mSessionList.clear()
+                        mSessionList.addAll(s2!!)
                         mAdapter.notifyDataSetChanged()
                     }
             }

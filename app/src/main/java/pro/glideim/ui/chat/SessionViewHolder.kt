@@ -8,9 +8,9 @@ import com.dengzii.ktx.android.hide
 import com.dengzii.ktx.android.show
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
-import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.entity.IMSession
 import pro.glideim.utils.loadImage
+import pro.glideim.utils.secToTimeSpan
 
 class SessionViewHolder(v: ViewGroup) : AbsViewHolder<IMSession>(v) {
 
@@ -34,10 +34,19 @@ class SessionViewHolder(v: ViewGroup) : AbsViewHolder<IMSession>(v) {
         } else {
             mTvNewMessage.hide()
         }
-        mTvTime.text = data.updateAt.toString()
+        mTvTime.text = data.updateAt.secToTimeSpan()
 
         itemView.setOnClickListener {
             ChatActivity.start(context, data.to)
         }
+    }
+
+    override fun onBindData(data: IMSession, position: Int, payloads: MutableList<Any>?) {
+        super.onBindData(data, position, payloads)
+
+    }
+
+    override fun getChangePayloads(old: Any, new_: Any): Any? {
+        return super.getChangePayloads(old, new_)
     }
 }
