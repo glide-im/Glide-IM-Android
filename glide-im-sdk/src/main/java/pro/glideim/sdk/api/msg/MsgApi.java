@@ -12,6 +12,9 @@ public interface MsgApi {
 
     MsgApi API = RetrofitManager.create(MsgApi.class);
 
+    @POST("msg/id")
+    Observable<Response<MessageIDBean>> getMessageID();
+
     @POST("msg/chat/recent")
     Observable<Response<List<MessageBean>>> getRecentChatMessage();
 

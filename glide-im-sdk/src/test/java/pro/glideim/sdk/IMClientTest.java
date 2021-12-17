@@ -17,7 +17,7 @@ import pro.glideim.sdk.protocol.CommMessage;
 
 class IMClientTest {
 
-    IMClient imClient = new IMClient();
+    WsIMClientImpl imClient = new WsIMClientImpl();
 
     @BeforeEach
     void setUp() throws InterruptedException {

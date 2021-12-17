@@ -1,5 +1,7 @@
 package pro.glideim.sdk.entity;
 
+import java.util.Objects;
+
 import pro.glideim.sdk.GlideIM;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.MessageBean;
@@ -30,12 +32,13 @@ public class IMMessage {
         m.setSendAt(messageBean.getSendAt());
         m.setCreateAt(messageBean.getCreateAt());
         m.setContent(messageBean.getContent());
-        m.targetType = 1;
+        long id = 0;
         if (m.from == GlideIM.getInstance().getMyUID()) {
-            m.targetId = m.to;
+            id = m.to;
         } else {
-            m.targetId = m.from;
+            id = m.from;
         }
+        m.setTarget(1, id);
         return m;
     }
 
@@ -48,9 +51,26 @@ public class IMMessage {
         m.setType(m.getType());
         m.setSendAt(messageBean.getSentAt());
         m.setContent(messageBean.getContent());
-        m.targetType = 2;
-        m.targetId = m.to;
+        m.setTarget(2, m.to);
         return m;
+    }
+
+    private void setTarget(int type, long id) {
+        this.targetType = type;
+        this.targetId = id;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        IMMessage imMessage = (IMMessage) o;
+        return imMessage.mid == this.mid;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(mid);
     }
 
     public int getTargetType() {
@@ -89,16 +109,16 @@ public class IMMessage {
         return to;
     }
 
+    public void setTo(long to) {
+        this.to = to;
+    }
+
     public long getTargetId() {
         return targetId;
     }
 
     public void setTargetId(long targetId) {
         this.targetId = targetId;
-    }
-
-    public void setTo(long to) {
-        this.to = to;
     }
 
     public int getType() {

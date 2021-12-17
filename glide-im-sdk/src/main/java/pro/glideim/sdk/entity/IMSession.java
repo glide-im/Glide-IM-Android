@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import pro.glideim.sdk.GlideIM;
 import pro.glideim.sdk.SilentObserver;
@@ -128,6 +129,10 @@ public class IMSession {
         onUpdate();
     }
 
+    public List<IMMessage> getLatestMessage() {
+        return latestMessage;
+    }
+
     public IMSession setGroupInfo(GroupInfoBean groupInfoBean) {
         to = groupInfoBean.getGid();
         title = groupInfoBean.getName();
@@ -156,6 +161,20 @@ public class IMSession {
         if (onUpdateListener != null) {
             onUpdateListener.onUpdate();
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        IMSession imSession = (IMSession) o;
+        return to == imSession.to && type == imSession.type;
+    }
+
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(to, type);
     }
 
     @Override

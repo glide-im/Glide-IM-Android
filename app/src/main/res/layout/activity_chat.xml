@@ -61,8 +61,8 @@
             android:maxLines="5"
             android:minHeight="40dp"
             android:paddingVertical="10dp"
-            android:text="Hello world"
             android:textSize="14sp"
+            android:hint="天涯何处觅知音"
             app:layout_constraintEnd_toStartOf="@id/bt_send"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />

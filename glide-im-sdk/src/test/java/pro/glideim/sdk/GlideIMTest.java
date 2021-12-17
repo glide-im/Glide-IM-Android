@@ -14,6 +14,7 @@ import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.entity.IMContacts;
 import pro.glideim.sdk.entity.IMMessage;
 import pro.glideim.sdk.entity.IMSession;
+import pro.glideim.sdk.protocol.ChatMessage;
 
 class GlideIMTest {
 
@@ -27,9 +28,24 @@ class GlideIMTest {
     }
 
     @Test
-    void init() {
-        GlideIM.login("abc","abc",1)
+    void login() {
+        GlideIM.login("abc", "abc", 1)
                 .subscribe(new TestObserver<>());
+    }
+
+    @Test
+    void sendChatMessage() throws InterruptedException {
+        login();
+        Thread.sleep(1000);
+        GlideIM.sendChatMessage(543602L, 1, "hello world")
+                .subscribe(new TestResObserver<ChatMessage>() {
+                    @Override
+                    public void onNext(@NonNull ChatMessage chatMessage) {
+                        System.out.println("===================");
+                        System.out.println("SendChatMessage.onNext: mid=" + chatMessage.getMid());
+                    }
+                });
+        Thread.sleep(5000);
     }
 
     @Test

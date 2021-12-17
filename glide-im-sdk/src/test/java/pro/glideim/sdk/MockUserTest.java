@@ -18,7 +18,7 @@ import pro.glideim.sdk.protocol.CommMessage;
 
 public class MockUserTest {
 
-    IMClient imClient = new IMClient();
+    WsIMClientImpl imClient = new WsIMClientImpl();
 
     @BeforeEach
     void setup() throws InterruptedException {

@@ -43,19 +43,20 @@ import pro.glideim.sdk.entity.IMSession;
 import pro.glideim.sdk.entity.UserInfo;
 import pro.glideim.sdk.http.RetrofitManager;
 import pro.glideim.sdk.protocol.Actions;
+import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
 
 public class GlideIM {
 
     public static final UserInfo sUserInfo = new UserInfo();
-    private static final IMClient sIM = new IMClient();
+    private static final WsIMClientImpl sIM = new WsIMClientImpl();
     private static final Map<Long, UserInfoBean> sTempUserInfo = new HashMap<>();
     private static final Map<Long, GroupInfoBean> sTempGroupInfo = new HashMap<>();
     private static final Map<String, SessionBean> sTempSession = new HashMap<>();
 
     static GlideIM sInstance;
 
-    DataStorage dataStorage;
+    DataStorage dataStorage = new DefaultDataStoreImpl();
     int device = 1;
 
     private GlideIM() {
@@ -69,6 +70,25 @@ public class GlideIM {
         RetrofitManager.init(baseUrlApi);
         sIM.connect(wsUrl);
         sInstance = new GlideIM();
+    }
+
+    public static Observable<ChatMessage> sendChatMessage(long to, int type, String content) {
+
+        ChatMessage message = new ChatMessage();
+        message.setContent(content);
+        message.setFrom(getInstance().getMyUID());
+        message.setTo(to);
+        message.setType(type);
+        return MsgApi.API.getMessageID()
+                .map(bodyConverter())
+                .map(messageIDBean -> {
+                    message.setMid(messageIDBean.getMid());
+                    return message;
+                })
+                .flatMap((Function<ChatMessage, ObservableSource<ChatMessage>>) chatMessage ->
+                        sIM.sendChatMessage(chatMessage).map(s -> chatMessage)
+                );
+
     }
 
     public static Observable<Boolean> auth() {

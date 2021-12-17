@@ -14,7 +14,6 @@ import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.base.BaseFragment
 import pro.glideim.sdk.GlideIM
-import pro.glideim.sdk.IMClient
 import pro.glideim.sdk.entity.IMContacts
 import pro.glideim.ui.Events
 import pro.glideim.ui.chat.ChatActivity

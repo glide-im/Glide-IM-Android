@@ -6,6 +6,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.dengzii.adapter.SuperAdapter
 import com.dengzii.ktx.android.content.intentExtra
+import com.dengzii.ktx.android.toggleEnable
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textview.MaterialTextView
@@ -14,7 +15,11 @@ import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.api.msg.GetChatHistoryDto
 import pro.glideim.sdk.api.msg.MsgApi
+import pro.glideim.sdk.entity.IMMessage
+import pro.glideim.sdk.entity.IMSession
+import pro.glideim.utils.io2main
 import pro.glideim.utils.request
+import pro.glideim.utils.request2
 
 class ChatActivity : BaseActivity() {
 
@@ -24,8 +29,9 @@ class ChatActivity : BaseActivity() {
     private val mTvTitle by lazy { findViewById<MaterialTextView>(R.id.tv_title) }
 
     private val mMessage = mutableListOf<Any>()
-    private val mAdapter = SuperAdapter(mMessage)
+    private val mAdapter = SuperAdapter(emptyList<Any>())
 
+    private lateinit var mSession: IMSession
     private val mUID by intentExtra(EXTRA_UID, 0L)
 
     override val layoutResId = R.layout.activity_chat
@@ -44,11 +50,12 @@ class ChatActivity : BaseActivity() {
     }
 
     override fun initView() {
-
-        mTvTitle.text = "Chat $mUID"
+        mTvTitle.text = "Chat"
+        mEtMessage.toggleEnable()
+        mBtSend.toggleEnable()
 
         mAdapter.addViewHolderForType(
-            MessageViewData::class.java,
+            IMMessage::class.java,
             ChatMessageViewHolder::class.java
         )
         mRvMessages.adapter = mAdapter
@@ -60,7 +67,25 @@ class ChatActivity : BaseActivity() {
         mBtSend.setOnClickListener {
             sendMessage()
         }
-        requestData()
+
+        GlideIM.getSession(mUID, 1)
+            .io2main()
+            .request2(this) {
+                setSessionInfo(it)
+                requestData()
+            }
+    }
+
+    private fun setSessionInfo(s: IMSession) {
+        mSession = s
+        mEtMessage.toggleEnable()
+        mBtSend.toggleEnable()
+
+        mTvTitle.text = s.title
+        mMessage.clear()
+        mMessage.addAll(s.latestMessage)
+
+        mAdapter.updateWithDiff(s.latestMessage)
     }
 
     private fun sendMessage() {
@@ -69,28 +94,21 @@ class ChatActivity : BaseActivity() {
             return
         }
 
-        mMessage.add(MessageViewData().apply {
-            this.avatar = ""
-            this.content = msg
-            this.fromMe = true
-            this.type = 1
-            this.time = "10:19"
-        })
-        mAdapter.notifyItemInserted(mMessage.size - 1)
         mEtMessage.setText("")
+        GlideIM.sendChatMessage(mUID, 1, msg)
     }
 
     private fun requestData() {
-        MsgApi.API.getChatMessageHistory(GetChatHistoryDto(mUID, 0))
-            .request(this) {
-                mMessage.clear()
-                mMessage.addAll(it!!.map {
-                    MessageViewData().apply {
-                        content = it.content
-                        time = "00:00"
-                        fromMe = GlideIM.getInstance().myUID == it.from
-                    }
-                })
-            }
+//        MsgApi.API.getChatMessageHistory(GetChatHistoryDto(mUID, 0))
+//            .request(this) {
+//                mMessage.clear()
+//                mMessage.addAll(it!!.map {
+//                    MessageViewData().apply {
+//                        content = it.content
+//                        time = "00:00"
+//                        fromMe = GlideIM.getInstance().myUID == it.from
+//                    }
+//                })
+//            }
     }
 }

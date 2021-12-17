@@ -11,8 +11,11 @@ import com.dengzii.ktx.android.hide
 import com.dengzii.ktx.android.show
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
+import pro.glideim.sdk.GlideIM
+import pro.glideim.sdk.entity.IMMessage
+import pro.glideim.utils.secToTimeSpan
 
-class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<MessageViewData>(v) {
+class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<IMMessage>(v) {
 
     private val mIvAvatarRight by lazy { findViewById<ImageView>(R.id.iv_avatar_right) }
     private val mTvTime by lazy { findViewById<MaterialTextView>(R.id.tv_time) }
@@ -25,8 +28,8 @@ class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<MessageViewData>(v) {
         setContentView(R.layout.item_chat_message)
     }
 
-    override fun onBindData(data: MessageViewData, position: Int) {
-        if (data.fromMe) {
+    override fun onBindData(data: IMMessage, position: Int) {
+        if (data.from == GlideIM.getInstance().myUID) {
             mIvAvatarRight.show()
             mIvAvatarLeft.hide()
             (mCvMessageContainer.layoutParams as FrameLayout.LayoutParams).gravity = Gravity.END
@@ -41,7 +44,7 @@ class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<MessageViewData>(v) {
             } else {
                 LinearLayoutCompat.HORIZONTAL
             }
-        mTvTime.text = data.time
+        mTvTime.text = data.sendAt.secToTimeSpan()
         mTvMsg.text = data.content
     }
 }
