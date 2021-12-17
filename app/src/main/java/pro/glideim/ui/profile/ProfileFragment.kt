@@ -4,8 +4,10 @@ import android.widget.ImageView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
+import pro.glideim.UserPerf
 import pro.glideim.base.BaseFragment
-import pro.glideim.ui.chat.ChatActivity
+import pro.glideim.sdk.GlideIM
+import pro.glideim.ui.LoginActivity
 
 class ProfileFragment : BaseFragment() {
 
@@ -19,7 +21,9 @@ class ProfileFragment : BaseFragment() {
     override fun initView() {
 
         mBtLogout.setOnClickListener {
-            toast("TODO")
+            UserPerf.logout()
+            activity?.finish()
+            LoginActivity.start(requireContext())
         }
     }
 }

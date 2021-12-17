@@ -17,6 +17,8 @@ abstract class BaseFragment : Fragment(), RequestStateCallback {
 
     abstract fun initView()
 
+    private var inited = false
+
     override fun onCreateView(
         inflater: LayoutInflater,
         container: ViewGroup?,
@@ -28,7 +30,10 @@ abstract class BaseFragment : Fragment(), RequestStateCallback {
 
     override fun onStart() {
         super.onStart()
-        initView()
+        if (!inited) {
+            initView()
+            inited = true
+        }
     }
 
 

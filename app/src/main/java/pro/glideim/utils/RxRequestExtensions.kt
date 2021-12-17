@@ -104,7 +104,28 @@ fun <T> Single<T>.request(activity: RequestStateCallback, callback: (r: T?) -> U
     this.subscribe(proxy)
 }
 
-fun <T> Observable<T>.request2(activity: RequestStateCallback, callback: (r: T?) -> Unit) {
+fun <T> Observable<T>.request2(activity: RequestStateCallback, callback: (r: T) -> Unit) {
+
+    val proxy = ProxyObserver<T>()
+    val b: ObserverBuilder<T>.() -> Unit = {
+        onStart {
+            activity.onRequestStart()
+        }
+        onFinish {
+            activity.onRequestFinish()
+        }
+        onError {
+            activity.onRequestError(it)
+        }
+        onSuccess {
+            callback(it)
+        }
+    }
+    b.invoke(ObserverBuilder(proxy))
+    this.subscribe(proxy)
+}
+
+fun <T> Single<T>.request2(activity: RequestStateCallback, callback: (r: T?) -> Unit) {
 
     val proxy = ProxyObserver<T>()
     val b: ObserverBuilder<T>.() -> Unit = {

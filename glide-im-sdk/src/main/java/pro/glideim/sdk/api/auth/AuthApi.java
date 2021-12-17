@@ -14,8 +14,11 @@ public interface AuthApi {
     Observable<Response<Object>> register(@Body RegisterDto d);
 
     @POST("auth/signin")
-    Observable<Response<TokenBean>> login(@Body LoginDto d);
+    Observable<Response<AuthBean>> login(@Body LoginDto d);
 
     @POST("auth/logout")
     Observable<Response<Object>> logout();
+
+    @POST("auth/token")
+    Observable<Response<AuthBean>> auth(@Body AuthDto d);
 }

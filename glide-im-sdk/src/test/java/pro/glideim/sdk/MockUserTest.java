@@ -9,7 +9,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import pro.glideim.sdk.api.auth.LoginDto;
 import pro.glideim.sdk.api.auth.RegisterDto;
-import pro.glideim.sdk.api.auth.TokenBean;
+import pro.glideim.sdk.api.auth.AuthBean;
 import pro.glideim.sdk.api.auth.AuthApi;
 import pro.glideim.sdk.http.RetrofitManager;
 import pro.glideim.sdk.protocol.AckMessage;
@@ -45,7 +45,7 @@ public class MockUserTest {
     @Test
     void login() throws InterruptedException {
         LoginDto d = new LoginDto("aaa", "aaa", 1);
-        Observable<CommMessage<TokenBean>> request = imClient.request("api.user.login", TokenBean.class, false, d);
+        Observable<CommMessage<AuthBean>> request = imClient.request("api.user.login", AuthBean.class, false, d);
         request.subscribe(new TestObserver<>());
 
         Thread.sleep(1000);

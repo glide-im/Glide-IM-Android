@@ -16,9 +16,9 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.Response;
 import pro.glideim.sdk.api.auth.AuthApi;
+import pro.glideim.sdk.api.auth.AuthBean;
 import pro.glideim.sdk.api.auth.AuthDto;
 import pro.glideim.sdk.api.auth.LoginDto;
-import pro.glideim.sdk.api.auth.TokenBean;
 import pro.glideim.sdk.api.group.CreateGroupBean;
 import pro.glideim.sdk.api.group.CreateGroupDto;
 import pro.glideim.sdk.api.group.GetGroupInfoDto;
@@ -76,26 +76,32 @@ public class GlideIM {
         if (token == null) {
             return Observable.error(new Exception("invalid token"));
         }
-        return loginWs(token, getInstance().device);
+        return AuthApi.API.auth(new AuthDto(token, getInstance().device))
+                .map(bodyConverter())
+                .map(authBean -> authBean.getUid() != 0);
+//                .flatMap((Function<AuthBean, ObservableSource<Boolean>>) authBean ->
+//                        authWs(token, getInstance().device)
+//                );
+    }
+
+    private static Observable<Boolean> authWs(String token, int device) {
+        return sIM.request(Actions.Cli.ACTION_USER_AUTH, AuthBean.class, false, new AuthDto(token, device))
+                .map(bodyConverterForWsMsg())
+                .map(authBean -> {
+                    sUserInfo.uid = authBean.getUid();
+                    return authBean.getUid() != 0;
+                });
     }
 
     public static Observable<Boolean> login(String account, String password, int device) {
         return AuthApi.API.login(new LoginDto(account, password, device))
                 .map(bodyConverter())
-                .flatMap((Function<TokenBean, ObservableSource<Boolean>>) tokenBean -> {
-                    sUserInfo.uid = tokenBean.getUid();
-                    return loginWs(tokenBean.getToken(), getInstance().device);
+                .flatMap((Function<AuthBean, ObservableSource<Boolean>>) authBean -> {
+                    getInstance().dataStorage.storeToken(authBean.getToken());
+                    return authWs(authBean.getToken(), getInstance().device);
                 });
     }
 
-    private static Observable<Boolean> loginWs(String token, int device) {
-        return sIM.request(Actions.Cli.ACTION_USER_AUTH, TokenBean.class, false, new AuthDto(token, device))
-                .map(bodyConverterForWsMsg())
-                .map(tokenBean -> {
-                    sUserInfo.uid = tokenBean.getUid();
-                    return tokenBean.getUid() != 0;
-                });
-    }
 
     public static Single<List<IMSession>> updateSessionList() {
 
@@ -348,6 +354,10 @@ public class GlideIM {
 
     public Long getMyUID() {
         return sUserInfo.uid;
+    }
+
+    public DataStorage getDataStorage() {
+        return dataStorage;
     }
 
     public void setDataStorage(DataStorage dataStorage) {

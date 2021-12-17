@@ -88,7 +88,7 @@ class ChatActivity : BaseActivity() {
                     MessageViewData().apply {
                         content = it.content
                         time = "00:00"
-                        fromMe = GlideIM.getMyUID() == it.from
+                        fromMe = GlideIM.getInstance().myUID == it.from
                     }
                 })
             }

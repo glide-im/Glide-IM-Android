@@ -9,7 +9,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import pro.glideim.sdk.api.auth.LoginDto;
-import pro.glideim.sdk.api.auth.TokenBean;
+import pro.glideim.sdk.api.auth.AuthBean;
 import pro.glideim.sdk.http.RetrofitManager;
 import pro.glideim.sdk.protocol.AckMessage;
 import pro.glideim.sdk.protocol.ChatMessage;
@@ -34,16 +34,16 @@ class IMClientTest {
     @Test
     void connect() throws InterruptedException {
         LoginDto d = new LoginDto("abc", "abc", 1);
-        Observable<CommMessage<TokenBean>> ob = imClient.request("api.user.login", TokenBean.class, false, d);
+        Observable<CommMessage<AuthBean>> ob = imClient.request("api.user.login", AuthBean.class, false, d);
         ob.observeOn(Schedulers.single())
-                .subscribe(new Observer<CommMessage<TokenBean>>() {
+                .subscribe(new Observer<CommMessage<AuthBean>>() {
                     @Override
                     public void onSubscribe(@NotNull Disposable d) {
                         System.out.println("IMClientTest.onSubscribe");
                     }
 
                     @Override
-                    public void onNext(@NotNull CommMessage<TokenBean> tokenBean) {
+                    public void onNext(@NotNull CommMessage<AuthBean> tokenBean) {
                         System.out.println("IMClientTest.onNext\t" + tokenBean);
                     }
 

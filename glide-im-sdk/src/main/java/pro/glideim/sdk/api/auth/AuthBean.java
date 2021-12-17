@@ -1,6 +1,6 @@
 package pro.glideim.sdk.api.auth;
 
-public class TokenBean {
+public class AuthBean {
     private String token;
     private int uid;
 

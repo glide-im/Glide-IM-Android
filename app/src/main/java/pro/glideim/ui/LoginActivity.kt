@@ -2,11 +2,16 @@ package pro.glideim.ui
 
 import android.content.Context
 import android.content.Intent
+import android.widget.ProgressBar
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
+import pro.glideim.sdk.GlideIM
+import pro.glideim.utils.io2main
+import pro.glideim.utils.request2
 
 class LoginActivity : BaseActivity() {
 
@@ -18,7 +23,7 @@ class LoginActivity : BaseActivity() {
 
     override val layoutResId = R.layout.activity_login
 
-    companion object{
+    companion object {
         @JvmStatic
         fun start(context: Context) {
             val starter = Intent(context, LoginActivity::class.java)
@@ -34,7 +39,7 @@ class LoginActivity : BaseActivity() {
             RegisterActivity.start(this)
         }
         mTvResetPassword.setOnClickListener {
-            toast("Reset Password todo")
+            toast("TODO")
         }
     }
 
@@ -46,10 +51,15 @@ class LoginActivity : BaseActivity() {
         val account = mEtAccount.text.toString()
         val password = mEtPassword.text.toString()
 
-
+        GlideIM.login(account, password, 1)
+            .io2main()
+            .request2(this) {
+                MainActivity.start(this)
+            }
     }
 
     private fun validate(): Boolean {
+        return true
 
         val account = mEtAccount.text.toString()
         val password = mEtPassword.text.toString()

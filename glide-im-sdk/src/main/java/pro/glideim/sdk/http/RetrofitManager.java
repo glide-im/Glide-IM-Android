@@ -58,6 +58,7 @@ public class RetrofitManager {
                 .readTimeout(30, TimeUnit.SECONDS)
                 .writeTimeout(30, TimeUnit.SECONDS)
                 .hostnameVerifier((hostname, session) -> true)
+                .addInterceptor(AuthInterceptor.create())
                 .addInterceptor(sLoggerInterceptor);
 
 //        if (cacheDir != null) {
