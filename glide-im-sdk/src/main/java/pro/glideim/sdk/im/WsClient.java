@@ -1,4 +1,4 @@
-package pro.glideim.sdk.ws;
+package pro.glideim.sdk.im;
 
 import okhttp3.Response;
 import okhttp3.WebSocket;
@@ -55,7 +55,7 @@ public class WsClient {
         @Override
         public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
             if (t instanceof EOFException) {
-                onClosed(webSocket, -1, "EOF, closed");
+                this.onClosed(webSocket, -1, "EOF, closed");
                 return;
             }
 

@@ -14,15 +14,27 @@ import pro.glideim.sdk.http.RetrofitManager;
 import pro.glideim.sdk.protocol.AckMessage;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
+import pro.glideim.sdk.im.IMConnectListener;
+import pro.glideim.sdk.im.WsIMClientImpl;
 
 class IMClientTest {
 
-    WsIMClientImpl imClient = new WsIMClientImpl();
+    WsIMClientImpl imClient = WsIMClientImpl.create();
 
     @BeforeEach
     void setUp() throws InterruptedException {
         RetrofitManager.init("http://localhost/api/");
-        imClient.connect("ws://localhost:8080/ws");
+        imClient.connect("ws://localhost:8080/ws", new IMConnectListener() {
+            @Override
+            public void onError(Throwable t) {
+
+            }
+
+            @Override
+            public void onSuccess() {
+
+            }
+        });
         Thread.sleep(1000);
     }
 
@@ -69,7 +81,7 @@ class IMClientTest {
         c.setType(1);
         c.setMid(12343);
         c.setcTime(System.currentTimeMillis());
-        Observable<AckMessage> o = imClient.sendChatMessage(c);
+        Observable<ChatMessage> o = imClient.sendChatMessage(c);
         o.subscribe(new TestObserver<>());
         Thread.sleep(4000);
     }

@@ -1,30 +1,42 @@
 package pro.glideim.sdk;
 
-import io.reactivex.Observable;
-import io.reactivex.Observer;
-import io.reactivex.disposables.Disposable;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import io.reactivex.Observable;
+import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
+import pro.glideim.sdk.api.auth.AuthApi;
+import pro.glideim.sdk.api.auth.AuthBean;
 import pro.glideim.sdk.api.auth.LoginDto;
 import pro.glideim.sdk.api.auth.RegisterDto;
-import pro.glideim.sdk.api.auth.AuthBean;
-import pro.glideim.sdk.api.auth.AuthApi;
 import pro.glideim.sdk.http.RetrofitManager;
-import pro.glideim.sdk.protocol.AckMessage;
+import pro.glideim.sdk.im.IMConnectListener;
+import pro.glideim.sdk.im.WsIMClientImpl;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
 
 public class MockUserTest {
 
-    WsIMClientImpl imClient = new WsIMClientImpl();
+    WsIMClientImpl imClient = WsIMClientImpl.create();
 
     @BeforeEach
     void setup() throws InterruptedException {
 
         RetrofitManager.init("http://localhost:8081/api/");
-        imClient.connect("ws://localhost:8080/ws");
+        imClient.connect("ws://localhost:8080/ws", new IMConnectListener() {
+            @Override
+            public void onError(Throwable t) {
+                t.printStackTrace();
+            }
+
+            @Override
+            public void onSuccess() {
+
+            }
+        });
         imClient.setMessageListener(m -> {
             System.out.println("On Receive Message ===>>> " + RetrofitManager.toJson(m));
         });
@@ -56,21 +68,21 @@ public class MockUserTest {
         c.setType(1);
         c.setMid(123431);
         c.setcTime(System.currentTimeMillis());
-        Observable<AckMessage> o = imClient.sendChatMessage(c);
-        o.subscribe(new Observer<AckMessage>() {
+        Observable<ChatMessage> o = imClient.sendChatMessage(c);
+        o.subscribe(new Observer<ChatMessage>() {
             @Override
             public void onSubscribe(@NotNull Disposable d) {
 
             }
 
             @Override
-            public void onNext(@NotNull AckMessage message) {
-                System.out.println("Message Send Success");
+            public void onNext(@NotNull ChatMessage message) {
+                System.out.println("send.onNext:" + message.getState());
             }
 
             @Override
             public void onError(@NotNull Throwable e) {
-
+                System.out.println("send.onError: " + e.getMessage());
             }
 
             @Override

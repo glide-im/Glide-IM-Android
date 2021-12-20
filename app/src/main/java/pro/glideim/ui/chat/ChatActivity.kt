@@ -13,10 +13,9 @@ import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.GlideIM
-import pro.glideim.sdk.api.msg.GetChatHistoryDto
-import pro.glideim.sdk.api.msg.MsgApi
 import pro.glideim.sdk.entity.IMMessage
 import pro.glideim.sdk.entity.IMSession
+import pro.glideim.sdk.protocol.ChatMessage
 import pro.glideim.utils.io2main
 import pro.glideim.utils.request
 import pro.glideim.utils.request2
@@ -93,9 +92,31 @@ class ChatActivity : BaseActivity() {
         if (msg.isBlank()) {
             return
         }
-
-        mEtMessage.setText("")
         GlideIM.sendChatMessage(mUID, 1, msg)
+            .io2main()
+            .request {
+                onSuccess {
+                    when (it.state) {
+                        ChatMessage.STATE_CREATED -> {
+                            mMessage.add(it)
+                            mEtMessage.setText("")
+                        }
+                        ChatMessage.STATE_SRV_RECEIVED -> {
+
+                        }
+                        ChatMessage.STATE_RCV_RECEIVED -> {
+
+                        }
+                        else -> {
+
+                        }
+                    }
+                }
+            }
+    }
+
+    private fun addMessage(){
+
     }
 
     private fun requestData() {

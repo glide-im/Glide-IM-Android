@@ -1,9 +1,8 @@
-package pro.glideim.sdk.ws;
+package pro.glideim.sdk.im;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import pro.glideim.sdk.protocol.CommMessage;
-import pro.glideim.sdk.api.auth.LoginDto;
+
 import pro.glideim.sdk.http.RetrofitManager;
 
 import java.util.concurrent.ExecutionException;
@@ -24,7 +23,7 @@ class WsClientTest {
             e.printStackTrace();
         }
 
-        c.sendMessage(new CommMessage(1, "api.user.login", 1, new LoginDto("abc", "abc", 1)));
-        Thread.sleep(5000);
+//        c.sendMessage(new CommMessage(1, "api.user.login", 1, new LoginDto("abc", "abc", 1)));
+        Thread.sleep(10000);
     }
 }

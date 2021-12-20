@@ -2,9 +2,9 @@ package pro.glideim.sdk.entity;
 
 import androidx.annotation.NonNull;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.TreeMap;
 
 import pro.glideim.sdk.GlideIM;
 import pro.glideim.sdk.SilentObserver;
@@ -16,7 +16,10 @@ import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.utils.RxUtils;
 
 public class IMSession {
-    private final List<IMMessage> latestMessage = new ArrayList<>();
+
+//    private final List<IMMessage> latestMessage = new ArrayList<>();
+
+    private final TreeMap<Long, IMMessage> latestMessageMap = new TreeMap<>();
     public long to;
     public long lastMsgSender;
     public String title;
@@ -26,11 +29,15 @@ public class IMSession {
     public int type;
     public String lastMsg;
     public long lastMsgId;
-
+    private final IMSessionMessage messages;
     private long lastUpdateAt;
 
     private IMSessionList sessionList;
     private OnUpdateListener onUpdateListener;
+
+    private IMSession() {
+        messages = new IMSessionMessage(this);
+    }
 
     public static IMSession fromGroupState(GroupMessageStateBean stateBean) {
         IMSession s = new IMSession();
@@ -73,12 +80,12 @@ public class IMSession {
         return s;
     }
 
+    public IMSessionMessage getMessages() {
+        return this.messages;
+    }
+
     public void addMessage(IMMessage message) {
-        int index = 0;
-        if (latestMessage.size() > 0) {
-            index = latestMessage.size() - 1;
-        }
-        latestMessage.add(index, message);
+        messages.addMessage(message);
         onUpdate();
     }
 
@@ -115,22 +122,20 @@ public class IMSession {
         }
     }
 
-    public void setLatestGroupMessage(List<GroupMessageBean> message) {
-        latestMessage.clear();
+    public void addGroupMessage(List<GroupMessageBean> message) {
         for (GroupMessageBean messageBean : message) {
             IMMessage imMessage = IMMessage.fromGroupMessage(messageBean);
-            latestMessage.add(imMessage);
+            messages.addMessage(imMessage);
         }
     }
 
-    public void setLatestMessage(List<IMMessage> message) {
-        latestMessage.clear();
-        latestMessage.addAll(message);
-        onUpdate();
+    public List<IMMessage> getLatestMessage() {
+        return messages.getLatest();
     }
 
-    public List<IMMessage> getLatestMessage() {
-        return latestMessage;
+    public void addMessages(List<IMMessage> message) {
+        messages.addMessages(message);
+        onUpdate();
     }
 
     public IMSession setGroupInfo(GroupInfoBean groupInfoBean) {
@@ -151,12 +156,12 @@ public class IMSession {
 
     private void onUpdate() {
         lastUpdateAt = System.currentTimeMillis();
-        if (latestMessage.size() > 0) {
-            IMMessage msg = latestMessage.get(latestMessage.size() - 1);
-            lastMsg = msg.getContent();
-            lastMsgId = msg.getMid();
-            lastMsgSender = msg.getFrom();
-        }
+//        if (latestMessage.size() > 0) {
+//            IMMessage msg = latestMessage.get(latestMessage.size() - 1);
+//            lastMsg = msg.getContent();
+//            lastMsgId = msg.getMid();
+//            lastMsgSender = msg.getFrom();
+//        }
 
         if (onUpdateListener != null) {
             onUpdateListener.onUpdate();
@@ -188,7 +193,7 @@ public class IMSession {
                 ", type=" + type +
                 ", lastMsg='" + lastMsg + '\'' +
                 ", lastMsgId=" + lastMsgId +
-                ", latestMessage=" + latestMessage +
+                ", latestMessage=" + messages.getLatest() +
                 '}';
     }
 

@@ -15,11 +15,6 @@ public class IMSessionList {
 
     private SessionUpdateListener sessionUpdateListener;
 
-    public IMSession getSession(long id, int type) {
-        SessionTag sessionTag = SessionTag.get(type, id);
-        return sessionMap.get(sessionTag);
-    }
-
     public void setSessionUpdateListener(SessionUpdateListener sessionUpdateListener) {
         this.sessionUpdateListener = sessionUpdateListener;
     }
@@ -33,7 +28,7 @@ public class IMSessionList {
         return sessionMap.containsKey(SessionTag.get(type, id));
     }
 
-    public void updateSession(IMSession ses){
+    public void updateSession(IMSession ses) {
         SessionTag tag = SessionTag.get(ses.type, ses.to);
         tag.updateAt = ses.updateAt;
         if (sessionMap.containsKey(tag)) {
@@ -69,15 +64,14 @@ public class IMSessionList {
             m.get(sessionTag).add(message);
         }
         m.forEach((sessionTag, messages1) -> {
-            if (sessionMap.containsKey(sessionTag)) {
-                sessionMap.get(sessionTag).setLatestMessage(messages1);
-            } else {
-                IMSession newSession = IMSession.create(sessionTag.getId(), sessionTag.getType());
-                newSession.initTargetInfo();
-                newSession.setLatestMessage(messages1);
-                newSession.setIMSessionList(this);
-                sessionMap.put(sessionTag, newSession);
+            IMSession session = sessionMap.get(sessionTag);
+            if (session == null) {
+                session = IMSession.create(sessionTag.getId(), sessionTag.getType());
+                session.initTargetInfo();
+                session.setIMSessionList(this);
+                sessionMap.put(sessionTag, session);
             }
+            session.addMessages(messages1);
         });
     }
 

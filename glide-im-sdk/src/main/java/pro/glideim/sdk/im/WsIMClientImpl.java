@@ -1,4 +1,4 @@
-package pro.glideim.sdk;
+package pro.glideim.sdk.im;
 
 import com.google.gson.reflect.TypeToken;
 
@@ -14,21 +14,20 @@ import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
-import io.reactivex.ObservableSource;
-import io.reactivex.functions.Function;
 import io.reactivex.internal.operators.observable.ObservableSubscribeOn;
 import okhttp3.Response;
 import okhttp3.WebSocket;
 import okhttp3.WebSocketListener;
+import pro.glideim.sdk.Logger;
+import pro.glideim.sdk.ParameterizedTypeImpl;
 import pro.glideim.sdk.http.RetrofitManager;
 import pro.glideim.sdk.protocol.AckMessage;
 import pro.glideim.sdk.protocol.AckRequest;
 import pro.glideim.sdk.protocol.Actions;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
-import pro.glideim.sdk.ws.WsClient;
 
-public class WsIMClientImpl {
+public class WsIMClientImpl implements IMClient {
 
     public static final int STATE_CLOSED = 1;
     public static final int STATE_OPENED = 2;
@@ -50,42 +49,8 @@ public class WsIMClientImpl {
     private long seq;
 
     private ConnStateListener connStateListener;
-    private final WebSocketListener webSocketListener = new WebSocketListener() {
 
-        @Override
-        public void onClosed(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
-            WsIMClientImpl.this.disconnect();
-            WsIMClientImpl.this.onConnStateChanged(STATE_CLOSED, reason);
-        }
-
-        @Override
-        public void onMessage(@NotNull WebSocket webSocket, @NotNull String text) {
-            try {
-                WsIMClientImpl.this.onMessage(new Message(text));
-            } catch (Throwable t) {
-                t.printStackTrace();
-            }
-        }
-
-        @Override
-        public void onClosing(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
-            open = false;
-        }
-
-        @Override
-        public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
-            open = true;
-            WsIMClientImpl.this.onConnStateChanged(STATE_OPENED, "");
-        }
-
-        @Override
-        public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
-            open = false;
-            WsIMClientImpl.this.onConnStateChanged(STATE_CLOSED, t.getMessage());
-        }
-    };
-
-    WsIMClientImpl() {
+    private WsIMClientImpl() {
         wsClient = new WsClient();
         logger = new Logger() {
             @Override
@@ -101,6 +66,10 @@ public class WsIMClientImpl {
         };
     }
 
+    public static WsIMClientImpl create() {
+        return new WsIMClientImpl();
+    }
+
     private static <T> T deserialize(Type t, Message msg) {
         return RetrofitManager.fromJson(t, msg.message);
     }
@@ -113,8 +82,8 @@ public class WsIMClientImpl {
         this.messageListener = messageListener;
     }
 
-    public void connect(String url) {
-        wsClient.setListener(webSocketListener);
+    public void connect(String url, IMConnectListener l) {
+        wsClient.setListener(new WsListener(l));
         try {
             wsClient.connect(url);
         } catch (ExecutionException | InterruptedException e) {
@@ -126,15 +95,15 @@ public class WsIMClientImpl {
         wsClient.disconnect();
     }
 
-    public Observable<AckMessage> resendMessage(ChatMessage message) {
+    public Observable<ChatMessage> resendMessage(ChatMessage message) {
         return sendMessage(Actions.ACTION_MESSAGE_CHAT_RESEND, message);
     }
 
-    public Observable<AckMessage> sendChatMessage(ChatMessage message) {
+    public Observable<ChatMessage> sendChatMessage(ChatMessage message) {
         return sendMessage(Actions.ACTION_MESSAGE_CHAT, message);
     }
 
-    public Observable<AckMessage> sendGroupMessage(ChatMessage message) {
+    public Observable<ChatMessage> sendGroupMessage(ChatMessage message) {
         return sendMessage(Actions.ACTION_MESSAGE_GROUP, message);
     }
 
@@ -163,38 +132,28 @@ public class WsIMClientImpl {
     }
 
     @SuppressWarnings("UnnecessaryLocalVariable")
-    private Observable<AckMessage> sendMessage(String action, ChatMessage message) {
+    private Observable<ChatMessage> sendMessage(final String action, final ChatMessage message) {
         if (!open) {
             return Observable.error(new Exception("the server is not connected"));
         }
 
-        CommMessage<ChatMessage> c = new CommMessage<>(MESSAGE_VER, action, 0, message);
-
-        Observable<MessageSendState> ob = ObservableSubscribeOn.create(emitter -> {
-            boolean send = send(c);
-            if (!send) {
-                emitter.onError(new Exception("send message failed"));
-                return;
-            }
-            messages.put(message.getMid(), new MessageEmitter(emitter));
+        Observable<ChatMessage> ob = ObservableSubscribeOn.create(emitter -> {
+            MessageEmitter e = new MessageEmitter(emitter, message);
+            messages.put(message.getMid(), e);
+            e.send(action);
         });
-        Observable<AckMessage> flat = ob
+        Observable<ChatMessage> flat = ob
                 .timeout(TIMEOUT_MESSAGE, TimeUnit.SECONDS)
-                .filter(ackMessage ->
-                        ackMessage.state == MessageSendState.NOTIFY
-                )
-                .flatMap((Function<MessageSendState, ObservableSource<AckMessage>>) m ->
-                        Observable.just(m.msg.getData())
-                )
-                .doOnNext(ackMessage ->
-                        messages.remove(ackMessage.getMid())
-                );
+                .doOnNext(msg -> {
+                    if (msg.getState() == ChatMessage.STATE_RCV_RECEIVED) {
+                        messages.remove(msg.getMid());
+                    }
+                });
         return flat;
     }
 
     private boolean send(Object obj) {
-        wsClient.sendMessage(obj);
-        return true;
+        return wsClient.sendMessage(obj);
     }
 
     private void onMessage(Message msg) {
@@ -220,6 +179,8 @@ public class WsIMClientImpl {
             case Actions.ACTION_ACK_GROUP_MSG:
                 onGroupMessage(msg);
                 return;
+            case Actions.ACTION_NOTIFY:
+                return;
         }
 
         logger.d("IMClient.onMessage:", "UNKNOWN ACTION: " + m.getAction());
@@ -238,7 +199,11 @@ public class WsIMClientImpl {
             return;
         }
         MessageEmitter emitter = messages.get(m.getData().getMid());
-        emitter.onAck(m);
+        if (emitter != null) {
+            emitter.onAck(m);
+        } else {
+            logger.d("IMClient.onAckMessage", "ack message emitter null");
+        }
     }
 
     private void onGroupMessage(Message msg) {
@@ -269,47 +234,6 @@ public class WsIMClientImpl {
         void onNewMessage(ChatMessage m);
     }
 
-    private static class MessageSendState {
-        static final int ACK = 1;
-        static final int NOTIFY = 2;
-        static final int FAILED = 3;
-        static final int SUCCESS = 4;
-
-        int state;
-        CommMessage<AckMessage> msg;
-
-        public MessageSendState(int state, CommMessage<AckMessage> msg) {
-            this.state = state;
-            this.msg = msg;
-        }
-    }
-
-    private static class MessageEmitter {
-        private final ObservableEmitter<MessageSendState> emitter;
-        int retry;
-        boolean ack;
-        boolean notify;
-
-        public MessageEmitter(ObservableEmitter<MessageSendState> emitter) {
-            this.emitter = emitter;
-        }
-
-        void onAck(CommMessage<AckMessage> a) {
-            switch (a.getAction()) {
-                case Actions.ACTION_ACK_MESSAGE:
-                    this.ack = true;
-                    emitter.onNext(new MessageSendState(MessageSendState.ACK, a));
-                    break;
-                case Actions.ACTION_ACK_GROUP_MSG:
-                case Actions.ACTION_ACK_NOTIFY:
-                    emitter.onNext(new MessageSendState(MessageSendState.NOTIFY, a));
-                    this.notify = true;
-                    emitter.onComplete();
-                    break;
-            }
-        }
-    }
-
     @SuppressWarnings("rawtypes")
     private static class RequestEmitter {
         private final ObservableEmitter emitter;
@@ -333,6 +257,93 @@ public class WsIMClientImpl {
                 emitter.onError(new Exception(m.getData().toString()));
             }
             emitter.onComplete();
+        }
+    }
+
+    private class MessageEmitter {
+        private final ObservableEmitter<ChatMessage> emitter;
+        int retry;
+        ChatMessage msg;
+
+        public MessageEmitter(ObservableEmitter<ChatMessage> emitter, ChatMessage msg) {
+            this.emitter = emitter;
+            this.msg = msg;
+        }
+
+        void send(String action) {
+            CommMessage<ChatMessage> c = new CommMessage<>(MESSAGE_VER, action, 0, msg);
+            boolean send = WsIMClientImpl.this.send(c);
+            if (!send) {
+                if (WsIMClientImpl.this.open) {
+                    emitter.onError(new Exception("send message failed"));
+                } else {
+                    emitter.onError(new Exception("send message failed due to socket closed"));
+                }
+            } else {
+                emitter.onNext(msg.setState(ChatMessage.STATE_SRV_SENDING));
+            }
+        }
+
+        void onAck(CommMessage<AckMessage> a) {
+            switch (a.getAction()) {
+                case Actions.ACTION_ACK_MESSAGE:
+                    emitter.onNext(msg.setState(ChatMessage.STATE_SRV_RECEIVED));
+                    break;
+                case Actions.ACTION_ACK_GROUP_MSG:
+                case Actions.ACTION_ACK_NOTIFY:
+                    emitter.onNext(msg.setState(ChatMessage.STATE_RCV_RECEIVED));
+                    emitter.onComplete();
+                    break;
+            }
+        }
+    }
+
+    private final class WsListener extends WebSocketListener {
+
+        private IMConnectListener wsConnectListener;
+
+        WsListener(IMConnectListener l) {
+            this.wsConnectListener = l;
+        }
+
+        @Override
+        public void onClosed(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
+            WsIMClientImpl.this.disconnect();
+            WsIMClientImpl.this.onConnStateChanged(STATE_CLOSED, reason);
+        }
+
+        @Override
+        public void onMessage(@NotNull WebSocket webSocket, @NotNull String text) {
+            try {
+                WsIMClientImpl.this.onMessage(new Message(text));
+            } catch (Throwable t) {
+                t.printStackTrace();
+            }
+        }
+
+        @Override
+        public void onClosing(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
+            open = false;
+        }
+
+        @Override
+        public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
+            if (wsConnectListener != null) {
+                wsConnectListener.onSuccess();
+                wsConnectListener = null;
+            }
+            open = true;
+            WsIMClientImpl.this.onConnStateChanged(STATE_OPENED, "");
+        }
+
+        @Override
+        public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
+            open = false;
+            WsIMClientImpl.this.onConnStateChanged(STATE_CLOSED, t.getMessage());
+            if (wsConnectListener != null) {
+                wsConnectListener.onError(t);
+                wsConnectListener = null;
+            }
         }
     }
 }

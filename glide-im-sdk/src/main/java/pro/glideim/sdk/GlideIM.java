@@ -31,6 +31,7 @@ import pro.glideim.sdk.api.msg.GetGroupMsgHistoryDto;
 import pro.glideim.sdk.api.msg.GetSessionDto;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.MessageBean;
+import pro.glideim.sdk.api.msg.MessageIDBean;
 import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.msg.SessionBean;
 import pro.glideim.sdk.api.user.GetUserInfoDto;
@@ -42,6 +43,10 @@ import pro.glideim.sdk.entity.IMMessage;
 import pro.glideim.sdk.entity.IMSession;
 import pro.glideim.sdk.entity.UserInfo;
 import pro.glideim.sdk.http.RetrofitManager;
+import pro.glideim.sdk.im.ConnStateListener;
+import pro.glideim.sdk.im.IMClient;
+import pro.glideim.sdk.im.IMConnectListener;
+import pro.glideim.sdk.im.WsIMClientImpl;
 import pro.glideim.sdk.protocol.Actions;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
@@ -49,7 +54,7 @@ import pro.glideim.sdk.protocol.CommMessage;
 public class GlideIM {
 
     public static final UserInfo sUserInfo = new UserInfo();
-    private static final WsIMClientImpl sIM = new WsIMClientImpl();
+    private static final IMClient sIM = WsIMClientImpl.create();
     private static final Map<Long, UserInfoBean> sTempUserInfo = new HashMap<>();
     private static final Map<Long, GroupInfoBean> sTempGroupInfo = new HashMap<>();
     private static final Map<String, SessionBean> sTempSession = new HashMap<>();
@@ -58,6 +63,7 @@ public class GlideIM {
 
     DataStorage dataStorage = new DefaultDataStoreImpl();
     int device = 1;
+    private String wsUrl;
 
     private GlideIM() {
     }
@@ -68,27 +74,65 @@ public class GlideIM {
 
     public static void init(String wsUrl, String baseUrlApi) {
         RetrofitManager.init(baseUrlApi);
-        sIM.connect(wsUrl);
+        sIM.connect(wsUrl, new IMConnectListener() {
+            @Override
+            public void onError(Throwable t) {
+
+            }
+
+            @Override
+            public void onSuccess() {
+
+            }
+        });
         sInstance = new GlideIM();
     }
 
-    public static Observable<ChatMessage> sendChatMessage(long to, int type, String content) {
+    public static Observable<List<IMMessage>> subscribeChatMessageChanges(long to, int type) {
+        return Observable.empty();
+    }
 
-        ChatMessage message = new ChatMessage();
-        message.setContent(content);
-        message.setFrom(getInstance().getMyUID());
-        message.setTo(to);
-        message.setType(type);
-        return MsgApi.API.getMessageID()
-                .map(bodyConverter())
-                .map(messageIDBean -> {
+    public static Observable<IMMessage> sendChatMessage(long to, int type, String content) {
+
+
+        Observable<ChatMessage> m = Observable.create(emitter -> {
+            ChatMessage message = new ChatMessage();
+            message.setContent(content);
+            message.setFrom(getInstance().getMyUID());
+            message.setTo(to);
+            message.setType(type);
+            emitter.onNext(message);
+            emitter.onComplete();
+        });
+
+        Observable<MessageIDBean> messageIDBeanObservable = MsgApi.API.getMessageID()
+                .map(bodyConverter());
+
+        return m
+                .zipWith(messageIDBeanObservable, (message, messageIDBean) -> {
+                    message.setState(ChatMessage.STATE_CREATED);
                     message.setMid(messageIDBean.getMid());
                     return message;
                 })
-                .flatMap((Function<ChatMessage, ObservableSource<ChatMessage>>) chatMessage ->
-                        sIM.sendChatMessage(chatMessage).map(s -> chatMessage)
-                );
-
+                .flatMap((Function<ChatMessage, ObservableSource<ChatMessage>>) message -> {
+                    Observable<ChatMessage> ob = sIM.sendChatMessage(message);
+                    return Observable.concat(Observable.just(message), ob);
+                })
+                .map(chatMessage -> {
+                    IMMessage r = IMMessage.fromChatMessage(chatMessage);
+                    IMSession session = sUserInfo.sessionList.getSession(type, to);
+                    switch (chatMessage.getState()) {
+                        case ChatMessage.STATE_CREATED:
+                            session.addMessage(r);
+                            break;
+                        case ChatMessage.STATE_SRV_RECEIVED:
+                            break;
+                        case ChatMessage.STATE_RCV_RECEIVED:
+                            break;
+                    }
+                    return r;
+                })
+                .filter(message -> message.getState() == ChatMessage.STATE_SRV_RECEIVED);
     }
 
     public static Observable<Boolean> auth() {
@@ -104,8 +148,9 @@ public class GlideIM {
 //                );
     }
 
-    private static Observable<Boolean> authWs(String token, int device) {
-        return sIM.request(Actions.Cli.ACTION_USER_AUTH, AuthBean.class, false, new AuthDto(token, device))
+    public static Observable<Boolean> authWs() {
+        AuthDto d = new AuthDto(getInstance().dataStorage.loadToken(), getInstance().device);
+        return sIM.request(Actions.Cli.ACTION_USER_AUTH, AuthBean.class, false, d)
                 .map(bodyConverterForWsMsg())
                 .map(authBean -> {
                     sUserInfo.uid = authBean.getUid();
@@ -118,10 +163,9 @@ public class GlideIM {
                 .map(bodyConverter())
                 .flatMap((Function<AuthBean, ObservableSource<Boolean>>) authBean -> {
                     getInstance().dataStorage.storeToken(authBean.getToken());
-                    return authWs(authBean.getToken(), getInstance().device);
+                    return authWs();
                 });
     }
-
 
     public static Single<List<IMSession>> updateSessionList() {
 
@@ -366,6 +410,14 @@ public class GlideIM {
             }
             return r.getData();
         };
+    }
+
+    public void connectIM(IMConnectListener l) {
+        sIM.connect(wsUrl, l);
+    }
+
+    public void setConnStateChangeListener(ConnStateListener l) {
+        sIM.setConnStateListener(l);
     }
 
     public void setDevice(int device) {

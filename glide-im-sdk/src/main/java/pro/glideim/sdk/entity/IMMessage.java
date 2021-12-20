@@ -5,6 +5,7 @@ import java.util.Objects;
 import pro.glideim.sdk.GlideIM;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.MessageBean;
+import pro.glideim.sdk.protocol.ChatMessage;
 
 public class IMMessage {
     private long mid;
@@ -18,8 +19,30 @@ public class IMMessage {
 
     private long targetId;
     private int targetType;
+    private int state;
 
     private IMMessage() {
+    }
+
+    public static IMMessage fromChatMessage(ChatMessage message) {
+        IMMessage m = new IMMessage();
+        m.setMid(message.getMid());
+        m.setCliSeq(message.getcSeq());
+        m.setFrom(message.getFrom());
+        m.setTo(message.getTo());
+        m.setType(m.getType());
+        m.setSendAt(message.getcTime());
+        m.setCreateAt(message.getcTime());
+        m.setContent(message.getContent());
+        m.setState(message.getState());
+        long id = 0;
+        if (m.from == GlideIM.getInstance().getMyUID()) {
+            id = m.to;
+        } else {
+            id = m.from;
+        }
+        m.setTarget(1, id);
+        return m;
     }
 
     public static IMMessage fromMessage(MessageBean messageBean) {
@@ -28,7 +51,7 @@ public class IMMessage {
         m.setCliSeq(messageBean.getCliSeq());
         m.setFrom(messageBean.getFrom());
         m.setTo(messageBean.getTo());
-        m.setType(m.getType());
+        m.setType(messageBean.getType());
         m.setSendAt(messageBean.getSendAt());
         m.setCreateAt(messageBean.getCreateAt());
         m.setContent(messageBean.getContent());
@@ -48,7 +71,7 @@ public class IMMessage {
         m.setCliSeq(0);
         m.setFrom(messageBean.getSender());
         m.setTo(0);
-        m.setType(m.getType());
+        m.setType(messageBean.getType());
         m.setSendAt(messageBean.getSentAt());
         m.setContent(messageBean.getContent());
         m.setTarget(2, m.to);
@@ -71,6 +94,14 @@ public class IMMessage {
     @Override
     public int hashCode() {
         return Objects.hash(mid);
+    }
+
+    public int getState() {
+        return state;
+    }
+
+    public void setState(int state) {
+        this.state = state;
     }
 
     public int getTargetType() {

@@ -19,7 +19,7 @@ import pro.glideim.sdk.protocol.ChatMessage;
 class GlideIMTest {
 
     @BeforeEach
-    void setUp() {
+    void setUp() throws InterruptedException {
         GlideIM.init("ws://192.168.1.123:8080/ws", "http://192.168.1.123:8081/api/");
     }
 
@@ -36,13 +36,12 @@ class GlideIMTest {
     @Test
     void sendChatMessage() throws InterruptedException {
         login();
-        Thread.sleep(1000);
+        Thread.sleep(2000);
         GlideIM.sendChatMessage(543602L, 1, "hello world")
-                .subscribe(new TestResObserver<ChatMessage>() {
+                .subscribe(new TestResObserver<IMMessage>() {
                     @Override
-                    public void onNext(@NonNull ChatMessage chatMessage) {
-                        System.out.println("===================");
-                        System.out.println("SendChatMessage.onNext: mid=" + chatMessage.getMid());
+                    public void onNext(@NonNull IMMessage chatMessage) {
+                        System.out.println("===================" + chatMessage.getState());
                     }
                 });
         Thread.sleep(5000);
