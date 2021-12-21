@@ -136,10 +136,14 @@ public class WsIMClientImpl implements IMClient {
         if (!open) {
             return Observable.error(new Exception("the server is not connected"));
         }
+        if (message.getMid() == 0) {
+            return Observable.error(new Exception("the message id is not initialized"));
+        }
 
+        MessageEmitter e = new MessageEmitter(null, message);
+        messages.put(message.getMid(), e);
         Observable<ChatMessage> ob = ObservableSubscribeOn.create(emitter -> {
-            MessageEmitter e = new MessageEmitter(emitter, message);
-            messages.put(message.getMid(), e);
+            e.emitter = emitter;
             e.send(action);
         });
         Observable<ChatMessage> flat = ob
@@ -261,9 +265,9 @@ public class WsIMClientImpl implements IMClient {
     }
 
     private class MessageEmitter {
-        private final ObservableEmitter<ChatMessage> emitter;
         int retry;
         ChatMessage msg;
+        private ObservableEmitter<ChatMessage> emitter;
 
         public MessageEmitter(ObservableEmitter<ChatMessage> emitter, ChatMessage msg) {
             this.emitter = emitter;

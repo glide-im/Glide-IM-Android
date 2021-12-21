@@ -54,6 +54,7 @@ abstract class BaseFragment : Fragment(), RequestStateCallback {
     }
 
     override fun onRequestError(t: Throwable) {
+        t.printStackTrace()
         toast(t.message ?: "error")
     }
 }

@@ -55,6 +55,7 @@ class LoginActivity : BaseActivity() {
             .io2main()
             .request2(this) {
                 MainActivity.start(this)
+                finish()
             }
     }
 

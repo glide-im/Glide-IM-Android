@@ -32,6 +32,7 @@ class SplashActivity : BaseActivity() {
             .io2main()
             .doOnError {
                 LoginActivity.start(this)
+                finish()
             }
             .request2(this) {
                 if (it == true) {

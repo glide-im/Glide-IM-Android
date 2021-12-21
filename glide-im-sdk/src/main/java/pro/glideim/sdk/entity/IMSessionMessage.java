@@ -1,5 +1,7 @@
 package pro.glideim.sdk.entity;
 
+import androidx.annotation.Nullable;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
@@ -24,8 +26,10 @@ public class IMSessionMessage {
             session.lastMsgId = mid;
             session.lastMsgSender = msg.getFrom();
             session.updateAt = msg.getSendAt();
+            onNewMessage(msg);
+        } else {
+            onInsertMessage(msg);
         }
-        onChange(mid);
     }
 
     void addMessages(List<IMMessage> msg) {
@@ -34,13 +38,23 @@ public class IMSessionMessage {
         }
     }
 
-    private void onChange(long mid) {
+    private void onChange(IMMessage message) {
         if (messageChangeListener != null) {
-            messageChangeListener.onChange(mid);
+            messageChangeListener.onChange(message.getMid(), message);
         }
     }
 
-    public void setOnChangeListener(MessageChangeListener l) {
+    private void onInsertMessage(IMMessage m) {
+
+    }
+
+    private void onNewMessage(IMMessage m) {
+        if (messageChangeListener != null) {
+            messageChangeListener.onNewMessage(m);
+        }
+    }
+
+    public void setOnChangeListener(@Nullable MessageChangeListener l) {
         this.messageChangeListener = l;
     }
 
@@ -50,10 +64,10 @@ public class IMSessionMessage {
             return ret;
         }
         Long mid = beforeMid;
-        if (beforeMid == 0) {
-            messageTreeMap.lastKey();
+        if (mid == 0) {
+            mid = messageTreeMap.lastKey();
         } else {
-            messageTreeMap.lowerKey(beforeMid);
+            mid = messageTreeMap.lowerKey(mid);
         }
         int count = maxLen;
         while (mid != null && count > 0) {
@@ -66,6 +80,6 @@ public class IMSessionMessage {
     }
 
     public List<IMMessage> getLatest() {
-        return getMessages(0, 10);
+        return getMessages(0, 20);
     }
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SortedList
 import com.dengzii.adapter.SuperAdapter
 import com.dengzii.ktx.android.content.intentExtra
 import com.dengzii.ktx.android.toggleEnable
@@ -15,10 +16,12 @@ import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.entity.IMMessage
 import pro.glideim.sdk.entity.IMSession
+import pro.glideim.sdk.entity.MessageChangeListener
 import pro.glideim.sdk.protocol.ChatMessage
 import pro.glideim.utils.io2main
 import pro.glideim.utils.request
 import pro.glideim.utils.request2
+import java.util.*
 
 class ChatActivity : BaseActivity() {
 
@@ -27,8 +30,9 @@ class ChatActivity : BaseActivity() {
     private val mRvMessages by lazy { findViewById<RecyclerView>(R.id.rv_messages) }
     private val mTvTitle by lazy { findViewById<MaterialTextView>(R.id.tv_title) }
 
-    private val mMessage = mutableListOf<Any>()
-    private val mAdapter = SuperAdapter(emptyList<Any>())
+    private val mMidMap: TreeMap<Long, IMMessage> = TreeMap()
+    private val mMessage = MySortedList()
+    private val mAdapter = SuperAdapter(mMessage)
 
     private lateinit var mSession: IMSession
     private val mUID by intentExtra(EXTRA_UID, 0L)
@@ -49,6 +53,8 @@ class ChatActivity : BaseActivity() {
     }
 
     override fun initView() {
+        mMessage.l = SortedList(IMMessage::class.java, MessageListSorter(mAdapter))
+
         mTvTitle.text = "Chat"
         mEtMessage.toggleEnable()
         mBtSend.toggleEnable()
@@ -80,11 +86,31 @@ class ChatActivity : BaseActivity() {
         mEtMessage.toggleEnable()
         mBtSend.toggleEnable()
 
-        mTvTitle.text = s.title
+        mTvTitle.text = mSession.title
         mMessage.clear()
-        mMessage.addAll(s.latestMessage)
 
-        mAdapter.updateWithDiff(s.latestMessage)
+        val latest = mSession.latestMessage
+        mMessage.addAll(latest)
+//        latest.forEach {
+//            mMidMap[it.mid] = it
+//        }
+
+//        mAdapter.updateWithDiff(mSession.latestMessage)
+
+        mSession.messages.setOnChangeListener(object : MessageChangeListener {
+            override fun onChange(mid: Long, message: IMMessage) {
+
+            }
+
+            override fun onInsertMessage(mid: Long, message: IMMessage) {
+            }
+
+            override fun onNewMessage(message: IMMessage) {
+                mMessage.add(message)
+//                mMidMap[message.mid] = message
+//                mAdapter.notifyItemInserted(mMessage.size() - 1)
+            }
+        })
     }
 
     private fun sendMessage() {
@@ -92,30 +118,35 @@ class ChatActivity : BaseActivity() {
         if (msg.isBlank()) {
             return
         }
+        mBtSend.isEnabled = false
         GlideIM.sendChatMessage(mUID, 1, msg)
             .io2main()
             .request {
                 onSuccess {
                     when (it.state) {
+                        ChatMessage.STATE_INIT -> {
+                            mEtMessage.setText("")
+                            mMessage.add(it)
+                        }
                         ChatMessage.STATE_CREATED -> {
                             mMessage.add(it)
-                            mEtMessage.setText("")
                         }
                         ChatMessage.STATE_SRV_RECEIVED -> {
-
+                            mMessage.add(it)
                         }
                         ChatMessage.STATE_RCV_RECEIVED -> {
-
+                            mMessage.add(it)
                         }
                         else -> {
 
                         }
                     }
+                    mBtSend.isEnabled = true
                 }
             }
     }
 
-    private fun addMessage(){
+    private fun addMessage() {
 
     }
 

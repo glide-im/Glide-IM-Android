@@ -11,8 +11,6 @@ import java.util.TreeMap;
 public class IMSessionList {
 
     private final TreeMap<SessionTag, IMSession> sessionMap = new TreeMap<>();
-    private final List<IMSession> sessionList = new ArrayList<>();
-
     private SessionUpdateListener sessionUpdateListener;
 
     public void setSessionUpdateListener(SessionUpdateListener sessionUpdateListener) {
@@ -21,7 +19,12 @@ public class IMSessionList {
 
     public IMSession getSession(int type, long id) {
         SessionTag sessionTag = SessionTag.get(type, id);
-        return sessionMap.get(sessionTag);
+        IMSession session = sessionMap.get(sessionTag);
+        if (session == null) {
+            session = IMSession.create(id, type);
+            updateSession(session);
+        }
+        return session;
     }
 
     public boolean containSession(int type, long id) {
@@ -31,12 +34,15 @@ public class IMSessionList {
     public void updateSession(IMSession ses) {
         SessionTag tag = SessionTag.get(ses.type, ses.to);
         tag.updateAt = ses.updateAt;
-        if (sessionMap.containsKey(tag)) {
-            sessionList.remove(sessionMap.remove(tag));
+
+        IMSession origin = sessionMap.get(tag);
+        if (origin == null) {
+            ses.setIMSessionList(this);
+            sessionMap.put(tag, ses);
+        } else {
+            sessionMap.remove(tag);
+            sessionMap.put(tag, origin.update(origin));
         }
-        ses.setIMSessionList(this);
-        sessionMap.put(tag, ses);
-        sessionList.add(ses);
     }
 
     public void updateSession(List<IMSession> s) {
@@ -76,7 +82,7 @@ public class IMSessionList {
     }
 
     public List<IMSession> getAll() {
-        return sessionList;
+        return new ArrayList<>(sessionMap.values());
     }
 
     private static class SessionTag implements Comparable<SessionTag> {

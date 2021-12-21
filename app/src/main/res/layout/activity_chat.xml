@@ -57,7 +57,6 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:background="@null"
-            android:focusedByDefault="true"
             android:maxLines="5"
             android:minHeight="40dp"
             android:paddingVertical="10dp"

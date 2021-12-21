@@ -10,33 +10,37 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="100dp"
         android:text="@string/sign_in"
-        android:textSize="20pt"/>
+        android:textSize="20pt" />
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp">
+
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_account"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:maxLength="10"
+            android:hint="@string/account"
             android:inputType="text"
-            android:hint="@string/account" />
+            android:maxLength="10"
+            android:text="abc" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp">
+
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/et_password"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:hint="@string/password"
             android:inputType="textPassword"
             android:maxLength="10"
-            android:hint="@string/password" />
+            android:text="abc" />
     </com.google.android.material.textfield.TextInputLayout>
 
 

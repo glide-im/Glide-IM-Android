@@ -20,6 +20,7 @@ public class IMSession {
 //    private final List<IMMessage> latestMessage = new ArrayList<>();
 
     private final TreeMap<Long, IMMessage> latestMessageMap = new TreeMap<>();
+    private final IMSessionMessage messages;
     public long to;
     public long lastMsgSender;
     public String title;
@@ -29,7 +30,6 @@ public class IMSession {
     public int type;
     public String lastMsg;
     public long lastMsgId;
-    private final IMSessionMessage messages;
     private long lastUpdateAt;
 
     private IMSessionList sessionList;
@@ -84,9 +84,23 @@ public class IMSession {
         return this.messages;
     }
 
+    public IMSession update(IMSession session) {
+        this.updateAt = session.updateAt;
+        this.lastMsg = session.lastMsg;
+        return this;
+    }
+
     public void addMessage(IMMessage message) {
         messages.addMessage(message);
         onUpdate();
+    }
+
+    public void onMessageSendSuccess(IMMessage message) {
+
+    }
+
+    public void onMessageReceived(IMMessage message) {
+
     }
 
     void setIMSessionList(IMSessionList list) {

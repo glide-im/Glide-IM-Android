@@ -94,45 +94,55 @@ public class GlideIM {
 
     public static Observable<IMMessage> sendChatMessage(long to, int type, String content) {
 
-
-        Observable<ChatMessage> m = Observable.create(emitter -> {
+        Observable<ChatMessage> creator = Observable.create(emitter -> {
             ChatMessage message = new ChatMessage();
+            message.setMid(0);
             message.setContent(content);
             message.setFrom(getInstance().getMyUID());
             message.setTo(to);
             message.setType(type);
+            message.setState(ChatMessage.STATE_INIT);
+            message.setcTime(System.currentTimeMillis() / 1000);
             emitter.onNext(message);
             emitter.onComplete();
         });
 
-        Observable<MessageIDBean> messageIDBeanObservable = MsgApi.API.getMessageID()
+        Observable<MessageIDBean> midRequest = MsgApi.API.getMessageID()
                 .map(bodyConverter());
 
-        return m
-                .zipWith(messageIDBeanObservable, (message, messageIDBean) -> {
-                    message.setState(ChatMessage.STATE_CREATED);
-                    message.setMid(messageIDBean.getMid());
-                    return message;
-                })
+        return creator
                 .flatMap((Function<ChatMessage, ObservableSource<ChatMessage>>) message -> {
-                    Observable<ChatMessage> ob = sIM.sendChatMessage(message);
-                    return Observable.concat(Observable.just(message), ob);
+                    Observable<ChatMessage> init = Observable.just(message);
+                    Observable<ChatMessage> create = Observable.just(message)
+                            .zipWith(midRequest, (m1, messageIDBean) -> {
+                                m1.setState(ChatMessage.STATE_CREATED);
+                                m1.setMid(messageIDBean.getMid());
+                                return m1;
+                            })
+                            .flatMap((Function<ChatMessage, ObservableSource<ChatMessage>>) m2 -> {
+                                Observable<ChatMessage> ob = sIM.sendChatMessage(m2);
+                                return Observable.concat(Observable.just(m2), ob);
+                            });
+                    return Observable.concat(init, create);
                 })
                 .map(chatMessage -> {
                     IMMessage r = IMMessage.fromChatMessage(chatMessage);
-                    IMSession session = sUserInfo.sessionList.getSession(type, to);
+                    IMSession session = sUserInfo.sessionList.getSession(chatMessage.getType(), chatMessage.getTo());
                     switch (chatMessage.getState()) {
-                        case ChatMessage.STATE_CREATED:
+                        case ChatMessage.STATE_INIT:
                             session.addMessage(r);
                             break;
+                        case ChatMessage.STATE_CREATED:
+                            break;
                         case ChatMessage.STATE_SRV_RECEIVED:
+                            session.onMessageSendSuccess(r);
                             break;
                         case ChatMessage.STATE_RCV_RECEIVED:
+                            session.onMessageReceived(r);
                             break;
                     }
                     return r;
-                })
-                .filter(message -> message.getState() == ChatMessage.STATE_SRV_RECEIVED);
+                });
     }
 
     public static Observable<Boolean> auth() {
