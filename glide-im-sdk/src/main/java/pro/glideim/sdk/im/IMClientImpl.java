@@ -21,7 +21,6 @@ import pro.glideim.sdk.protocol.Actions;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
 import pro.glideim.sdk.ws.NettyWsClient;
-import pro.glideim.sdk.ws.RetrofitWsClient;
 import pro.glideim.sdk.ws.WsClient;
 
 public class IMClientImpl implements IMClient {
@@ -66,6 +65,7 @@ public class IMClientImpl implements IMClient {
         return RetrofitManager.fromJson(t, msg.message);
     }
 
+    @Override
     public void setConnStateListener(ConnStateListener connStateListener) {
         connection.addStateListener(connStateListener);
     }
@@ -74,10 +74,13 @@ public class IMClientImpl implements IMClient {
         this.messageListener = messageListener;
     }
 
+
+    @Override
     public Single<Boolean> connect(String url) {
         return connection.connect(url);
     }
 
+    @Override
     public void disconnect() {
         connection.disconnect();
     }
@@ -94,6 +97,7 @@ public class IMClientImpl implements IMClient {
         return sendMessage(Actions.ACTION_MESSAGE_GROUP, message);
     }
 
+    @Override
     public <T> Observable<CommMessage<T>> request(String action, Class<T> clazz, boolean isArray, Object data) {
         if (!connection.isConnected()) {
             return Observable.error(new Exception("the server is not connected"));

@@ -9,6 +9,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
 import pro.glideim.base.BaseFragment
+import pro.glideim.sdk.GlideIM
 import pro.glideim.ui.chat.SessionsFragment
 import pro.glideim.ui.contacts.ContactsFragment
 import pro.glideim.ui.profile.ProfileFragment
@@ -31,6 +32,11 @@ class MainActivity : BaseActivity() {
 
     override fun initView() {
         initLayout()
+        GlideIM.getInstance().setConnectionListener { state, msg ->
+            runOnUiThread {
+                toast("connection state changed: $state $msg")
+            }
+        }
     }
 
     private fun initLayout() {
@@ -65,5 +71,10 @@ class MainActivity : BaseActivity() {
 //        val badge = mBnvNav.getOrCreateBadge(R.id.it_messages)
 //        badge.isVisible = true
 //        badge.number = 4
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        GlideIM.getInstance().disconnect()
     }
 }

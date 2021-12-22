@@ -8,6 +8,7 @@ import pro.glideim.UserPerf
 import pro.glideim.base.BaseFragment
 import pro.glideim.sdk.GlideIM
 import pro.glideim.ui.LoginActivity
+import pro.glideim.utils.loadImage
 
 class ProfileFragment : BaseFragment() {
 
@@ -24,6 +25,15 @@ class ProfileFragment : BaseFragment() {
             UserPerf.logout()
             activity?.finish()
             LoginActivity.start(requireContext())
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        GlideIM.sUserInfo.apply {
+            mIvAvatar.loadImage(avatar)
+            mTvUid.text = "uid: $uid"
+            mTvNickname.text = nickname
         }
     }
 }

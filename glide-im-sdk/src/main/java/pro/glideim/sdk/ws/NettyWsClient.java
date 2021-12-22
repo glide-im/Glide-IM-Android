@@ -6,7 +6,6 @@ import java.net.URISyntaxException;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
@@ -25,14 +24,20 @@ public class NettyWsClient extends ChannelInitializer<NioSocketChannel> implemen
     private static Bootstrap bootstrap;
 
     private WsInboundChHandler channelInboundHandler;
-    private NioEventLoopGroup eventExecutors;
+    private final NioEventLoopGroup eventExecutors;
     private Channel channel;
     private ConnStateListener connStateListener;
 
     private MessageListener messageListener;
 
     public NettyWsClient() {
+        eventExecutors = new NioEventLoopGroup();
         bootstrap = new Bootstrap();
+        bootstrap.option(ChannelOption.TCP_NODELAY, true)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
+                .group(eventExecutors)
+                .channel(NioSocketChannel.class)
+                .handler(this);
     }
 
     public Single<Boolean> connect(String url) {
@@ -64,22 +69,18 @@ public class NettyWsClient extends ChannelInitializer<NioSocketChannel> implemen
         channelInboundHandler = new WsInboundChHandler(uri);
         channelInboundHandler.connStateListener = connStateListener;
         channelInboundHandler.messageListener = messageListener;
-        eventExecutors = new NioEventLoopGroup();
-        bootstrap.option(ChannelOption.TCP_NODELAY, true)
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
-                .group(eventExecutors)
-                .channel(NioSocketChannel.class)
-                .handler(this);
-
         return bootstrap.connect(uri.getHost(), uri.getPort());
     }
 
     @Override
     public void disconnect() {
         if (channel.isOpen()) {
-            channel.close().addListener((ChannelFutureListener) future ->
-                    eventExecutors.shutdownGracefully()
-            );
+            try {
+                channel.close().sync();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            eventExecutors.shutdownGracefully();
         }
     }
 
@@ -114,7 +115,7 @@ public class NettyWsClient extends ChannelInitializer<NioSocketChannel> implemen
     }
 
     @Override
-    public void setMessageListener(MessageListener listener){
+    public void setMessageListener(MessageListener listener) {
         this.messageListener = listener;
     }
 

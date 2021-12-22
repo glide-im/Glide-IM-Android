@@ -62,9 +62,11 @@ public class GlideIM {
 
     DataStorage dataStorage = new DefaultDataStoreImpl();
     int device = 1;
-    private String wsUrl;
 
-    private GlideIM() {
+    private final String wsUrl;
+
+    private GlideIM(String wsUrl) {
+        this.wsUrl = wsUrl;
     }
 
     public static GlideIM getInstance() {
@@ -73,8 +75,13 @@ public class GlideIM {
 
     public static void init(String wsUrl, String baseUrlApi) {
         RetrofitManager.init(baseUrlApi);
-        sIM.connect(wsUrl).subscribe(new SilentObserver<>());
-        sInstance = new GlideIM();
+        sInstance = new GlideIM(wsUrl);
+    }
+
+    public static void init(String wsUrl, String baseUrlApi, ConnStateListener listener) {
+        RetrofitManager.init(baseUrlApi);
+        sIM.setConnStateListener(listener);
+        sInstance = new GlideIM(wsUrl);
     }
 
     public static Observable<List<IMMessage>> subscribeChatMessageChanges(long to, int type) {
@@ -142,20 +149,17 @@ public class GlideIM {
         return AuthApi.API.auth(new AuthDto(token, getInstance().device))
                 .map(bodyConverter())
                 .map(authBean -> {
-                    if (authBean.getUid() == 0 || authBean.getToken().isEmpty()) {
-                        throw new Exception("token expired");
-                    }
+                    sUserInfo.uid = authBean.getUid();
                     return true;
                 })
                 .flatMap((Function<Boolean, ObservableSource<Boolean>>) aBoolean -> authWs());
     }
 
-    public static Observable<Boolean> authWs() {
+    private static Observable<Boolean> authWs() {
         AuthDto d = new AuthDto(getInstance().dataStorage.loadToken(), getInstance().device);
         return sIM.request(Actions.Cli.ACTION_USER_AUTH, AuthBean.class, false, d)
                 .map(bodyConverterForWsMsg())
                 .map(authBean -> {
-                    sUserInfo.uid = authBean.getUid();
                     return authBean.getUid() != 0;
                 });
     }
@@ -165,6 +169,7 @@ public class GlideIM {
                 .map(bodyConverter())
                 .flatMap((Function<AuthBean, ObservableSource<Boolean>>) authBean -> {
                     getInstance().dataStorage.storeToken(authBean.getToken());
+                    sUserInfo.uid = authBean.getUid();
                     return authWs();
                 });
     }
@@ -414,9 +419,16 @@ public class GlideIM {
         };
     }
 
+    public void setConnectionListener(ConnStateListener listener){
+        sIM.setConnStateListener(listener);
+    }
 
-    public void setConnStateChangeListener(ConnStateListener l) {
-        sIM.setConnStateListener(l);
+    public Single<Boolean> connect() {
+        return sIM.connect(this.wsUrl);
+    }
+
+    public void disconnect(){
+        sIM.disconnect();
     }
 
     public void setDevice(int device) {

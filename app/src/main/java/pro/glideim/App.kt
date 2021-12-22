@@ -8,7 +8,7 @@ import pro.glideim.sdk.GlideIM
 
 class App : Application() {
 
-    companion object{
+    companion object {
         private const val TAG = "App"
     }
 
@@ -16,13 +16,11 @@ class App : Application() {
         super.onCreate()
 
         UserPerf.init(this)
-        GlideIM.init("ws://192.168.1.123:8080/ws", "http://192.168.1.123:8081/api/")
-        GlideIM.getInstance().dataStorage = UserPerf.getInstance()
-        GlideIM.getInstance().setConnStateChangeListener { state, msg ->
-            Log.d(TAG, "onCreate: IM Conn Changed $state, $msg")
+        GlideIM.init("ws://192.168.1.123:8080/ws", "http://192.168.1.123:8081/api/") { s, c ->
+            Log.d(TAG, "ConnectionStateChanged: $s $c")
         }
+        GlideIM.getInstance().dataStorage = UserPerf.getInstance()
         GlideIM.getInstance().setDevice(1)
-        GlideIM.getInstance()
 
         SuperAdapter.addDefaultViewHolderForType(
             SuperAdapter.Empty::class.java,

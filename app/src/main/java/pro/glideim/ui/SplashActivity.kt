@@ -6,6 +6,7 @@ import pro.glideim.UserPerf
 import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.GlideIM
 import pro.glideim.utils.io2main
+import pro.glideim.utils.request
 import pro.glideim.utils.request2
 
 class SplashActivity : BaseActivity() {
@@ -16,18 +17,31 @@ class SplashActivity : BaseActivity() {
 
     override fun initView() {
 
-        mTvState.postDelayed({
-            if (UserPerf.getInstance().loadToken().isBlank()) {
-                LoginActivity.start(this)
-                finish()
-            } else {
-                checkToken()
+        GlideIM.getInstance().connect()
+            .io2main()
+            .request {
+                onStart {
+                    mTvState.text = "Connecting to server"
+                }
+                onSuccess {
+                    checkToken()
+                }
+                onError {
+                    it.printStackTrace()
+                    toast(it.message ?: it.localizedMessage)
+                }
             }
-        }, 100)
     }
 
     private fun checkToken() {
-        mTvState.text = "Sig in ..."
+        val token = UserPerf.getInstance().loadToken()
+        if (token.isBlank()) {
+            LoginActivity.start(this)
+            finish()
+            return
+        }
+
+        mTvState.text = "Logging in ..."
         GlideIM.auth()
             .io2main()
             .doOnError {
@@ -45,5 +59,6 @@ class SplashActivity : BaseActivity() {
     }
 
     override fun onRequestError(t: Throwable) {
+        t.printStackTrace()
     }
 }

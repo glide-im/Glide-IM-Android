@@ -38,13 +38,13 @@ class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<IMMessage>(v) {
             mIvAvatarRight.hide()
             (mCvMessageContainer.layoutParams as FrameLayout.LayoutParams).gravity = Gravity.START
         }
+        mTvTime.text = data.sendAt.secToTimeSpan()
+        mTvMsg.text = data.content
         mLlMessageContainer.orientation =
             if (mTvMsg.width > (mCvMessageContainer.parent as ViewGroup).measuredWidth - 60) {
                 LinearLayoutCompat.VERTICAL
             } else {
                 LinearLayoutCompat.HORIZONTAL
             }
-        mTvTime.text = data.sendAt.secToTimeSpan()
-        mTvMsg.text = data.content
     }
 }

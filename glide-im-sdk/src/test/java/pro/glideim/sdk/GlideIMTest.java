@@ -14,17 +14,24 @@ import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.entity.IMContacts;
 import pro.glideim.sdk.entity.IMMessage;
 import pro.glideim.sdk.entity.IMSession;
-import pro.glideim.sdk.protocol.ChatMessage;
 
 class GlideIMTest {
 
     @BeforeEach
     void setUp() throws InterruptedException {
         GlideIM.init("ws://192.168.1.123:8080/ws", "http://192.168.1.123:8081/api/");
+        GlideIM.getInstance().connect().blockingGet();
     }
 
     @AfterEach
     void tearDown() {
+    }
+
+    @Test
+    void auth() throws InterruptedException {
+        login();
+        Thread.sleep(1000);
+
     }
 
     @Test
