@@ -45,8 +45,7 @@ import pro.glideim.sdk.entity.UserInfo;
 import pro.glideim.sdk.http.RetrofitManager;
 import pro.glideim.sdk.im.ConnStateListener;
 import pro.glideim.sdk.im.IMClient;
-import pro.glideim.sdk.im.IMConnectListener;
-import pro.glideim.sdk.im.WsIMClientImpl;
+import pro.glideim.sdk.im.IMClientImpl;
 import pro.glideim.sdk.protocol.Actions;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
@@ -54,7 +53,7 @@ import pro.glideim.sdk.protocol.CommMessage;
 public class GlideIM {
 
     public static final UserInfo sUserInfo = new UserInfo();
-    private static final IMClient sIM = WsIMClientImpl.create();
+    private static final IMClient sIM = IMClientImpl.create();
     private static final Map<Long, UserInfoBean> sTempUserInfo = new HashMap<>();
     private static final Map<Long, GroupInfoBean> sTempGroupInfo = new HashMap<>();
     private static final Map<String, SessionBean> sTempSession = new HashMap<>();
@@ -74,17 +73,7 @@ public class GlideIM {
 
     public static void init(String wsUrl, String baseUrlApi) {
         RetrofitManager.init(baseUrlApi);
-        sIM.connect(wsUrl, new IMConnectListener() {
-            @Override
-            public void onError(Throwable t) {
-
-            }
-
-            @Override
-            public void onSuccess() {
-
-            }
-        });
+        sIM.connect(wsUrl).subscribe(new SilentObserver<>());
         sInstance = new GlideIM();
     }
 
@@ -152,10 +141,13 @@ public class GlideIM {
         }
         return AuthApi.API.auth(new AuthDto(token, getInstance().device))
                 .map(bodyConverter())
-                .map(authBean -> authBean.getUid() != 0);
-//                .flatMap((Function<AuthBean, ObservableSource<Boolean>>) authBean ->
-//                        authWs(token, getInstance().device)
-//                );
+                .map(authBean -> {
+                    if (authBean.getUid() == 0 || authBean.getToken().isEmpty()) {
+                        throw new Exception("token expired");
+                    }
+                    return true;
+                })
+                .flatMap((Function<Boolean, ObservableSource<Boolean>>) aBoolean -> authWs());
     }
 
     public static Observable<Boolean> authWs() {
@@ -422,9 +414,6 @@ public class GlideIM {
         };
     }
 
-    public void connectIM(IMConnectListener l) {
-        sIM.connect(wsUrl, l);
-    }
 
     public void setConnStateChangeListener(ConnStateListener l) {
         sIM.setConnStateListener(l);

@@ -35,10 +35,7 @@ class GlideIMTest {
 
     @Test
     void sendChatMessage() throws InterruptedException {
-        Thread.sleep(500);
         login();
-        Thread.sleep(2000);
-        GlideIM.getSessionList().subscribe();
         Thread.sleep(1000);
         GlideIM.sendChatMessage(543604L, 1, "hello world")
                 .subscribe(new TestResObserver<IMMessage>() {

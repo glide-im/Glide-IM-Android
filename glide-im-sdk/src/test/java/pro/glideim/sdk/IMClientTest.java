@@ -11,30 +11,18 @@ import org.junit.jupiter.api.Test;
 import pro.glideim.sdk.api.auth.LoginDto;
 import pro.glideim.sdk.api.auth.AuthBean;
 import pro.glideim.sdk.http.RetrofitManager;
-import pro.glideim.sdk.protocol.AckMessage;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
-import pro.glideim.sdk.im.IMConnectListener;
-import pro.glideim.sdk.im.WsIMClientImpl;
+import pro.glideim.sdk.im.IMClientImpl;
 
 class IMClientTest {
 
-    WsIMClientImpl imClient = WsIMClientImpl.create();
+    IMClientImpl imClient = IMClientImpl.create();
 
     @BeforeEach
     void setUp() throws InterruptedException {
         RetrofitManager.init("http://localhost/api/");
-        imClient.connect("ws://localhost:8080/ws", new IMConnectListener() {
-            @Override
-            public void onError(Throwable t) {
-
-            }
-
-            @Override
-            public void onSuccess() {
-
-            }
-        });
+        Boolean aBoolean = imClient.connect("ws://localhost:8080/ws").blockingGet();
         Thread.sleep(1000);
     }
 

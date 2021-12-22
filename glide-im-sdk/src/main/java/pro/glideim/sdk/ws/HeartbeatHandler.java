@@ -1,4 +1,4 @@
-package pro.glideim.sdk.socket;
+package pro.glideim.sdk.ws;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;

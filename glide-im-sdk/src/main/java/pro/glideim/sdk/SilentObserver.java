@@ -3,12 +3,18 @@ package pro.glideim.sdk;
 import androidx.annotation.NonNull;
 
 import io.reactivex.Observer;
+import io.reactivex.SingleObserver;
 import io.reactivex.disposables.Disposable;
 
-public class SilentObserver<T> implements Observer<T> {
+public class SilentObserver<T> implements Observer<T>, SingleObserver<T> {
 
     @Override
     public void onSubscribe(@NonNull Disposable d) {
+
+    }
+
+    @Override
+    public void onSuccess(@NonNull T t) {
 
     }
 

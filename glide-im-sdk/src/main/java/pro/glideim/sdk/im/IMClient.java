@@ -1,13 +1,14 @@
 package pro.glideim.sdk.im;
 
 import io.reactivex.Observable;
+import io.reactivex.Single;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
 
 public interface IMClient {
     void setConnStateListener(ConnStateListener connStateListener);
 
-    void connect(String url, IMConnectListener l);
+    Single<Boolean> connect(String url);
 
     Observable<ChatMessage> sendChatMessage(ChatMessage m);
 

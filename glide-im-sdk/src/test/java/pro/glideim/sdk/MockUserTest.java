@@ -13,30 +13,19 @@ import pro.glideim.sdk.api.auth.AuthBean;
 import pro.glideim.sdk.api.auth.LoginDto;
 import pro.glideim.sdk.api.auth.RegisterDto;
 import pro.glideim.sdk.http.RetrofitManager;
-import pro.glideim.sdk.im.IMConnectListener;
-import pro.glideim.sdk.im.WsIMClientImpl;
+import pro.glideim.sdk.im.IMClientImpl;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
 
 public class MockUserTest {
 
-    WsIMClientImpl imClient = WsIMClientImpl.create();
+    IMClientImpl imClient = IMClientImpl.create();
 
     @BeforeEach
     void setup() throws InterruptedException {
 
         RetrofitManager.init("http://localhost:8081/api/");
-        imClient.connect("ws://localhost:8080/ws", new IMConnectListener() {
-            @Override
-            public void onError(Throwable t) {
-                t.printStackTrace();
-            }
-
-            @Override
-            public void onSuccess() {
-
-            }
-        });
+        imClient.connect("ws://localhost:8080/ws").blockingGet();
         imClient.setMessageListener(m -> {
             System.out.println("On Receive Message ===>>> " + RetrofitManager.toJson(m));
         });
