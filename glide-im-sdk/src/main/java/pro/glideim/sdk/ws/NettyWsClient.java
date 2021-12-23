@@ -15,6 +15,7 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
+import io.reactivex.Observable;
 import io.reactivex.Single;
 import pro.glideim.sdk.http.RetrofitManager;
 import pro.glideim.sdk.im.ConnStateListener;

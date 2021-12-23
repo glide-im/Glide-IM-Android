@@ -32,40 +32,40 @@ public class IMSession {
     public long lastMsgId;
     private long lastUpdateAt;
 
+    IMSessionList.SessionTag tag;
+
     private IMSessionList sessionList;
     private OnUpdateListener onUpdateListener;
 
-    private IMSession() {
+    private IMSession(long to, int type) {
+        this.tag = IMSessionList.SessionTag.get(type, to);
+        this.to =to;
+        this.type = type;
         messages = new IMSessionMessage(this);
     }
 
     public static IMSession fromGroupState(GroupMessageStateBean stateBean) {
-        IMSession s = new IMSession();
-        s.to = stateBean.getGid();
+        IMSession s = new IMSession(stateBean.getGid(), 2);
         s.unread = 0;
         s.updateAt = stateBean.getLastMsgAt();
-        s.type = 2;
         s.lastMsgId = stateBean.getLastMID();
         return s;
     }
 
     public static IMSession fromSessionBean(Long myUid, SessionBean sessionBean) {
-        IMSession s = new IMSession();
+        IMSession s = new IMSession(0, 1);
         if (sessionBean.getUid1() == myUid) {
             s.to = sessionBean.getUid2();
         } else {
             s.to = sessionBean.getUid1();
         }
-        s.type = 1;
         s.updateAt = sessionBean.getUpdateAt();
         s.lastMsgId = sessionBean.getLastMid();
         return s;
     }
 
     public static IMSession fromIMMessage(IMMessage message) {
-        IMSession s = new IMSession();
-        s.type = message.getTargetType();
-        s.to = message.getTo();
+        IMSession s = new IMSession(message.getTo(), message.getTargetType());
         s.updateAt = message.getSendAt();
         s.lastMsgId = message.getMid();
         s.lastMsg = message.getContent();
@@ -74,10 +74,7 @@ public class IMSession {
     }
 
     public static IMSession create(long to, int type) {
-        IMSession s = new IMSession();
-        s.to = to;
-        s.type = type;
-        return s;
+        return new IMSession(to, type);
     }
 
     public IMSessionMessage getMessages() {
@@ -178,7 +175,7 @@ public class IMSession {
 //        }
 
         if (onUpdateListener != null) {
-            onUpdateListener.onUpdate();
+            onUpdateListener.onUpdate(this);
         }
     }
 
@@ -212,6 +209,6 @@ public class IMSession {
     }
 
     public interface OnUpdateListener {
-        void onUpdate();
+        void onUpdate(IMSession s);
     }
 }

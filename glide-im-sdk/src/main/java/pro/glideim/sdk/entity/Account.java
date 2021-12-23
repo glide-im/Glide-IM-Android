@@ -1,25 +1,23 @@
 package pro.glideim.sdk.entity;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeMap;
 
+import io.reactivex.Observable;
 import pro.glideim.sdk.api.group.GroupInfoBean;
+import pro.glideim.sdk.api.user.ProfileBean;
+import pro.glideim.sdk.api.user.UserApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
+import pro.glideim.sdk.utils.RxUtils;
 
-public class UserInfo {
+public class Account {
 
+    private final IMSessionList sessionList = new IMSessionList();
     private final TreeMap<String, IMContacts> contactsMap = new TreeMap<>();
-
-    public final IMSessionList sessionList = new IMSessionList();
-
     public long uid;
-    public String avatar = "";
-    public String nickname = "-";
-    public String token;
     public ContactsChangeListener contactsChangeListener;
+    private ProfileBean profileBean;
 
     public List<IMContacts> updateContacts(List<UserInfoBean> userInfoBeans) {
         List<IMContacts> res = new ArrayList<>();
@@ -35,6 +33,14 @@ public class UserInfo {
             res.add(c);
         }
         return res;
+    }
+
+    public IMSessionList getIMSessionList() {
+        return sessionList;
+    }
+
+    public Observable<List<IMSession>> getSessions() {
+        return sessionList.getSessionList();
     }
 
     public List<IMContacts> updateContactsGroup(List<GroupInfoBean> groupInfoBeans) {
@@ -57,6 +63,16 @@ public class UserInfo {
         for (IMContacts c : contacts) {
             addContacts(c);
         }
+    }
+
+    public ProfileBean getProfile() {
+        return profileBean;
+    }
+
+    public Observable<ProfileBean> initUserProfile() {
+        return UserApi.API.myProfile()
+                .map(RxUtils.bodyConverter())
+                .doOnNext(profileBean -> Account.this.profileBean = profileBean);
     }
 
     public void addContacts(IMContacts c) {

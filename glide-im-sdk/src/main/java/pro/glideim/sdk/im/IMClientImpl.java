@@ -11,6 +11,7 @@ import java.util.concurrent.TimeUnit;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.Single;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.internal.operators.observable.ObservableSubscribeOn;
 import pro.glideim.sdk.Logger;
 import pro.glideim.sdk.ParameterizedTypeImpl;
@@ -39,9 +40,11 @@ public class IMClientImpl implements IMClient {
     }.getType();
     private MessageListener messageListener;
     private long seq;
+    private ConnStateListener connStateListener;
 
     private IMClientImpl() {
         connection = new NettyWsClient();
+        connection.addStateListener(new ConnectionStateChangeListener());
         connection.setMessageListener(msg -> onMessage(new Message(msg)));
         logger = new Logger() {
             @Override
@@ -67,7 +70,7 @@ public class IMClientImpl implements IMClient {
 
     @Override
     public void setConnStateListener(ConnStateListener connStateListener) {
-        connection.addStateListener(connStateListener);
+        this.connStateListener = connStateListener;
     }
 
     public void setMessageListener(MessageListener messageListener) {
@@ -226,6 +229,30 @@ public class IMClientImpl implements IMClient {
         void onNewMessage(ChatMessage m);
     }
 
+    private class ConnectionStateChangeListener implements ConnStateListener {
+
+        private Disposable heartbeat;
+
+        @Override
+        public void onStateChange(int state, String msg) {
+            if (connStateListener != null) {
+                connStateListener.onStateChange(state, msg);
+            }
+            if (state == WsClient.STATE_OPENED) {
+                heartbeat = Observable
+                        .interval(3, TimeUnit.SECONDS)
+                        .doOnNext(aLong -> {
+                            send(new CommMessage<>(MESSAGE_VER, Actions.ACTION_HEARTBEAT, 0, ""));
+                        })
+                        .subscribe();
+            } else if (state == WsClient.STATE_CLOSED) {
+                if (heartbeat != null && !heartbeat.isDisposed()) {
+                    heartbeat.dispose();
+                }
+            }
+        }
+    }
+
     @SuppressWarnings("rawtypes")
     private class RequestEmitter {
         private final Type type;
@@ -244,6 +271,9 @@ public class IMClientImpl implements IMClient {
         }
 
         void respond(CommMessage<Object> m, Message msg) {
+            if (emitter.isDisposed()) {
+                return;
+            }
             if (m.getAction().equals("api.success")) {
                 try {
                     CommMessage<Object> o = deserialize(type, msg);
@@ -284,6 +314,9 @@ public class IMClientImpl implements IMClient {
         }
 
         void onAck(CommMessage<AckMessage> a) {
+            if (emitter.isDisposed()) {
+                return;
+            }
             switch (a.getAction()) {
                 case Actions.ACTION_ACK_MESSAGE:
                     emitter.onNext(msg.setState(ChatMessage.STATE_SRV_RECEIVED));

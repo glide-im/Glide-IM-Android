@@ -86,7 +86,7 @@ class ContactsFragment : BaseFragment() {
     }
 
     private fun startChat(id: Long, type: Int) {
-        GlideIM.getSession(id, type)
+        GlideIM.getInstance().account.imSessionList.getSession(id, type)
             .io2main()
             .request2(this) {
                 when (type) {

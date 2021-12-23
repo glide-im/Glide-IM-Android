@@ -26,22 +26,19 @@ import pro.glideim.sdk.api.group.GroupApi;
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.msg.AckOfflineMsgDto;
 import pro.glideim.sdk.api.msg.GetChatHistoryDto;
-import pro.glideim.sdk.api.msg.GetGroupMessageStateDto;
-import pro.glideim.sdk.api.msg.GetGroupMsgHistoryDto;
-import pro.glideim.sdk.api.msg.GetSessionDto;
-import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.MessageBean;
 import pro.glideim.sdk.api.msg.MessageIDBean;
 import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.msg.SessionBean;
 import pro.glideim.sdk.api.user.GetUserInfoDto;
+import pro.glideim.sdk.api.user.ProfileBean;
 import pro.glideim.sdk.api.user.UserApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
+import pro.glideim.sdk.entity.Account;
 import pro.glideim.sdk.entity.ContactsChangeListener;
 import pro.glideim.sdk.entity.IMContacts;
 import pro.glideim.sdk.entity.IMMessage;
 import pro.glideim.sdk.entity.IMSession;
-import pro.glideim.sdk.entity.UserInfo;
 import pro.glideim.sdk.http.RetrofitManager;
 import pro.glideim.sdk.im.ConnStateListener;
 import pro.glideim.sdk.im.IMClient;
@@ -52,18 +49,16 @@ import pro.glideim.sdk.protocol.CommMessage;
 
 public class GlideIM {
 
-    public static final UserInfo sUserInfo = new UserInfo();
+    private static final Account S_ACCOUNT = new Account();
     private static final IMClient sIM = IMClientImpl.create();
     private static final Map<Long, UserInfoBean> sTempUserInfo = new HashMap<>();
     private static final Map<Long, GroupInfoBean> sTempGroupInfo = new HashMap<>();
     private static final Map<String, SessionBean> sTempSession = new HashMap<>();
 
-    static GlideIM sInstance;
-
-    DataStorage dataStorage = new DefaultDataStoreImpl();
-    int device = 1;
-
+    private static GlideIM sInstance;
     private final String wsUrl;
+    private DataStorage dataStorage = new DefaultDataStoreImpl();
+    private int device = 1;
 
     private GlideIM(String wsUrl) {
         this.wsUrl = wsUrl;
@@ -123,7 +118,7 @@ public class GlideIM {
                 })
                 .map(chatMessage -> {
                     IMMessage r = IMMessage.fromChatMessage(chatMessage);
-                    IMSession session = sUserInfo.sessionList.getSession(chatMessage.getType(), chatMessage.getTo());
+                    IMSession session = S_ACCOUNT.getIMSessionList().getSession(chatMessage.getType(), chatMessage.getTo());
                     switch (chatMessage.getState()) {
                         case ChatMessage.STATE_INIT:
                             session.addMessage(r);
@@ -141,18 +136,16 @@ public class GlideIM {
                 });
     }
 
-    public static Observable<Boolean> auth() {
+    public static Observable<ProfileBean> auth() {
         String token = getInstance().dataStorage.loadToken();
         if (token == null) {
             return Observable.error(new Exception("invalid token"));
         }
         return AuthApi.API.auth(new AuthDto(token, getInstance().device))
                 .map(bodyConverter())
-                .map(authBean -> {
-                    sUserInfo.uid = authBean.getUid();
-                    return true;
-                })
-                .flatMap((Function<Boolean, ObservableSource<Boolean>>) aBoolean -> authWs());
+                .doOnNext(authBean -> S_ACCOUNT.uid = authBean.getUid())
+                .flatMap((Function<AuthBean, ObservableSource<Boolean>>) aBoolean -> authWs())
+                .flatMap((Function<Boolean, ObservableSource<ProfileBean>>) aBoolean -> S_ACCOUNT.initUserProfile());
     }
 
     private static Observable<Boolean> authWs() {
@@ -169,36 +162,13 @@ public class GlideIM {
                 .map(bodyConverter())
                 .flatMap((Function<AuthBean, ObservableSource<Boolean>>) authBean -> {
                     getInstance().dataStorage.storeToken(authBean.getToken());
-                    sUserInfo.uid = authBean.getUid();
+                    S_ACCOUNT.uid = authBean.getUid();
                     return authWs();
                 });
     }
 
-    public static Single<List<IMSession>> updateSessionList() {
-
-        Observable<IMMessage> chat = MsgApi.API.getRecentChatMessage()
-                .map(bodyConverter())
-                .flatMap(Observable::fromIterable)
-                .map(IMMessage::fromMessage);
-
-        List<Observable<Response<List<GroupMessageBean>>>> gob = new ArrayList<>();
-        for (Long gid : sUserInfo.getContactsGroup()) {
-            GetGroupMsgHistoryDto d = new GetGroupMsgHistoryDto(gid);
-            gob.add(MsgApi.API.getRecentGroupMessage(d));
-        }
-        Observable<IMMessage> group = Observable.merge(gob)
-                .map(bodyConverter())
-                .flatMap(Observable::fromIterable)
-                .map(IMMessage::fromGroupMessage);
-
-        return Observable.merge(chat, group)
-                .toList()
-                .doOnSuccess(sUserInfo.sessionList::setSessionRecentMessages)
-                .map(messages -> sUserInfo.sessionList.getAll());
-    }
-
     public static void onContactsChange(ContactsChangeListener listener) {
-        sUserInfo.contactsChangeListener = listener;
+        S_ACCOUNT.contactsChangeListener = listener;
     }
 
     public static Observable<List<MessageBean>> getOfflineMessage() {
@@ -239,56 +209,13 @@ public class GlideIM {
                 .toObservable();
     }
 
-    public static Observable<IMSession> getSession(long id, int type) {
-        if (sUserInfo.sessionList.containSession(type, id)) {
-            return Observable.just(sUserInfo.sessionList.getSession(type, id));
-        }
-        if (type == 2) {
-            return MsgApi.API.getGroupMessageState(new GetGroupMessageStateDto(id))
-                    .map(bodyConverter())
-                    .map(stateBean -> {
-                        IMSession imSession = IMSession.fromGroupState(stateBean);
-                        sUserInfo.sessionList.updateSession(imSession);
-                        return imSession;
-                    });
-        }
-        return MsgApi.API.getSession(new GetSessionDto(id)).map(bodyConverter()).map(sessionBean -> {
-            IMSession imSession = IMSession.fromSessionBean(getInstance().getMyUID(), sessionBean);
-            sUserInfo.sessionList.updateSession(imSession);
-            return imSession;
-        });
-    }
-
-    public static Observable<List<IMSession>> getSessionList() {
-
-        Observable<IMSession> groupSession = MsgApi.API.getAllGroupMessageState()
-                .map(bodyConverter())
-                .flatMap(Observable::fromIterable)
-                .map(IMSession::fromGroupState)
-                .flatMap((Function<IMSession, ObservableSource<IMSession>>) session ->
-                        getGroupInfo(session.to).map(session::setGroupInfo)
-                );
-
-        Observable<IMSession> chatSession = MsgApi.API.getRecentSession()
-                .map(bodyConverter())
-                .flatMap(Observable::fromIterable)
-                .map(sessionBean -> IMSession.fromSessionBean(getInstance().getMyUID(), sessionBean))
-                .flatMap((Function<IMSession, ObservableSource<IMSession>>) imSession ->
-                        getUserInfo(imSession.to).map(imSession::setUserInfo)
-                );
-        return Observable.merge(groupSession, chatSession)
-                .toList()
-                .toObservable()
-                .doOnNext(sUserInfo.sessionList::updateSession);
-    }
-
     public static Observable<List<IMContacts>> getContacts() {
         return UserApi.API.getContactsList()
                 .map(bodyConverter())
                 .flatMap(Observable::fromIterable)
                 .map(IMContacts::fromContactsBean)
                 .toList()
-                .doOnSuccess(sUserInfo::addContacts)
+                .doOnSuccess(S_ACCOUNT::addContacts)
                 .flatMapObservable((Function<List<IMContacts>, ObservableSource<List<IMContacts>>>) contacts ->
                         updateContactInfo()
                 );
@@ -373,7 +300,7 @@ public class GlideIM {
     }
 
     public static Observable<List<IMContacts>> updateContactInfo() {
-        Iterable<IMContacts> idList = sUserInfo.getContacts();
+        Iterable<IMContacts> idList = S_ACCOUNT.getContacts();
         List<Observable<IMContacts>> obs = new ArrayList<>();
 
         Map<Integer, List<Long>> typeIdsMap = new HashMap<>();
@@ -389,16 +316,16 @@ public class GlideIM {
             Observable<IMContacts> ob = Observable.empty();
             switch (type) {
                 case 1:
-                    ob = getUserInfo(ids).map(sUserInfo::updateContacts).flatMap(Observable::fromIterable);
+                    ob = getUserInfo(ids).map(S_ACCOUNT::updateContacts).flatMap(Observable::fromIterable);
                     break;
                 case 2:
-                    ob = getGroupInfo(ids).map(sUserInfo::updateContactsGroup).flatMap(Observable::fromIterable);
+                    ob = getGroupInfo(ids).map(S_ACCOUNT::updateContactsGroup).flatMap(Observable::fromIterable);
                     break;
             }
             obs.add(ob);
         });
 
-        return Observable.merge(obs).toList().map(s -> sUserInfo.getContacts()).toObservable();
+        return Observable.merge(obs).toList().map(s -> S_ACCOUNT.getContacts()).toObservable();
     }
 
     private static <T> Function<Response<T>, T> bodyConverter() {
@@ -419,7 +346,11 @@ public class GlideIM {
         };
     }
 
-    public void setConnectionListener(ConnStateListener listener){
+    public Account getAccount() {
+        return S_ACCOUNT;
+    }
+
+    public void setConnectionListener(ConnStateListener listener) {
         sIM.setConnStateListener(listener);
     }
 
@@ -427,7 +358,7 @@ public class GlideIM {
         return sIM.connect(this.wsUrl);
     }
 
-    public void disconnect(){
+    public void disconnect() {
         sIM.disconnect();
     }
 
@@ -436,7 +367,7 @@ public class GlideIM {
     }
 
     public Long getMyUID() {
-        return sUserInfo.uid;
+        return S_ACCOUNT.uid;
     }
 
     public DataStorage getDataStorage() {

@@ -8,9 +8,27 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
+import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
+import io.reactivex.Single;
+import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
+import pro.glideim.sdk.GlideIM;
+import pro.glideim.sdk.api.Response;
+import pro.glideim.sdk.api.msg.GetGroupMessageStateDto;
+import pro.glideim.sdk.api.msg.GetGroupMsgHistoryDto;
+import pro.glideim.sdk.api.msg.GetSessionDto;
+import pro.glideim.sdk.api.msg.GroupMessageBean;
+import pro.glideim.sdk.api.msg.MsgApi;
+import pro.glideim.sdk.utils.Logger;
+import pro.glideim.sdk.utils.RxUtils;
+
 public class IMSessionList {
 
+    public static final String TAG = IMSessionList.class.getSimpleName();
+
     private final TreeMap<SessionTag, IMSession> sessionMap = new TreeMap<>();
+
     private SessionUpdateListener sessionUpdateListener;
 
     public void setSessionUpdateListener(SessionUpdateListener sessionUpdateListener) {
@@ -19,73 +37,146 @@ public class IMSessionList {
 
     public IMSession getSession(int type, long id) {
         SessionTag sessionTag = SessionTag.get(type, id);
-        IMSession session = sessionMap.get(sessionTag);
-        if (session == null) {
-            session = IMSession.create(id, type);
-            updateSession(session);
-        }
-        return session;
+        return getOrCreateSession(sessionTag);
     }
 
     public boolean containSession(int type, long id) {
         return sessionMap.containsKey(SessionTag.get(type, id));
     }
 
-    public void updateSession(IMSession ses) {
-        SessionTag tag = SessionTag.get(ses.type, ses.to);
-        tag.updateAt = ses.updateAt;
+    private void updateSession(IMSession... ses) {
 
-        IMSession origin = sessionMap.get(tag);
-        if (origin == null) {
-            ses.setIMSessionList(this);
-            sessionMap.put(tag, ses);
-        } else {
-            sessionMap.remove(tag);
-            sessionMap.put(tag, origin.update(origin));
+        List<IMSession> newSes = new ArrayList<>();
+        for (IMSession se : ses) {
+            se.tag.updateAt = se.updateAt;
+
+            IMSession s = getSession(se.tag);
+            if (s == null) {
+                s = se;
+                newSes.add(s);
+                addSession(s);
+                Logger.d(TAG, "session add:" + s.toString());
+            } else {
+                sessionMap.remove(s.tag);
+                addSession(s.update(s));
+                if (sessionUpdateListener != null) {
+                    sessionUpdateListener.onUpdate(s);
+                }
+                Logger.d(TAG, "session update:" + s.toString());
+            }
+        }
+        if (sessionUpdateListener != null && newSes.size() != 0) {
+            sessionUpdateListener.onNewSession(newSes.toArray(new IMSession[]{}));
         }
     }
 
-    public void updateSession(List<IMSession> s) {
-        for (IMSession ses : s) {
-            updateSession(ses);
-        }
+
+    void addMessage(IMMessage message) {
+        IMSession session = getSession(message.getTargetType(), message.getTargetId());
+        session.updateAt = message.getSendAt();
+        session.addMessage(message);
     }
 
-    public void addMessage(IMMessage message) {
-        SessionTag sessionTag = SessionTag.get(message.getTargetType(), message.getTargetId());
-        if (!sessionMap.containsKey(sessionTag)) {
-            sessionMap.put(sessionTag, IMSession.fromIMMessage(message));
+    private void addSession(IMSession session) {
+        session.setOnUpdateListener(this::updateSession);
+        session.setIMSessionList(this);
+        sessionMap.put(session.tag, session);
+    }
+
+    private IMSession getSession(SessionTag tag) {
+        return sessionMap.get(tag);
+    }
+
+    private IMSession getOrCreateSession(SessionTag tag) {
+        IMSession session = sessionMap.get(tag);
+        if (session == null) {
+            session = IMSession.create(tag.id, tag.type);
+            session.initTargetInfo();
+            session.setIMSessionList(this);
+            addSession(session);
         }
-        sessionTag.updateAt = message.getSendAt();
-        sessionMap.get(sessionTag).addMessage(message);
+        return session;
     }
 
     public void setSessionRecentMessages(List<IMMessage> messages) {
-        Map<SessionTag, List<IMMessage>> m = new HashMap<>();
         for (IMMessage message : messages) {
             SessionTag sessionTag = SessionTag.get(message.getTargetType(), message.getTargetId());
-            if (!m.containsKey(sessionTag)) {
-                m.put(sessionTag, new ArrayList<>());
-            }
-            m.get(sessionTag).add(message);
+            getOrCreateSession(sessionTag).addMessage(message);
         }
-        m.forEach((sessionTag, messages1) -> {
-            IMSession session = sessionMap.get(sessionTag);
-            if (session == null) {
-                session = IMSession.create(sessionTag.getId(), sessionTag.getType());
-                session.initTargetInfo();
-                session.setIMSessionList(this);
-                sessionMap.put(sessionTag, session);
-            }
-            session.addMessages(messages1);
+    }
+
+    public Observable<IMSession> getSession(long id, int type) {
+        if (containSession(type, id)) {
+            return Observable.just(getSession(type, id));
+        }
+        if (type == 2) {
+            return MsgApi.API.getGroupMessageState(new GetGroupMessageStateDto(id))
+                    .map(RxUtils.bodyConverter())
+                    .map(stateBean -> {
+                        IMSession imSession = IMSession.fromGroupState(stateBean);
+                        updateSession(imSession);
+                        return imSession;
+                    });
+        }
+        return MsgApi.API.getSession(new GetSessionDto(id)).map(RxUtils.bodyConverter()).map(sessionBean -> {
+            IMSession imSession = IMSession.fromSessionBean(GlideIM.getInstance().getMyUID(), sessionBean);
+            updateSession(imSession);
+            return imSession;
         });
     }
 
-    public List<IMSession> getAll() {
-        return new ArrayList<>(sessionMap.values());
+    public Observable<List<IMSession>> getSessionList() {
+
+        Observable<IMSession> groupSession = MsgApi.API.getAllGroupMessageState()
+                .map(RxUtils.bodyConverter())
+                .flatMap(Observable::fromIterable)
+                .map(IMSession::fromGroupState)
+                .flatMap((Function<IMSession, ObservableSource<IMSession>>) session ->
+                        GlideIM.getGroupInfo(session.to).map(session::setGroupInfo)
+                );
+
+        Observable<IMSession> chatSession = MsgApi.API.getRecentSession()
+                .map(RxUtils.bodyConverter())
+                .flatMap(Observable::fromIterable)
+                .map(sessionBean -> IMSession.fromSessionBean(GlideIM.getInstance().getMyUID(), sessionBean))
+                .flatMap((Function<IMSession, ObservableSource<IMSession>>) imSession ->
+                        GlideIM.getUserInfo(imSession.to).map(imSession::setUserInfo)
+                );
+        return Observable.merge(groupSession, chatSession)
+                .toList()
+                .toObservable()
+                .doOnNext(new Consumer<List<IMSession>>() {
+                    @Override
+                    public void accept(List<IMSession> sessions) throws Exception {
+                        IMSessionList.this.updateSession(sessions.toArray(new IMSession[]{}));
+                    }
+                });
     }
 
-    private static class SessionTag implements Comparable<SessionTag> {
+    public Single<List<IMSession>> updateSessionList() {
+
+        Observable<IMMessage> chat = MsgApi.API.getRecentChatMessage()
+                .map(RxUtils.bodyConverter())
+                .flatMap(Observable::fromIterable)
+                .map(IMMessage::fromMessage);
+
+        List<Observable<Response<List<GroupMessageBean>>>> gob = new ArrayList<>();
+        for (Long gid : GlideIM.getInstance().getAccount().getContactsGroup()) {
+            GetGroupMsgHistoryDto d = new GetGroupMsgHistoryDto(gid);
+            gob.add(MsgApi.API.getRecentGroupMessage(d));
+        }
+        Observable<IMMessage> group = Observable.merge(gob)
+                .map(RxUtils.bodyConverter())
+                .flatMap(Observable::fromIterable)
+                .map(IMMessage::fromGroupMessage);
+
+        return Observable.merge(chat, group)
+                .toList()
+                .doOnSuccess(this::setSessionRecentMessages)
+                .map(messages -> new ArrayList<>(sessionMap.values()));
+    }
+
+    static class SessionTag implements Comparable<SessionTag> {
         private static final Map<String, SessionTag> temp = new HashMap<>();
         int type;
         long id;

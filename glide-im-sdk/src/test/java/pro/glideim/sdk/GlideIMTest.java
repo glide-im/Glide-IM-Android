@@ -82,18 +82,13 @@ class GlideIMTest {
         GlideIM.getContacts().subscribe(new TestResObserver<List<IMContacts>>() {
             @Override
             public void onNext(@NonNull List<IMContacts> contacts) {
-                GlideIM.getSessionList().subscribe(new TestResObserver<List<IMSession>>() {
-                    @Override
-                    public void onNext(@NonNull List<IMSession> sessions) {
-                        GlideIM.updateSessionList()
-                                .subscribe(new TestResObserver<List<IMSession>>() {
-                                    @Override
-                                    public void onNext(@NonNull List<IMSession> sessions) {
-
-                                    }
-                                });
-                    }
-                });
+                GlideIM.getInstance().getAccount().getIMSessionList().getSessionList()
+                        .subscribe(new TestResObserver<List<IMSession>>() {
+                            @Override
+                            public void onNext(@NonNull List<IMSession> sessions) {
+                                GlideIM.getInstance().getAccount().getIMSessionList().updateSessionList();
+                            }
+                        });
             }
         });
     }

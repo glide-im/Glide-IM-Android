@@ -1,5 +1,6 @@
 package pro.glideim.ui
 
+import SessionsFragment
 import android.content.Context
 import android.content.Intent
 import androidx.core.view.get
@@ -10,7 +11,6 @@ import pro.glideim.R
 import pro.glideim.base.BaseActivity
 import pro.glideim.base.BaseFragment
 import pro.glideim.sdk.GlideIM
-import pro.glideim.ui.chat.SessionsFragment
 import pro.glideim.ui.contacts.ContactsFragment
 import pro.glideim.ui.profile.ProfileFragment
 

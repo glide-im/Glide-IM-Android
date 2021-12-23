@@ -49,11 +49,7 @@ class SplashActivity : BaseActivity() {
                 finish()
             }
             .request2(this) {
-                if (it == true) {
-                    MainActivity.start(this)
-                } else {
-                    LoginActivity.start(this)
-                }
+                MainActivity.start(this)
                 finish()
             }
     }

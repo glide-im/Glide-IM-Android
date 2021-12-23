@@ -30,9 +30,9 @@ class ProfileFragment : BaseFragment() {
 
     override fun onResume() {
         super.onResume()
-        GlideIM.sUserInfo.apply {
+        GlideIM.getInstance().account.profile.apply {
             mIvAvatar.loadImage(avatar)
-            mTvUid.text = "uid: $uid"
+            mTvUid.text = "uid: ${GlideIM.getInstance().myUID}"
             mTvNickname.text = nickname
         }
     }

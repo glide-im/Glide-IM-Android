@@ -73,7 +73,7 @@ class ChatActivity : BaseActivity() {
             sendMessage()
         }
 
-        GlideIM.getSession(mUID, 1)
+        GlideIM.getInstance().account.imSessionList.getSession(mUID, 1)
             .io2main()
             .request2(this) {
                 setSessionInfo(it)

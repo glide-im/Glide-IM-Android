@@ -1,5 +1,3 @@
-package pro.glideim.ui.chat
-
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -10,6 +8,8 @@ import pro.glideim.R
 import pro.glideim.base.BaseFragment
 import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.entity.IMSession
+import pro.glideim.sdk.entity.SessionUpdateListener
+import pro.glideim.ui.chat.SessionViewHolder
 import pro.glideim.utils.*
 
 class SessionsFragment : BaseFragment() {
@@ -19,6 +19,8 @@ class SessionsFragment : BaseFragment() {
 
     private val mSessionList = mutableListOf<Any>()
     private val mAdapter = SuperAdapter(mSessionList)
+
+    private val mIMSessionList by lazy { GlideIM.getInstance().account.imSessionList }
 
     override val layoutRes = R.layout.fragment_session
 
@@ -43,6 +45,24 @@ class SessionsFragment : BaseFragment() {
             requestData()
         }
 
+        mIMSessionList.setSessionUpdateListener(
+            object : SessionUpdateListener {
+                override fun onUpdate(session: IMSession) {
+                    val indexOf = mSessionList.indexOf(session)
+                    if (indexOf != -1) {
+                        mAdapter.notifyItemChanged(indexOf)
+                    }
+                }
+
+                override fun onNewSession(vararg session: IMSession) {
+                    mSessionList.addAll(session)
+                    mSessionList.sortBy {
+                        (it as? IMSession)?.updateAt ?: 0
+                    }
+                    mAdapter.notifyDataSetChanged()
+                }
+            })
+
         mSrfRefresh.startRefresh()
     }
 
@@ -52,14 +72,10 @@ class SessionsFragment : BaseFragment() {
     }
 
     private fun requestData() {
-        GlideIM.getSessionList()
+        mIMSessionList.sessionList
             .io2main()
             .request2(this) {
-//                mSessionList.clear()
-//                mSessionList.addAll(it!!)
-//                mAdapter.notifyDataSetChanged()
-
-                GlideIM.updateSessionList()
+                mIMSessionList.updateSessionList()
                     .io2main()
                     .request(this) { s2 ->
                         mSessionList.clear()
