@@ -99,11 +99,11 @@ public class IMSession {
         SLogger.d(TAG, "addMessage:" + msg);
         // TODO cache msg to file
         long mid = msg.getMid();
-        messageTreeMap.put(mid, msg);
         long last = 0;
         if (!messageTreeMap.isEmpty()) {
             last = messageTreeMap.lastKey();
         }
+        messageTreeMap.put(mid, msg);
         if (last < mid) {
             setLastMessage(msg);
         }

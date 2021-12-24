@@ -121,9 +121,9 @@ public class GlideIM {
                     IMSession session = S_IM_ACCOUNT.getIMSessionList().getSession(chatMessage.getType(), chatMessage.getTo());
                     switch (chatMessage.getState()) {
                         case ChatMessage.STATE_INIT:
-                            session.addMessage(r);
                             break;
                         case ChatMessage.STATE_CREATED:
+                            session.addMessage(r);
                             break;
                         case ChatMessage.STATE_SRV_RECEIVED:
                             session.onMessageSendSuccess(r);
