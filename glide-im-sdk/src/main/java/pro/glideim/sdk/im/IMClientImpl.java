@@ -21,6 +21,7 @@ import pro.glideim.sdk.protocol.AckRequest;
 import pro.glideim.sdk.protocol.Actions;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
+import pro.glideim.sdk.utils.SLogger;
 import pro.glideim.sdk.ws.NettyWsClient;
 import pro.glideim.sdk.ws.WsClient;
 
@@ -46,18 +47,7 @@ public class IMClientImpl implements IMClient {
         connection = new NettyWsClient();
         connection.addStateListener(new ConnectionStateChangeListener());
         connection.setMessageListener(msg -> onMessage(new Message(msg)));
-        logger = new Logger() {
-            @Override
-            public void d(String tag, String log) {
-                System.out.println(tag + "\t" + log);
-            }
-
-            @Override
-            public void e(String tag, Throwable t) {
-                System.err.println(tag + "\t" + t.getMessage());
-                t.printStackTrace();
-            }
-        };
+        logger = SLogger.getLogger();
     }
 
     public static IMClientImpl create() {

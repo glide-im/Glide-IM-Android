@@ -21,6 +21,8 @@ public class IMMessage {
     private int targetType;
     private int state;
 
+    IMSessionList.SessionTag tag;
+
     private IMMessage() {
     }
 
@@ -81,6 +83,7 @@ public class IMMessage {
     private void setTarget(int type, long id) {
         this.targetType = type;
         this.targetId = id;
+        this.tag = IMSessionList.SessionTag.get(type, id);
     }
 
     @Override
@@ -188,9 +191,9 @@ public class IMMessage {
     public String toString() {
         return "IMMessage{" +
                 "mid=" + mid +
-                ", cliSeq=" + cliSeq +
                 ", from=" + from +
                 ", to=" + to +
+                ", cliSeq=" + cliSeq +
                 ", type=" + type +
                 ", sendAt=" + sendAt +
                 ", createAt=" + createAt +

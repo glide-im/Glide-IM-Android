@@ -5,13 +5,14 @@ import java.util.List;
 import java.util.TreeMap;
 
 import io.reactivex.Observable;
+import io.reactivex.Single;
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.user.ProfileBean;
 import pro.glideim.sdk.api.user.UserApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.utils.RxUtils;
 
-public class Account {
+public class IMAccount {
 
     private final IMSessionList sessionList = new IMSessionList();
     private final TreeMap<String, IMContacts> contactsMap = new TreeMap<>();
@@ -37,10 +38,6 @@ public class Account {
 
     public IMSessionList getIMSessionList() {
         return sessionList;
-    }
-
-    public Observable<List<IMSession>> getSessions() {
-        return sessionList.getSessionList();
     }
 
     public List<IMContacts> updateContactsGroup(List<GroupInfoBean> groupInfoBeans) {
@@ -72,7 +69,7 @@ public class Account {
     public Observable<ProfileBean> initUserProfile() {
         return UserApi.API.myProfile()
                 .map(RxUtils.bodyConverter())
-                .doOnNext(profileBean -> Account.this.profileBean = profileBean);
+                .doOnNext(profileBean -> IMAccount.this.profileBean = profileBean);
     }
 
     public void addContacts(IMContacts c) {

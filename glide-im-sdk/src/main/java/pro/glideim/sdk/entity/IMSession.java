@@ -2,6 +2,7 @@ package pro.glideim.sdk.entity;
 
 import androidx.annotation.NonNull;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.TreeMap;
@@ -14,13 +15,12 @@ import pro.glideim.sdk.api.msg.GroupMessageStateBean;
 import pro.glideim.sdk.api.msg.SessionBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.utils.RxUtils;
+import pro.glideim.sdk.utils.SLogger;
 
 public class IMSession {
 
-//    private final List<IMMessage> latestMessage = new ArrayList<>();
-
-    private final TreeMap<Long, IMMessage> latestMessageMap = new TreeMap<>();
-    private final IMSessionMessage messages;
+    public static final String TAG = IMSession.class.getSimpleName();
+    private final TreeMap<Long, IMMessage> messageTreeMap = new TreeMap<>();
     public long to;
     public long lastMsgSender;
     public String title;
@@ -30,18 +30,20 @@ public class IMSession {
     public int type;
     public String lastMsg;
     public long lastMsgId;
-    private long lastUpdateAt;
-
     IMSessionList.SessionTag tag;
-
+    private long lastUpdateAt;
     private IMSessionList sessionList;
     private OnUpdateListener onUpdateListener;
+    private MessageChangeListener messageChangeListener;
+
+    private IMSession(){
+
+    }
 
     private IMSession(long to, int type) {
         this.tag = IMSessionList.SessionTag.get(type, to);
-        this.to =to;
+        this.to = to;
         this.type = type;
-        messages = new IMSessionMessage(this);
     }
 
     public static IMSession fromGroupState(GroupMessageStateBean stateBean) {
@@ -53,11 +55,11 @@ public class IMSession {
     }
 
     public static IMSession fromSessionBean(Long myUid, SessionBean sessionBean) {
-        IMSession s = new IMSession(0, 1);
+        IMSession s;
         if (sessionBean.getUid1() == myUid) {
-            s.to = sessionBean.getUid2();
+            s = new IMSession(sessionBean.getUid2(), 1);
         } else {
-            s.to = sessionBean.getUid1();
+            s = new IMSession(sessionBean.getUid1(), 1);
         }
         s.updateAt = sessionBean.getUpdateAt();
         s.lastMsgId = sessionBean.getLastMid();
@@ -73,12 +75,18 @@ public class IMSession {
         return s;
     }
 
-    public static IMSession create(long to, int type) {
-        return new IMSession(to, type);
+    public static IMSession create(long to, int type, IMSessionList imSessionList) {
+        IMSession s= new IMSession(to, type);
+        s.setIMSessionList(imSessionList);
+        s.initTargetInfo();
+        return s;
     }
 
-    public IMSessionMessage getMessages() {
-        return this.messages;
+    public static IMSession create(IMSessionList.SessionTag t, IMSessionList imSessionList) {
+        IMSession s= new IMSession(t.getId(), t.getType());
+        s.setIMSessionList(imSessionList);
+        s.initTargetInfo();
+        return s;
     }
 
     public IMSession update(IMSession session) {
@@ -87,17 +95,69 @@ public class IMSession {
         return this;
     }
 
-    public void addMessage(IMMessage message) {
-        messages.addMessage(message);
+    public void addMessage(IMMessage msg) {
+        SLogger.d(TAG, "addMessage:" + msg);
+        // TODO cache msg to file
+        long mid = msg.getMid();
+        messageTreeMap.put(mid, msg);
+        long last = 0;
+        if (!messageTreeMap.isEmpty()) {
+            last = messageTreeMap.lastKey();
+        }
+        if (last < mid) {
+            setLastMessage(msg);
+        }
         onUpdate();
     }
 
-    public void onMessageSendSuccess(IMMessage message) {
+    public void addMessages(List<IMMessage> messages) {
+        long last = 0;
+        if (!messageTreeMap.isEmpty()) {
+            last = messageTreeMap.lastKey();
+        }
+        for (IMMessage message : messages) {
+            messageTreeMap.put(message.getMid(), message);
+            if (message.getMid() > last) {
+                setLastMessage(message);
+                last = message.getMid();
+            }
+        }
+        onUpdate();
+    }
 
+    public void addHistoryMessage(IMMessage msg) {
+
+    }
+
+    public void addNewMessage(IMMessage msg) {
+
+    }
+
+    private void onInsertMessage(IMMessage m) {
+
+    }
+
+    private void onNewMessage(IMMessage m) {
+        tag.updateAt = m.getSendAt();
+        if (messageChangeListener != null) {
+            messageChangeListener.onNewMessage(m);
+        }
+    }
+
+
+    public void onMessageSendSuccess(IMMessage message) {
+        onUpdate();
     }
 
     public void onMessageReceived(IMMessage message) {
 
+    }
+
+    private void setLastMessage(IMMessage msg) {
+        this.lastMsg = msg.getContent();
+        this.lastMsgId = msg.getMid();
+        this.lastMsgSender = msg.getFrom();
+        this.updateAt = msg.getSendAt();
     }
 
     void setIMSessionList(IMSessionList list) {
@@ -108,6 +168,11 @@ public class IMSession {
         this.onUpdateListener = onUpdateListener;
     }
 
+
+    public void setMessageListener(MessageChangeListener l) {
+        this.messageChangeListener = l;
+    }
+
     public void initTargetInfo() {
         switch (type) {
             case 1:
@@ -116,7 +181,7 @@ public class IMSession {
                         .subscribe(new SilentObserver<UserInfoBean>() {
                             @Override
                             public void onNext(@NonNull UserInfoBean userInfoBean) {
-                                setUserInfo(userInfoBean);
+                                setInfo(userInfoBean);
                             }
                         });
                 break;
@@ -126,30 +191,43 @@ public class IMSession {
                         .subscribe(new SilentObserver<GroupInfoBean>() {
                             @Override
                             public void onNext(@NonNull GroupInfoBean groupInfoBean) {
-                                setGroupInfo(groupInfoBean);
+                                setInfo(groupInfoBean);
                             }
                         });
                 break;
         }
     }
 
-    public void addGroupMessage(List<GroupMessageBean> message) {
-        for (GroupMessageBean messageBean : message) {
-            IMMessage imMessage = IMMessage.fromGroupMessage(messageBean);
-            messages.addMessage(imMessage);
-        }
-    }
-
     public List<IMMessage> getLatestMessage() {
-        return messages.getLatest();
+        return getMessages(0, 20);
     }
 
-    public void addMessages(List<IMMessage> message) {
-        messages.addMessages(message);
-        onUpdate();
+    public List<IMMessage> getMessages(long beforeMid, int maxLen) {
+        List<IMMessage> ret = new ArrayList<>();
+        if (messageTreeMap.isEmpty()) {
+            return ret;
+        }
+        Long mid = beforeMid;
+        if (mid == 0) {
+            mid = messageTreeMap.lastKey();
+        } else {
+            mid = messageTreeMap.lowerKey(mid);
+        }
+        int count = maxLen;
+        while (mid != null && count > 0) {
+            IMMessage m = messageTreeMap.get(mid);
+            ret.add(0, m);
+            mid = messageTreeMap.lowerKey(mid);
+            count--;
+        }
+        return ret;
     }
 
-    public IMSession setGroupInfo(GroupInfoBean groupInfoBean) {
+    public List<IMMessage> getLatest() {
+        return getMessages(0, 20);
+    }
+
+    public IMSession setInfo(GroupInfoBean groupInfoBean) {
         to = groupInfoBean.getGid();
         title = groupInfoBean.getName();
         avatar = groupInfoBean.getAvatar();
@@ -157,7 +235,7 @@ public class IMSession {
         return this;
     }
 
-    public IMSession setUserInfo(UserInfoBean userInfoBean) {
+    public IMSession setInfo(UserInfoBean userInfoBean) {
         to = userInfoBean.getUid();
         title = userInfoBean.getNickname();
         avatar = userInfoBean.getAvatar();
@@ -175,6 +253,7 @@ public class IMSession {
 //        }
 
         if (onUpdateListener != null) {
+            SLogger.d(TAG, "onUpdate");
             onUpdateListener.onUpdate(this);
         }
     }
@@ -204,7 +283,7 @@ public class IMSession {
                 ", type=" + type +
                 ", lastMsg='" + lastMsg + '\'' +
                 ", lastMsgId=" + lastMsgId +
-                ", latestMessage=" + messages.getLatest() +
+                ", messages=" + messageTreeMap +
                 '}';
     }
 

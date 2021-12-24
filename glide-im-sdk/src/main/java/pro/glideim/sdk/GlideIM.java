@@ -34,7 +34,7 @@ import pro.glideim.sdk.api.user.GetUserInfoDto;
 import pro.glideim.sdk.api.user.ProfileBean;
 import pro.glideim.sdk.api.user.UserApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
-import pro.glideim.sdk.entity.Account;
+import pro.glideim.sdk.entity.IMAccount;
 import pro.glideim.sdk.entity.ContactsChangeListener;
 import pro.glideim.sdk.entity.IMContacts;
 import pro.glideim.sdk.entity.IMMessage;
@@ -49,7 +49,7 @@ import pro.glideim.sdk.protocol.CommMessage;
 
 public class GlideIM {
 
-    private static final Account S_ACCOUNT = new Account();
+    private static final IMAccount S_IM_ACCOUNT = new IMAccount();
     private static final IMClient sIM = IMClientImpl.create();
     private static final Map<Long, UserInfoBean> sTempUserInfo = new HashMap<>();
     private static final Map<Long, GroupInfoBean> sTempGroupInfo = new HashMap<>();
@@ -118,7 +118,7 @@ public class GlideIM {
                 })
                 .map(chatMessage -> {
                     IMMessage r = IMMessage.fromChatMessage(chatMessage);
-                    IMSession session = S_ACCOUNT.getIMSessionList().getSession(chatMessage.getType(), chatMessage.getTo());
+                    IMSession session = S_IM_ACCOUNT.getIMSessionList().getSession(chatMessage.getType(), chatMessage.getTo());
                     switch (chatMessage.getState()) {
                         case ChatMessage.STATE_INIT:
                             session.addMessage(r);
@@ -143,9 +143,9 @@ public class GlideIM {
         }
         return AuthApi.API.auth(new AuthDto(token, getInstance().device))
                 .map(bodyConverter())
-                .doOnNext(authBean -> S_ACCOUNT.uid = authBean.getUid())
+                .doOnNext(authBean -> S_IM_ACCOUNT.uid = authBean.getUid())
                 .flatMap((Function<AuthBean, ObservableSource<Boolean>>) aBoolean -> authWs())
-                .flatMap((Function<Boolean, ObservableSource<ProfileBean>>) aBoolean -> S_ACCOUNT.initUserProfile());
+                .flatMap((Function<Boolean, ObservableSource<ProfileBean>>) aBoolean -> S_IM_ACCOUNT.initUserProfile());
     }
 
     private static Observable<Boolean> authWs() {
@@ -162,13 +162,13 @@ public class GlideIM {
                 .map(bodyConverter())
                 .flatMap((Function<AuthBean, ObservableSource<Boolean>>) authBean -> {
                     getInstance().dataStorage.storeToken(authBean.getToken());
-                    S_ACCOUNT.uid = authBean.getUid();
+                    S_IM_ACCOUNT.uid = authBean.getUid();
                     return authWs();
                 });
     }
 
     public static void onContactsChange(ContactsChangeListener listener) {
-        S_ACCOUNT.contactsChangeListener = listener;
+        S_IM_ACCOUNT.contactsChangeListener = listener;
     }
 
     public static Observable<List<MessageBean>> getOfflineMessage() {
@@ -215,7 +215,7 @@ public class GlideIM {
                 .flatMap(Observable::fromIterable)
                 .map(IMContacts::fromContactsBean)
                 .toList()
-                .doOnSuccess(S_ACCOUNT::addContacts)
+                .doOnSuccess(S_IM_ACCOUNT::addContacts)
                 .flatMapObservable((Function<List<IMContacts>, ObservableSource<List<IMContacts>>>) contacts ->
                         updateContactInfo()
                 );
@@ -300,7 +300,7 @@ public class GlideIM {
     }
 
     public static Observable<List<IMContacts>> updateContactInfo() {
-        Iterable<IMContacts> idList = S_ACCOUNT.getContacts();
+        Iterable<IMContacts> idList = S_IM_ACCOUNT.getContacts();
         List<Observable<IMContacts>> obs = new ArrayList<>();
 
         Map<Integer, List<Long>> typeIdsMap = new HashMap<>();
@@ -316,16 +316,16 @@ public class GlideIM {
             Observable<IMContacts> ob = Observable.empty();
             switch (type) {
                 case 1:
-                    ob = getUserInfo(ids).map(S_ACCOUNT::updateContacts).flatMap(Observable::fromIterable);
+                    ob = getUserInfo(ids).map(S_IM_ACCOUNT::updateContacts).flatMap(Observable::fromIterable);
                     break;
                 case 2:
-                    ob = getGroupInfo(ids).map(S_ACCOUNT::updateContactsGroup).flatMap(Observable::fromIterable);
+                    ob = getGroupInfo(ids).map(S_IM_ACCOUNT::updateContactsGroup).flatMap(Observable::fromIterable);
                     break;
             }
             obs.add(ob);
         });
 
-        return Observable.merge(obs).toList().map(s -> S_ACCOUNT.getContacts()).toObservable();
+        return Observable.merge(obs).toList().map(s -> S_IM_ACCOUNT.getContacts()).toObservable();
     }
 
     private static <T> Function<Response<T>, T> bodyConverter() {
@@ -346,8 +346,8 @@ public class GlideIM {
         };
     }
 
-    public Account getAccount() {
-        return S_ACCOUNT;
+    public IMAccount getAccount() {
+        return S_IM_ACCOUNT;
     }
 
     public void setConnectionListener(ConnStateListener listener) {
@@ -367,7 +367,7 @@ public class GlideIM {
     }
 
     public Long getMyUID() {
-        return S_ACCOUNT.uid;
+        return S_IM_ACCOUNT.uid;
     }
 
     public DataStorage getDataStorage() {

@@ -1,3 +1,4 @@
+import android.util.Log
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -21,6 +22,10 @@ class SessionsFragment : BaseFragment() {
     private val mAdapter = SuperAdapter(mSessionList)
 
     private val mIMSessionList by lazy { GlideIM.getInstance().account.imSessionList }
+
+    companion object {
+        private val TAG = SessionsFragment::class.java.simpleName
+    }
 
     override val layoutRes = R.layout.fragment_session
 
@@ -47,19 +52,27 @@ class SessionsFragment : BaseFragment() {
 
         mIMSessionList.setSessionUpdateListener(
             object : SessionUpdateListener {
-                override fun onUpdate(session: IMSession) {
-                    val indexOf = mSessionList.indexOf(session)
-                    if (indexOf != -1) {
-                        mAdapter.notifyItemChanged(indexOf)
+                override fun onUpdate(vararg session: IMSession) {
+                    Log.d(TAG, "onUpdate() called with: session = ${session.joinToString { "${it.to}-${it.title}" }}")
+                    for (s in session) {
+                        val indexOf = mSessionList.indexOf(s)
+                        if (indexOf != -1) {
+                            activity?.runOnUiThread {
+                                mAdapter.notifyItemChanged(indexOf)
+                            }
+                        }
                     }
                 }
 
                 override fun onNewSession(vararg session: IMSession) {
+                    Log.d(TAG, "onNewSession() called with: session = ${session.joinToString { "${it.to}-${it.title}" }}")
                     mSessionList.addAll(session)
                     mSessionList.sortBy {
-                        (it as? IMSession)?.updateAt ?: 0
+                        -((it as? IMSession)?.updateAt ?: 0)
                     }
-                    mAdapter.notifyDataSetChanged()
+                    activity?.runOnUiThread {
+                        mAdapter.notifyDataSetChanged()
+                    }
                 }
             })
 
@@ -72,16 +85,10 @@ class SessionsFragment : BaseFragment() {
     }
 
     private fun requestData() {
-        mIMSessionList.sessionList
+        mIMSessionList.initSessionsList()
             .io2main()
-            .request2(this) {
-                mIMSessionList.updateSessionList()
-                    .io2main()
-                    .request(this) { s2 ->
-                        mSessionList.clear()
-                        mSessionList.addAll(s2!!)
-                        mAdapter.notifyDataSetChanged()
-                    }
+            .request(this) {
+
             }
     }
 }

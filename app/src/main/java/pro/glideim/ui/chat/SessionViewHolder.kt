@@ -26,7 +26,7 @@ class SessionViewHolder(v: ViewGroup) : AbsViewHolder<IMSession>(v) {
 
     override fun onBindData(data: IMSession, position: Int) {
         mIvAvatar.loadImage(data.avatar)
-        mTvTitle.text = data.title
+        mTvTitle.text = data.title + "${data.to}"
         mTvContent.text = data.lastMsg
         if (data.unread > 0) {
             mTvNewMessage.show()

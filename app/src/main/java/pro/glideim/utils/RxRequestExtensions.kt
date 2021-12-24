@@ -232,6 +232,7 @@ open class ProxyObserver<T> : Observer<T>, LifecycleEventObserver, SingleObserve
     override fun onSuccess(t: T) {
         nexted++
         success.invoke(t)
+        onComplete()
     }
 }
 

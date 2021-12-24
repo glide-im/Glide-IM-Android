@@ -1,6 +1,7 @@
 package pro.glideim.sdk.utils;
 
 import io.reactivex.ObservableTransformer;
+import io.reactivex.SingleTransformer;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import pro.glideim.sdk.api.Response;
@@ -17,5 +18,9 @@ public class RxUtils {
             }
             return r.getData();
         };
+    }
+
+    public static <T> SingleTransformer<T, T> silentSchedulerSingle() {
+        return upstream -> upstream.subscribeOn(Schedulers.io()).observeOn(Schedulers.newThread());
     }
 }

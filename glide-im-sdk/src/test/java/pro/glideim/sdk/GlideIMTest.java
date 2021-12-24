@@ -78,22 +78,6 @@ class GlideIMTest {
     }
 
     @Test
-    void getRecentMessages() throws InterruptedException {
-        GlideIM.getContacts().subscribe(new TestResObserver<List<IMContacts>>() {
-            @Override
-            public void onNext(@NonNull List<IMContacts> contacts) {
-                GlideIM.getInstance().getAccount().getIMSessionList().getSessionList()
-                        .subscribe(new TestResObserver<List<IMSession>>() {
-                            @Override
-                            public void onNext(@NonNull List<IMSession> sessions) {
-                                GlideIM.getInstance().getAccount().getIMSessionList().updateSessionList();
-                            }
-                        });
-            }
-        });
-    }
-
-    @Test
     void getMessageHistory() {
         GlideIM.getChatMessageHistory(2, 1099)
                 .subscribe(new TestResObserver<List<IMMessage>>() {

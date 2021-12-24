@@ -97,7 +97,7 @@ class ChatActivity : BaseActivity() {
 
 //        mAdapter.updateWithDiff(mSession.latestMessage)
 
-        mSession.messages.setOnChangeListener(object : MessageChangeListener {
+        mSession.setMessageListener(object : MessageChangeListener {
             override fun onChange(mid: Long, message: IMMessage) {
 
             }
