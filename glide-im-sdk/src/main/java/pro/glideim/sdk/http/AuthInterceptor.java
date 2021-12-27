@@ -22,7 +22,7 @@ public class AuthInterceptor implements Interceptor {
     public Response intercept(@NonNull Chain chain) throws IOException {
         Request.Builder request = chain.request().newBuilder();
 
-        String jwtToken = GlideIM.getInstance().getDataStorage().loadToken();
+        String jwtToken = GlideIM.getInstance().getDataStorage().loadToken(1);
         request.addHeader("Authorization", "Bearer "+jwtToken);
         return chain.proceed(request.build());
     }

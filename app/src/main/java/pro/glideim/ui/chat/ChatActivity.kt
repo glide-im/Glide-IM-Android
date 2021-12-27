@@ -36,6 +36,7 @@ class ChatActivity : BaseActivity() {
 
     private lateinit var mSession: IMSession
     private val mUID by intentExtra(EXTRA_UID, 0L)
+    private var mLastMid = 0L
 
     override val layoutResId = R.layout.activity_chat
 
@@ -89,13 +90,9 @@ class ChatActivity : BaseActivity() {
         mTvTitle.text = mSession.title
         mMessage.clear()
 
-        val latest = mSession.latestMessage
+        val latest = mSession.getMessages(mLastMid, 20)
         mMessage.addAll(latest)
-//        latest.forEach {
-//            mMidMap[it.mid] = it
-//        }
 
-//        mAdapter.updateWithDiff(mSession.latestMessage)
 
         mSession.setMessageListener(object : MessageChangeListener {
             override fun onChange(mid: Long, message: IMMessage) {
@@ -125,10 +122,9 @@ class ChatActivity : BaseActivity() {
                 onSuccess {
                     when (it.state) {
                         ChatMessage.STATE_INIT -> {
-                            mEtMessage.setText("")
-                            mMessage.add(it)
                         }
                         ChatMessage.STATE_CREATED -> {
+                            mEtMessage.setText("")
                             mMessage.add(it)
                         }
                         ChatMessage.STATE_SRV_RECEIVED -> {

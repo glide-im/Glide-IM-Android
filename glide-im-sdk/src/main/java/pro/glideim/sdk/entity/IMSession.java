@@ -7,11 +7,17 @@ import java.util.List;
 import java.util.Objects;
 import java.util.TreeMap;
 
+import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
+import io.reactivex.Single;
+import io.reactivex.functions.Function;
 import pro.glideim.sdk.GlideIM;
 import pro.glideim.sdk.SilentObserver;
 import pro.glideim.sdk.api.group.GroupInfoBean;
-import pro.glideim.sdk.api.msg.GroupMessageBean;
+import pro.glideim.sdk.api.msg.GetChatHistoryDto;
 import pro.glideim.sdk.api.msg.GroupMessageStateBean;
+import pro.glideim.sdk.api.msg.MessageBean;
+import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.msg.SessionBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.utils.RxUtils;
@@ -36,7 +42,7 @@ public class IMSession {
     private OnUpdateListener onUpdateListener;
     private MessageChangeListener messageChangeListener;
 
-    private IMSession(){
+    private IMSession() {
 
     }
 
@@ -76,14 +82,14 @@ public class IMSession {
     }
 
     public static IMSession create(long to, int type, IMSessionList imSessionList) {
-        IMSession s= new IMSession(to, type);
+        IMSession s = new IMSession(to, type);
         s.setIMSessionList(imSessionList);
         s.initTargetInfo();
         return s;
     }
 
     public static IMSession create(IMSessionList.SessionTag t, IMSessionList imSessionList) {
-        IMSession s= new IMSession(t.getId(), t.getType());
+        IMSession s = new IMSession(t.getId(), t.getType());
         s.setIMSessionList(imSessionList);
         s.initTargetInfo();
         return s;
@@ -92,10 +98,12 @@ public class IMSession {
     public IMSession update(IMSession session) {
         this.updateAt = session.updateAt;
         this.lastMsg = session.lastMsg;
+        this.messageTreeMap.putAll(session.messageTreeMap);
         return this;
     }
 
     public void addMessage(IMMessage msg) {
+        updateAt = msg.getSendAt();
         SLogger.d(TAG, "addMessage:" + msg);
         // TODO cache msg to file
         long mid = msg.getMid();
@@ -256,6 +264,16 @@ public class IMSession {
             SLogger.d(TAG, "onUpdate");
             onUpdateListener.onUpdate(this);
         }
+    }
+
+    public Single<List<IMMessage>> getHistory(long beforeMid) {
+        GetChatHistoryDto getChatHistoryDto = new GetChatHistoryDto(to, beforeMid);
+        return MsgApi.API.getChatMessageHistory(getChatHistoryDto)
+                .map(RxUtils.bodyConverter())
+                .flatMap((Function<List<MessageBean>, ObservableSource<MessageBean>>) Observable::fromIterable)
+                .map(IMMessage::fromMessage)
+                .toList()
+                .doOnSuccess(this::addMessages);
     }
 
     @Override

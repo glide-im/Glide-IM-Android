@@ -13,6 +13,7 @@ import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.entity.IMMessage
+import pro.glideim.utils.loadImage
 import pro.glideim.utils.secToTimeSpan
 
 class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<IMMessage>(v) {
@@ -30,10 +31,12 @@ class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<IMMessage>(v) {
 
     override fun onBindData(data: IMMessage, position: Int) {
         if (data.from == GlideIM.getInstance().myUID) {
+            mIvAvatarRight.loadImage(data.avatar)
             mIvAvatarRight.show()
             mIvAvatarLeft.hide()
             (mCvMessageContainer.layoutParams as FrameLayout.LayoutParams).gravity = Gravity.END
         } else {
+            mIvAvatarLeft.loadImage(data.avatar)
             mIvAvatarLeft.show()
             mIvAvatarRight.hide()
             (mCvMessageContainer.layoutParams as FrameLayout.LayoutParams).gravity = Gravity.START

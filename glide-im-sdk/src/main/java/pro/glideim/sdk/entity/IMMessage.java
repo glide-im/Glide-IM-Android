@@ -1,13 +1,24 @@
 package pro.glideim.sdk.entity;
 
+import androidx.annotation.NonNull;
+
 import java.util.Objects;
 
 import pro.glideim.sdk.GlideIM;
+import pro.glideim.sdk.SilentObserver;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.MessageBean;
+import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.protocol.ChatMessage;
+import pro.glideim.sdk.utils.RxUtils;
 
 public class IMMessage {
+    public String avatar;
+    public String title;
+
+    IMSessionList.SessionTag tag;
+
+
     private long mid;
     private long cliSeq;
     private long from;
@@ -16,12 +27,10 @@ public class IMMessage {
     private long sendAt;
     private long createAt;
     private String content;
-
     private long targetId;
     private int targetType;
     private int state;
 
-    IMSessionList.SessionTag tag;
 
     private IMMessage() {
     }
@@ -84,6 +93,22 @@ public class IMMessage {
         this.targetType = type;
         this.targetId = id;
         this.tag = IMSessionList.SessionTag.get(type, id);
+        if (targetType == 1) {
+            if (id == GlideIM.getInstance().getMyUID()) {
+                this.avatar = GlideIM.getInstance().getAccount().getProfile().getAvatar();
+                this.title = GlideIM.getInstance().getAccount().getProfile().getNickname();
+            } else {
+                GlideIM.getUserInfo(id)
+                        .compose(RxUtils.silentScheduler())
+                        .subscribe(new SilentObserver<pro.glideim.sdk.api.user.UserInfoBean>() {
+                            @Override
+                            public void onNext(@NonNull UserInfoBean userInfoBean) {
+                                avatar = userInfoBean.getAvatar();
+                                title = userInfoBean.getNickname();
+                            }
+                        });
+            }
+        }
     }
 
     @Override

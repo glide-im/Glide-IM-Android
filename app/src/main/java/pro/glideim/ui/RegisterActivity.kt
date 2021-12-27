@@ -4,9 +4,11 @@ import android.content.Context
 import android.content.Intent
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
-import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
+import pro.glideim.sdk.GlideIM
+import pro.glideim.utils.io2main
+import pro.glideim.utils.request2
 
 class RegisterActivity : BaseActivity() {
 
@@ -18,7 +20,7 @@ class RegisterActivity : BaseActivity() {
 
     override val layoutResId = R.layout.activity_register
 
-    companion object{
+    companion object {
         @JvmStatic
         fun start(context: Context) {
             val starter = Intent(context, RegisterActivity::class.java)
@@ -39,6 +41,12 @@ class RegisterActivity : BaseActivity() {
         val account = mEtAccount.text.toString()
         val password = mEtPassword.text.toString()
 
+        GlideIM.register(account, password)
+            .io2main()
+            .request2(this) {
+                toast("Register success!")
+                finish()
+            }
     }
 
     private fun validate(): Boolean {

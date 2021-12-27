@@ -5,14 +5,15 @@ import java.util.List;
 import java.util.TreeMap;
 
 import io.reactivex.Observable;
-import io.reactivex.Single;
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.user.ProfileBean;
 import pro.glideim.sdk.api.user.UserApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
+import pro.glideim.sdk.im.MessageListener;
+import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.utils.RxUtils;
 
-public class IMAccount {
+public class IMAccount implements MessageListener {
 
     private final IMSessionList sessionList = new IMSessionList();
     private final TreeMap<String, IMContacts> contactsMap = new TreeMap<>();
@@ -88,5 +89,15 @@ public class IMAccount {
             }
         }
         return g;
+    }
+
+    public void setContactsChangeListener(ContactsChangeListener contactsChangeListener) {
+        this.contactsChangeListener = contactsChangeListener;
+    }
+
+    @Override
+    public void onNewMessage(ChatMessage m) {
+        IMMessage ms = IMMessage.fromChatMessage(m);
+        sessionList.addMessage(ms);
     }
 }

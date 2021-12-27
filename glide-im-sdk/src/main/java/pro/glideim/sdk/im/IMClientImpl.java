@@ -3,6 +3,7 @@ package pro.glideim.sdk.im;
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,12 +16,14 @@ import io.reactivex.disposables.Disposable;
 import io.reactivex.internal.operators.observable.ObservableSubscribeOn;
 import pro.glideim.sdk.Logger;
 import pro.glideim.sdk.ParameterizedTypeImpl;
+import pro.glideim.sdk.SilentObserver;
 import pro.glideim.sdk.http.RetrofitManager;
 import pro.glideim.sdk.protocol.AckMessage;
 import pro.glideim.sdk.protocol.AckRequest;
 import pro.glideim.sdk.protocol.Actions;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
+import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
 import pro.glideim.sdk.ws.NettyWsClient;
 import pro.glideim.sdk.ws.WsClient;
@@ -39,9 +42,10 @@ public class IMClientImpl implements IMClient {
     private final Map<Long, MessageEmitter> messages = new ConcurrentHashMap<>();
     private final Type typeCommMsg = new TypeToken<CommMessage<Object>>() {
     }.getType();
+    private final List<ConnStateListener> connStateListeners = new ArrayList<>();
     private MessageListener messageListener;
     private long seq;
-    private ConnStateListener connStateListener;
+    private String url;
 
     private IMClientImpl() {
         connection = new NettyWsClient();
@@ -59,17 +63,31 @@ public class IMClientImpl implements IMClient {
     }
 
     @Override
-    public void setConnStateListener(ConnStateListener connStateListener) {
-        this.connStateListener = connStateListener;
+    public void addConnStateListener(ConnStateListener connStateListener) {
+        this.connStateListeners.add(connStateListener);
     }
 
+    @Override
+    public void removeConnStateListener(ConnStateListener connStateListener) {
+        if (!this.connStateListeners.contains(connStateListener)) {
+            return;
+        }
+        this.connStateListeners.remove(connStateListener);
+    }
+
+    @Override
     public void setMessageListener(MessageListener messageListener) {
         this.messageListener = messageListener;
     }
 
+    @Override
+    public boolean isConnected() {
+        return connection.isConnected();
+    }
 
     @Override
     public Single<Boolean> connect(String url) {
+        this.url = url;
         return connection.connect(url);
     }
 
@@ -215,18 +233,14 @@ public class IMClientImpl implements IMClient {
         send(new CommMessage<>(MESSAGE_VER, Actions.Cli.ACTION_ACK_REQUEST, 0, a));
     }
 
-    public interface MessageListener {
-        void onNewMessage(ChatMessage m);
-    }
-
     private class ConnectionStateChangeListener implements ConnStateListener {
 
         private Disposable heartbeat;
 
         @Override
         public void onStateChange(int state, String msg) {
-            if (connStateListener != null) {
-                connStateListener.onStateChange(state, msg);
+            for (ConnStateListener stateListener : connStateListeners) {
+                stateListener.onStateChange(state, msg);
             }
             if (state == WsClient.STATE_OPENED) {
                 heartbeat = Observable

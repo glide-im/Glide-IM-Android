@@ -7,9 +7,15 @@ import pro.glideim.sdk.protocol.CommMessage;
 import pro.glideim.sdk.ws.WsClient;
 
 public interface IMClient {
-    void setConnStateListener(ConnStateListener connStateListener);
+    void addConnStateListener(ConnStateListener connStateListener);
+
+    void removeConnStateListener(ConnStateListener connStateListener);
+
+    void setMessageListener(MessageListener listener);
 
     Single<Boolean> connect(String url);
+
+    boolean isConnected();
 
     Observable<ChatMessage> sendChatMessage(ChatMessage m);
 

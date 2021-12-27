@@ -19,6 +19,7 @@ import pro.glideim.sdk.api.auth.AuthApi;
 import pro.glideim.sdk.api.auth.AuthBean;
 import pro.glideim.sdk.api.auth.AuthDto;
 import pro.glideim.sdk.api.auth.LoginDto;
+import pro.glideim.sdk.api.auth.RegisterDto;
 import pro.glideim.sdk.api.group.CreateGroupBean;
 import pro.glideim.sdk.api.group.CreateGroupDto;
 import pro.glideim.sdk.api.group.GetGroupInfoDto;
@@ -35,7 +36,6 @@ import pro.glideim.sdk.api.user.ProfileBean;
 import pro.glideim.sdk.api.user.UserApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.entity.IMAccount;
-import pro.glideim.sdk.entity.ContactsChangeListener;
 import pro.glideim.sdk.entity.IMContacts;
 import pro.glideim.sdk.entity.IMMessage;
 import pro.glideim.sdk.entity.IMSession;
@@ -46,8 +46,13 @@ import pro.glideim.sdk.im.IMClientImpl;
 import pro.glideim.sdk.protocol.Actions;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
+import pro.glideim.sdk.utils.RxUtils;
+import pro.glideim.sdk.utils.SLogger;
+import pro.glideim.sdk.ws.WsClient;
 
 public class GlideIM {
+
+    public static final String TAG = "GlideIM";
 
     private static final IMAccount S_IM_ACCOUNT = new IMAccount();
     private static final IMClient sIM = IMClientImpl.create();
@@ -59,6 +64,27 @@ public class GlideIM {
     private final String wsUrl;
     private DataStorage dataStorage = new DefaultDataStoreImpl();
     private int device = 1;
+
+    private final ConnStateListener keepAliveStateListener = new ConnStateListener() {
+        @Override
+        public void onStateChange(int state, String msg) {
+            if (state == WsClient.STATE_CLOSED) {
+                SLogger.d(TAG, "reconnecting the server");
+                sIM.connect(wsUrl)
+                        .retry(10)
+                        .compose(RxUtils.silentSchedulerSingle())
+                        .doOnSuccess(aBoolean -> {
+                            authWs().compose(RxUtils.silentScheduler())
+                                    .subscribe(new SilentObserver<>());
+                        })
+                        .doOnError(e -> {
+                            SLogger.d(TAG, "reconnect server failed");
+                            SLogger.e(TAG, e);
+                        })
+                        .subscribe(new SilentObserver<>());
+            }
+        }
+    };
 
     private GlideIM(String wsUrl) {
         this.wsUrl = wsUrl;
@@ -75,7 +101,7 @@ public class GlideIM {
 
     public static void init(String wsUrl, String baseUrlApi, ConnStateListener listener) {
         RetrofitManager.init(baseUrlApi);
-        sIM.setConnStateListener(listener);
+        sIM.addConnStateListener(listener);
         sInstance = new GlideIM(wsUrl);
     }
 
@@ -137,7 +163,7 @@ public class GlideIM {
     }
 
     public static Observable<ProfileBean> auth() {
-        String token = getInstance().dataStorage.loadToken();
+        String token = getInstance().dataStorage.loadToken(getInstance().getMyUID());
         if (token == null) {
             return Observable.error(new Exception("invalid token"));
         }
@@ -149,10 +175,11 @@ public class GlideIM {
     }
 
     private static Observable<Boolean> authWs() {
-        AuthDto d = new AuthDto(getInstance().dataStorage.loadToken(), getInstance().device);
+        AuthDto d = new AuthDto(getInstance().dataStorage.loadToken(getInstance().getMyUID()), getInstance().device);
         return sIM.request(Actions.Cli.ACTION_USER_AUTH, AuthBean.class, false, d)
                 .map(bodyConverterForWsMsg())
                 .map(authBean -> {
+                    sIM.setMessageListener(S_IM_ACCOUNT);
                     return authBean.getUid() != 0;
                 });
     }
@@ -161,14 +188,16 @@ public class GlideIM {
         return AuthApi.API.login(new LoginDto(account, password, device))
                 .map(bodyConverter())
                 .flatMap((Function<AuthBean, ObservableSource<Boolean>>) authBean -> {
-                    getInstance().dataStorage.storeToken(authBean.getToken());
+                    getInstance().dataStorage.storeToken(getInstance().getMyUID(), authBean.getToken());
                     S_IM_ACCOUNT.uid = authBean.getUid();
                     return authWs();
                 });
     }
 
-    public static void onContactsChange(ContactsChangeListener listener) {
-        S_IM_ACCOUNT.contactsChangeListener = listener;
+    public static Observable<Boolean> register(String account, String password) {
+        return AuthApi.API.register(new RegisterDto(account, password))
+                .map(bodyConverter())
+                .map(o -> true);
     }
 
     public static Observable<List<MessageBean>> getOfflineMessage() {
@@ -256,6 +285,10 @@ public class GlideIM {
             temped.addAll(r);
             return r;
         });
+    }
+
+    public static UserInfoBean getTempUserInfo(long uid) {
+        return sTempUserInfo.get(uid);
     }
 
     public static Observable<UserInfoBean> getUserInfo(long uid) {
@@ -350,11 +383,17 @@ public class GlideIM {
         return S_IM_ACCOUNT;
     }
 
+    public boolean isConnected() {
+        return sIM.isConnected();
+    }
+
     public void setConnectionListener(ConnStateListener listener) {
-        sIM.setConnStateListener(listener);
+        sIM.addConnStateListener(listener);
     }
 
     public Single<Boolean> connect() {
+        sIM.removeConnStateListener(keepAliveStateListener);
+        sIM.addConnStateListener(keepAliveStateListener);
         return sIM.connect(this.wsUrl);
     }
 

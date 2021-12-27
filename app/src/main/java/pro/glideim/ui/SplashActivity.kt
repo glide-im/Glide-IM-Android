@@ -34,7 +34,7 @@ class SplashActivity : BaseActivity() {
     }
 
     private fun checkToken() {
-        val token = UserPerf.getInstance().loadToken()
+        val token = UserPerf.getInstance().loadToken(0)
         if (token.isBlank()) {
             LoginActivity.start(this)
             finish()

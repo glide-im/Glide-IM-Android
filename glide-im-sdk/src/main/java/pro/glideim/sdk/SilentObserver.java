@@ -15,7 +15,7 @@ public class SilentObserver<T> implements Observer<T>, SingleObserver<T> {
 
     @Override
     public void onSuccess(@NonNull T t) {
-
+        onNext(t);
     }
 
     @Override

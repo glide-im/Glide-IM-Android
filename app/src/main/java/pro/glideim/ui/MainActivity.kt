@@ -73,6 +73,18 @@ class MainActivity : BaseActivity() {
 //        badge.number = 4
     }
 
+    override fun onResume() {
+        super.onResume()
+        if (!GlideIM.getInstance().isConnected) {
+            toast("The IM server is not connected")
+        }
+        GlideIM.getInstance().setConnectionListener { state, _ ->
+            runOnUiThread {
+                toast("IM server connection changed: $state")
+            }
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         GlideIM.getInstance().disconnect()

@@ -53,7 +53,10 @@ class SessionsFragment : BaseFragment() {
         mIMSessionList.setSessionUpdateListener(
             object : SessionUpdateListener {
                 override fun onUpdate(vararg session: IMSession) {
-                    Log.d(TAG, "onUpdate() called with: session = ${session.joinToString { "${it.to}-${it.title}" }}")
+                    Log.d(
+                        TAG,
+                        "onUpdate() called with: session = ${session.joinToString { "${it.to}-${it.title}" }}"
+                    )
                     for (s in session) {
                         val indexOf = mSessionList.indexOf(s)
                         if (indexOf != -1) {
@@ -65,7 +68,10 @@ class SessionsFragment : BaseFragment() {
                 }
 
                 override fun onNewSession(vararg session: IMSession) {
-                    Log.d(TAG, "onNewSession() called with: session = ${session.joinToString { "${it.to}-${it.title}" }}")
+                    Log.d(
+                        TAG,
+                        "onNewSession() called with: session = ${session.joinToString { "${it.to}-${it.title}" }}"
+                    )
                     mSessionList.addAll(session)
                     mSessionList.sortBy {
                         -((it as? IMSession)?.updateAt ?: 0)
