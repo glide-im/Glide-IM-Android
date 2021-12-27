@@ -15,6 +15,8 @@ public interface WsClient {
 
     boolean isConnected();
 
+    int getState();
+
     boolean write(Object msg);
 
     void addStateListener(ConnStateListener listener);

@@ -1,7 +1,8 @@
 package pro.glideim.sdk.ws;
 
 import java.net.URI;
-import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.List;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -18,17 +19,15 @@ import io.netty.handler.codec.http.websocketx.WebSocketClientHandshakerFactory;
 import io.netty.handler.codec.http.websocketx.WebSocketHandshakeException;
 import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 import io.netty.util.CharsetUtil;
-import io.reactivex.Observable;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.Consumer;
 import pro.glideim.sdk.im.ConnStateListener;
 
 public class WsInboundChHandler extends SimpleChannelInboundHandler<Object> {
 
     private final WebSocketClientHandshaker handshaker;
     ChannelPromise handshakeFuture;
-    ConnStateListener connStateListener;
+    List<ConnStateListener> connStateListener = new ArrayList<>();
     MessageListener messageListener;
+    int connectionState;
 
     public WsInboundChHandler(URI uri) {
         this.handshaker = WebSocketClientHandshakerFactory.newHandshaker(
@@ -37,8 +36,9 @@ public class WsInboundChHandler extends SimpleChannelInboundHandler<Object> {
     }
 
     private void onStateChanged(int state) {
-        if (connStateListener != null) {
-            connStateListener.onStateChange(state, "");
+        connectionState = state;
+        for (ConnStateListener stateListener : connStateListener) {
+            stateListener.onStateChange(state, "");
         }
     }
 

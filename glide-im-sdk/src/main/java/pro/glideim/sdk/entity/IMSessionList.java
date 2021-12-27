@@ -86,9 +86,9 @@ public class IMSessionList {
         }
     }
 
-    void addMessage(IMMessage message) {
+    void onNewMessage(IMMessage message) {
         IMSession session = getSession(message.tag);
-        session.addMessage(message);
+        session.onNewMessage(message);
     }
 
     private void putSession(IMSession session) {

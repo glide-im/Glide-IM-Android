@@ -98,6 +98,6 @@ public class IMAccount implements MessageListener {
     @Override
     public void onNewMessage(ChatMessage m) {
         IMMessage ms = IMMessage.fromChatMessage(m);
-        sessionList.addMessage(ms);
+        sessionList.onNewMessage(ms);
     }
 }

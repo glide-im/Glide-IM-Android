@@ -115,7 +115,7 @@ public class IMSession {
         if (last < mid) {
             setLastMessage(msg);
         }
-        onUpdate();
+        onSessionUpdate();
     }
 
     public void addMessages(List<IMMessage> messages) {
@@ -130,14 +130,10 @@ public class IMSession {
                 last = message.getMid();
             }
         }
-        onUpdate();
+        onSessionUpdate();
     }
 
     public void addHistoryMessage(IMMessage msg) {
-
-    }
-
-    public void addNewMessage(IMMessage msg) {
 
     }
 
@@ -145,8 +141,8 @@ public class IMSession {
 
     }
 
-    private void onNewMessage(IMMessage m) {
-        tag.updateAt = m.getSendAt();
+    public void onNewMessage(IMMessage m) {
+        addMessage(m);
         if (messageChangeListener != null) {
             messageChangeListener.onNewMessage(m);
         }
@@ -154,7 +150,7 @@ public class IMSession {
 
 
     public void onMessageSendSuccess(IMMessage message) {
-        onUpdate();
+        onSessionUpdate();
     }
 
     public void onMessageReceived(IMMessage message) {
@@ -239,7 +235,7 @@ public class IMSession {
         to = groupInfoBean.getGid();
         title = groupInfoBean.getName();
         avatar = groupInfoBean.getAvatar();
-        onUpdate();
+        onSessionUpdate();
         return this;
     }
 
@@ -247,11 +243,11 @@ public class IMSession {
         to = userInfoBean.getUid();
         title = userInfoBean.getNickname();
         avatar = userInfoBean.getAvatar();
-        onUpdate();
+        onSessionUpdate();
         return this;
     }
 
-    private void onUpdate() {
+    private void onSessionUpdate() {
         lastUpdateAt = System.currentTimeMillis();
 //        if (latestMessage.size() > 0) {
 //            IMMessage msg = latestMessage.get(latestMessage.size() - 1);

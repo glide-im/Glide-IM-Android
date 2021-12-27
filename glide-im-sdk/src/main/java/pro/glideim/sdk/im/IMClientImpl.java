@@ -96,6 +96,11 @@ public class IMClientImpl implements IMClient {
         connection.disconnect();
     }
 
+    @Override
+    public WsClient getWebSocketClient() {
+        return this.connection;
+    }
+
     public Observable<ChatMessage> resendMessage(ChatMessage message) {
         return sendMessage(Actions.ACTION_MESSAGE_CHAT_RESEND, message);
     }

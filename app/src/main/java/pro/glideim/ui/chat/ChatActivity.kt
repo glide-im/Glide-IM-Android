@@ -92,20 +92,20 @@ class ChatActivity : BaseActivity() {
 
         val latest = mSession.getMessages(mLastMid, 20)
         mMessage.addAll(latest)
-
+        mAdapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
+            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
+                mRvMessages.smoothScrollToPosition(mAdapter.itemCount)
+                mAdapter.unregisterAdapterDataObserver(this)
+            }
+        })
 
         mSession.setMessageListener(object : MessageChangeListener {
-            override fun onChange(mid: Long, message: IMMessage) {
+            override fun onChange(mid: Long, message: IMMessage) {}
 
-            }
-
-            override fun onInsertMessage(mid: Long, message: IMMessage) {
-            }
+            override fun onInsertMessage(mid: Long, message: IMMessage) {}
 
             override fun onNewMessage(message: IMMessage) {
                 mMessage.add(message)
-//                mMidMap[message.mid] = message
-//                mAdapter.notifyItemInserted(mMessage.size() - 1)
             }
         })
     }
@@ -116,6 +116,7 @@ class ChatActivity : BaseActivity() {
             return
         }
         mBtSend.isEnabled = false
+
         GlideIM.sendChatMessage(mUID, 1, msg)
             .io2main()
             .request {
@@ -126,6 +127,7 @@ class ChatActivity : BaseActivity() {
                         ChatMessage.STATE_CREATED -> {
                             mEtMessage.setText("")
                             mMessage.add(it)
+                            mRvMessages.smoothScrollToPosition(mAdapter.itemCount)
                         }
                         ChatMessage.STATE_SRV_RECEIVED -> {
                             mMessage.add(it)

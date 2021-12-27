@@ -2,6 +2,8 @@ package pro.glideim.sdk.ws;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
+import java.util.List;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -15,7 +17,6 @@ import io.netty.handler.codec.http.HttpClientCodec;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler;
-import io.reactivex.Observable;
 import io.reactivex.Single;
 import pro.glideim.sdk.http.RetrofitManager;
 import pro.glideim.sdk.im.ConnStateListener;
@@ -23,11 +24,10 @@ import pro.glideim.sdk.im.ConnStateListener;
 public class NettyWsClient extends ChannelInitializer<NioSocketChannel> implements WsClient {
 
     private static Bootstrap bootstrap;
-
-    private WsInboundChHandler channelInboundHandler;
     private final NioEventLoopGroup eventExecutors;
+    private WsInboundChHandler channelInboundHandler;
     private Channel channel;
-    private ConnStateListener connStateListener;
+    private final List<ConnStateListener> connStateListener = new ArrayList<>();
 
     private MessageListener messageListener;
 
@@ -86,6 +86,11 @@ public class NettyWsClient extends ChannelInitializer<NioSocketChannel> implemen
     }
 
     @Override
+    public int getState() {
+        return channelInboundHandler.connectionState;
+    }
+
+    @Override
     public boolean isConnected() {
         return channel != null && channel.isActive();
     }
@@ -109,11 +114,11 @@ public class NettyWsClient extends ChannelInitializer<NioSocketChannel> implemen
 
     @Override
     public void addStateListener(ConnStateListener listener) {
-        this.connStateListener = listener;
-        if (channelInboundHandler != null) {
-            channelInboundHandler.connStateListener = listener;
-        }
+        this.connStateListener.add(listener);
+        channelInboundHandler.connStateListener = connStateListener;
     }
+
+
 
     @Override
     public void setMessageListener(MessageListener listener) {

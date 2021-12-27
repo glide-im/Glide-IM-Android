@@ -2,6 +2,7 @@ package pro.glideim.sdk;
 
 import androidx.annotation.NonNull;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -46,8 +47,6 @@ import pro.glideim.sdk.im.IMClientImpl;
 import pro.glideim.sdk.protocol.Actions;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
-import pro.glideim.sdk.utils.RxUtils;
-import pro.glideim.sdk.utils.SLogger;
 import pro.glideim.sdk.ws.WsClient;
 
 public class GlideIM {
@@ -62,32 +61,13 @@ public class GlideIM {
 
     private static GlideIM sInstance;
     private final String wsUrl;
+    private final KeepAlive keepAlive;
     private DataStorage dataStorage = new DefaultDataStoreImpl();
     private int device = 1;
 
-    private final ConnStateListener keepAliveStateListener = new ConnStateListener() {
-        @Override
-        public void onStateChange(int state, String msg) {
-            if (state == WsClient.STATE_CLOSED) {
-                SLogger.d(TAG, "reconnecting the server");
-                sIM.connect(wsUrl)
-                        .retry(10)
-                        .compose(RxUtils.silentSchedulerSingle())
-                        .doOnSuccess(aBoolean -> {
-                            authWs().compose(RxUtils.silentScheduler())
-                                    .subscribe(new SilentObserver<>());
-                        })
-                        .doOnError(e -> {
-                            SLogger.d(TAG, "reconnect server failed");
-                            SLogger.e(TAG, e);
-                        })
-                        .subscribe(new SilentObserver<>());
-            }
-        }
-    };
-
     private GlideIM(String wsUrl) {
         this.wsUrl = wsUrl;
+        this.keepAlive = new KeepAlive(sIM.getWebSocketClient(), wsUrl);
     }
 
     public static GlideIM getInstance() {
@@ -142,6 +122,11 @@ public class GlideIM {
                             });
                     return Observable.concat(init, create);
                 })
+                .doOnError(throwable -> {
+                    if (throwable instanceof IOException) {
+                        GlideIM.getInstance().keepAlive.check();
+                    }
+                })
                 .map(chatMessage -> {
                     IMMessage r = IMMessage.fromChatMessage(chatMessage);
                     IMSession session = S_IM_ACCOUNT.getIMSessionList().getSession(chatMessage.getType(), chatMessage.getTo());
@@ -174,7 +159,7 @@ public class GlideIM {
                 .flatMap((Function<Boolean, ObservableSource<ProfileBean>>) aBoolean -> S_IM_ACCOUNT.initUserProfile());
     }
 
-    private static Observable<Boolean> authWs() {
+    static Observable<Boolean> authWs() {
         AuthDto d = new AuthDto(getInstance().dataStorage.loadToken(getInstance().getMyUID()), getInstance().device);
         return sIM.request(Actions.Cli.ACTION_USER_AUTH, AuthBean.class, false, d)
                 .map(bodyConverterForWsMsg())
@@ -379,6 +364,15 @@ public class GlideIM {
         };
     }
 
+    public Observable<Boolean> tryReconnect() {
+        if (sIM.getWebSocketClient().getState() != WsClient.STATE_CLOSED) {
+            return Observable.just(true);
+        }
+        return connect().flatMapObservable((Function<Boolean, ObservableSource<Boolean>>) aBoolean ->
+                authWs()
+        );
+    }
+
     public IMAccount getAccount() {
         return S_IM_ACCOUNT;
     }
@@ -392,8 +386,6 @@ public class GlideIM {
     }
 
     public Single<Boolean> connect() {
-        sIM.removeConnStateListener(keepAliveStateListener);
-        sIM.addConnStateListener(keepAliveStateListener);
         return sIM.connect(this.wsUrl);
     }
 

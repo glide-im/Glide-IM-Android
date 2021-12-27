@@ -22,4 +22,6 @@ public interface IMClient {
     <T> Observable<CommMessage<T>> request(String action, Class<T> clazz, boolean isArray, Object data);
 
     void disconnect();
+
+    WsClient getWebSocketClient();
 }

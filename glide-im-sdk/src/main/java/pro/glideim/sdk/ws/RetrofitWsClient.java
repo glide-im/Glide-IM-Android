@@ -39,6 +39,11 @@ public class RetrofitWsClient implements WsClient {
     }
 
     @Override
+    public int getState() {
+        return state;
+    }
+
+    @Override
     public void addStateListener(ConnStateListener listener) {
         this.connStateListener = listener;
     }
