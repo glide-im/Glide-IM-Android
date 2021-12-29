@@ -31,7 +31,7 @@ class GlideIMTest {
     void auth() throws InterruptedException {
         login();
         Thread.sleep(1000);
-
+        GlideIM.auth();
     }
 
     @Test

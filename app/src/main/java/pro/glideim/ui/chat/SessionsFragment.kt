@@ -1,3 +1,4 @@
+import android.annotation.SuppressLint
 import android.util.Log
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -5,6 +6,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.dengzii.adapter.SuperAdapter
 import com.dengzii.ktx.android.content.getColorCompat
 import com.dengzii.ktx.android.px2dp
+import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.base.BaseFragment
 import pro.glideim.sdk.GlideIM
@@ -15,8 +17,11 @@ import pro.glideim.utils.*
 
 class SessionsFragment : BaseFragment() {
 
+    private val mTvTitle by lazy { findViewById<MaterialTextView>(R.id.tv_title) }
+
     private val mRvSessions by lazy { findViewById<RecyclerView>(R.id.rv_sessions) }
     private val mSrfRefresh by lazy { findViewById<SwipeRefreshLayout>(R.id.srf_refresh) }
+
 
     private val mSessionList = mutableListOf<Any>()
     private val mAdapter = SuperAdapter(mSessionList)
@@ -96,5 +101,15 @@ class SessionsFragment : BaseFragment() {
             .request(this) {
 
             }
+    }
+
+    @SuppressLint("SetTextI18n")
+    override fun updateConnState(state: String) {
+        super.updateConnState(state)
+        if (state.isBlank()) {
+            mTvTitle.text = "Glide"
+        } else {
+            mTvTitle.text = state
+        }
     }
 }

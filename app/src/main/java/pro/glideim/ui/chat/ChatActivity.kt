@@ -1,8 +1,11 @@
 package pro.glideim.ui.chat
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import androidx.recyclerview.widget.LinearLayoutManager
+import android.os.Bundle
+import android.view.View
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SortedList
 import com.dengzii.adapter.SuperAdapter
@@ -33,6 +36,7 @@ class ChatActivity : BaseActivity() {
     private val mMidMap: TreeMap<Long, IMMessage> = TreeMap()
     private val mMessage = MySortedList()
     private val mAdapter = SuperAdapter(mMessage)
+    private val mLayoutManger = GridLayoutManager(this, 1, RecyclerView.VERTICAL, true)
 
     private lateinit var mSession: IMSession
     private val mUID by intentExtra(EXTRA_UID, 0L)
@@ -53,6 +57,11 @@ class ChatActivity : BaseActivity() {
         }
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        mSession = GlideIM.getInstance().account.imSessionList.getSession(1, mUID)
+        super.onCreate(savedInstanceState)
+    }
+
     override fun initView() {
         mMessage.l = SortedList(IMMessage::class.java, MessageListSorter(mAdapter))
 
@@ -64,22 +73,15 @@ class ChatActivity : BaseActivity() {
             IMMessage::class.java,
             ChatMessageViewHolder::class.java
         )
-        mRvMessages.adapter = mAdapter
 
-        val layoutManager = LinearLayoutManager(this)
-        layoutManager.stackFromEnd = true
-        mRvMessages.layoutManager = layoutManager
+        mRvMessages.scrollBarStyle = View.SCROLLBARS_OUTSIDE_OVERLAY
+        mRvMessages.isNestedScrollingEnabled = false
+        mRvMessages.layoutManager = mLayoutManger
+        mRvMessages.adapter = mAdapter
 
         mBtSend.setOnClickListener {
             sendMessage()
         }
-
-        GlideIM.getInstance().account.imSessionList.getSession(mUID, 1)
-            .io2main()
-            .request2(this) {
-                setSessionInfo(it)
-                requestData()
-            }
     }
 
     private fun setSessionInfo(s: IMSession) {
@@ -87,17 +89,11 @@ class ChatActivity : BaseActivity() {
         mEtMessage.toggleEnable()
         mBtSend.toggleEnable()
 
-        mTvTitle.text = mSession.title
         mMessage.clear()
 
         val latest = mSession.getMessages(mLastMid, 20)
         mMessage.addAll(latest)
-        mAdapter.registerAdapterDataObserver(object : RecyclerView.AdapterDataObserver() {
-            override fun onItemRangeInserted(positionStart: Int, itemCount: Int) {
-                mRvMessages.smoothScrollToPosition(mAdapter.itemCount)
-                mAdapter.unregisterAdapterDataObserver(this)
-            }
-        })
+        scrollToLastMessage()
 
         mSession.setMessageListener(object : MessageChangeListener {
             override fun onChange(mid: Long, message: IMMessage) {}
@@ -127,7 +123,7 @@ class ChatActivity : BaseActivity() {
                         ChatMessage.STATE_CREATED -> {
                             mEtMessage.setText("")
                             mMessage.add(it)
-                            mRvMessages.smoothScrollToPosition(mAdapter.itemCount)
+                            scrollToLastMessage()
                         }
                         ChatMessage.STATE_SRV_RECEIVED -> {
                             mMessage.add(it)
@@ -160,5 +156,34 @@ class ChatActivity : BaseActivity() {
 //                    }
 //                })
 //            }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        GlideIM.getInstance().addConnectionListener { state, _ ->
+            checkIMServerState()
+        }
+    }
+
+    private fun checkIMServerState() {
+        if (!GlideIM.getInstance().isConnected) {
+            GlideIM.getInstance().tryReconnect()
+                .io2main()
+                .request2(this) {
+
+                }
+        }
+    }
+
+    private fun scrollToLastMessage() {
+        if (mAdapter.itemCount > 0) {
+            mRvMessages.scrollToPosition(0)
+        }
+    }
+
+    @SuppressLint("SetTextI18n")
+    override fun updateConnState(state: String) {
+        super.updateConnState(state)
+        mTvTitle.text = mSession.title + " " + state
     }
 }

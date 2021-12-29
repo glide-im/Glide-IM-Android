@@ -17,12 +17,12 @@ import pro.glideim.sdk.im.IMClientImpl;
 
 class IMClientTest {
 
-    IMClientImpl imClient = IMClientImpl.create();
+    IMClientImpl imClient = IMClientImpl.create("ws://localhost:8080/ws");
 
     @BeforeEach
     void setUp() throws InterruptedException {
         RetrofitManager.init("http://localhost/api/");
-        Boolean aBoolean = imClient.connect("ws://localhost:8080/ws").blockingGet();
+        Boolean aBoolean = imClient.connect().blockingGet();
         Thread.sleep(1000);
     }
 

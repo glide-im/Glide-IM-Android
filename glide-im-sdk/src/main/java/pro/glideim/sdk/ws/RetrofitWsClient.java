@@ -4,6 +4,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.EOFException;
+import java.util.ArrayList;
+import java.util.List;
 
 import io.reactivex.Single;
 import okhttp3.Response;
@@ -16,16 +18,26 @@ import pro.glideim.sdk.im.ConnStateListener;
 public class RetrofitWsClient implements WsClient {
 
     private WebSocket ws;
-    private ConnStateListener connStateListener;
+    private List<ConnStateListener> connStateListener = new ArrayList<>();
     private MessageListener messageListener;
     private int state = WsClient.STATE_CLOSED;
+    private final String url;
+
+    public RetrofitWsClient(String url) {
+        this.url = url;
+    }
 
     @Override
-    public Single<Boolean> connect(String url) {
+    public Single<Boolean> connect() {
         onStateChange(WsClient.STATE_CONNECTING);
         return Single.create(emitter -> {
             ws = RetrofitManager.newWebSocket(url, new WebSocketListenerProxy());
         });
+    }
+
+    @Override
+    public void removeStateListener(ConnStateListener listener) {
+        this.connStateListener.remove(listener);
     }
 
     @Override
@@ -45,7 +57,7 @@ public class RetrofitWsClient implements WsClient {
 
     @Override
     public void addStateListener(ConnStateListener listener) {
-        this.connStateListener = listener;
+        this.connStateListener.add(listener);
     }
 
     @Override
@@ -61,8 +73,8 @@ public class RetrofitWsClient implements WsClient {
     }
 
     private void onStateChange(int state) {
-        if (connStateListener != null) {
-            connStateListener.onStateChange(state, "");
+        for (ConnStateListener stateListener : connStateListener) {
+            stateListener.onStateChange(state, "");
         }
         this.state = state;
     }

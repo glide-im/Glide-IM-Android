@@ -13,7 +13,7 @@ public interface IMClient {
 
     void setMessageListener(MessageListener listener);
 
-    Single<Boolean> connect(String url);
+    Single<Boolean> connect();
 
     boolean isConnected();
 
@@ -22,6 +22,8 @@ public interface IMClient {
     <T> Observable<CommMessage<T>> request(String action, Class<T> clazz, boolean isArray, Object data);
 
     void disconnect();
+
+    boolean send(Object obj);
 
     WsClient getWebSocketClient();
 }

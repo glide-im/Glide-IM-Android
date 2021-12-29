@@ -16,9 +16,7 @@ class App : Application() {
         super.onCreate()
 
         UserPerf.init(this)
-        GlideIM.init("ws://192.168.1.123:8080/ws", "http://192.168.1.123:8081/api/") { s, c ->
-            Log.d(TAG, "ConnectionStateChanged: $s $c")
-        }
+        GlideIM.init("ws://192.168.1.123:8080/ws", "http://192.168.1.123:8081/api/")
         GlideIM.getInstance().dataStorage = UserPerf.getInstance()
         GlideIM.getInstance().setDevice(1)
 

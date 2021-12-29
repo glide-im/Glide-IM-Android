@@ -10,7 +10,7 @@ class MessageListSorter(adapter: SuperAdapter) : SortedListAdapterCallback<IMMes
         if (o1.mid == o2.mid) {
             return 0
         }
-        return (o1.mid - o2.mid).toInt()
+        return (o2.mid - o1.mid).toInt()
     }
 
     override fun areContentsTheSame(oldItem: IMMessage, newItem: IMMessage): Boolean {

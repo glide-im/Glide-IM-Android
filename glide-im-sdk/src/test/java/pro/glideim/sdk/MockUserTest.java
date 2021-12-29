@@ -19,13 +19,13 @@ import pro.glideim.sdk.protocol.CommMessage;
 
 public class MockUserTest {
 
-    IMClientImpl imClient = IMClientImpl.create();
+    IMClientImpl imClient = IMClientImpl.create("ws://localhost:8080/ws");
 
     @BeforeEach
     void setup() throws InterruptedException {
 
         RetrofitManager.init("http://localhost:8081/api/");
-        imClient.connect("ws://localhost:8080/ws").blockingGet();
+        imClient.connect().blockingGet();
         imClient.setMessageListener(m -> {
             System.out.println("On Receive Message ===>>> " + RetrofitManager.toJson(m));
         });

@@ -1,5 +1,6 @@
 package pro.glideim.ui.contacts
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import android.widget.ImageView
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -22,6 +23,7 @@ import pro.glideim.utils.*
 class ContactsFragment : BaseFragment() {
     private val mBtAdd by lazy { findViewById<MaterialButton>(R.id.bt_add) }
 
+    private val mTvTitle by lazy { findViewById<MaterialTextView>(R.id.tv_title) }
     private val mRvSessions by lazy { findViewById<RecyclerView>(R.id.rv_contacts) }
     private val mSrfRefresh by lazy { findViewById<SwipeRefreshLayout>(R.id.srf_refresh) }
 
@@ -107,5 +109,15 @@ class ContactsFragment : BaseFragment() {
                 mAdapter.notifyDataSetChanged()
                 mSrfRefresh.finishRefresh()
             }
+    }
+
+    @SuppressLint("SetTextI18n")
+    override fun updateConnState(state: String) {
+        super.updateConnState(state)
+        if (state.isBlank()) {
+            mTvTitle.text = "Contacts"
+        } else {
+            mTvTitle.text = state
+        }
     }
 }

@@ -17,8 +17,8 @@ class RetrofitWsClientTest {
 
     @Test
     void connect() throws InterruptedException {
-        RetrofitWsClient c = new RetrofitWsClient();
-        c.connect("ws://localhost:8080/ws").blockingGet();
+        RetrofitWsClient c = new RetrofitWsClient("ws://localhost:8080/ws");
+        c.connect().blockingGet();
 
 //        c.sendMessage(new CommMessage(1, "api.user.login", 1, new LoginDto("abc", "abc", 1)));
         Thread.sleep(10000);

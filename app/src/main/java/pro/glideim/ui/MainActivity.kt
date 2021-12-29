@@ -3,7 +3,6 @@ package pro.glideim.ui
 import SessionsFragment
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import androidx.core.view.get
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
@@ -14,8 +13,6 @@ import pro.glideim.base.BaseFragment
 import pro.glideim.sdk.GlideIM
 import pro.glideim.ui.contacts.ContactsFragment
 import pro.glideim.ui.profile.ProfileFragment
-import pro.glideim.utils.io2main
-import pro.glideim.utils.request2
 
 class MainActivity : BaseActivity() {
 
@@ -35,7 +32,7 @@ class MainActivity : BaseActivity() {
 
     override fun initView() {
         initLayout()
-        GlideIM.getInstance().setConnectionListener { state, msg ->
+        GlideIM.getInstance().addConnectionListener { state, msg ->
             runOnUiThread {
                 toast("connection state changed: $state $msg")
             }
@@ -74,23 +71,6 @@ class MainActivity : BaseActivity() {
 //        val badge = mBnvNav.getOrCreateBadge(R.id.it_messages)
 //        badge.isVisible = true
 //        badge.number = 4
-    }
-
-    override fun onResume() {
-        super.onResume()
-        GlideIM.getInstance().setConnectionListener { state, _ ->
-            checkIMServerState()
-        }
-    }
-
-    private fun checkIMServerState() {
-        if (!GlideIM.getInstance().isConnected) {
-            GlideIM.getInstance().tryReconnect()
-                .io2main()
-                .request2(this) {
-
-                }
-        }
     }
 
     override fun onDestroy() {

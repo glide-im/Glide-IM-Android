@@ -1,6 +1,5 @@
 package pro.glideim.sdk;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import pro.glideim.sdk.api.user.UserInfoBean;

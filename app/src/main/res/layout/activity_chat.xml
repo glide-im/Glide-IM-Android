@@ -37,6 +37,8 @@
         android:id="@+id/rv_messages"
         android:layout_width="match_parent"
         android:layout_height="0dp"
+        android:fadeScrollbars="true"
+        android:scrollbars="vertical"
         app:layout_constraintBottom_toTopOf="@+id/cl_msg"
         app:layout_constraintTop_toBottomOf="@id/fl_title" />
 
@@ -46,13 +48,13 @@
         android:layout_height="wrap_content"
         android:background="@color/white"
         android:elevation="10dp"
+        android:focusable="true"
+        android:focusableInTouchMode="true"
+        android:focusedByDefault="true"
         android:orientation="horizontal"
         android:paddingHorizontal="8dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        android:focusedByDefault="true"
-        android:focusable="true"
-        android:focusableInTouchMode="true"
         app:layout_constraintTop_toBottomOf="@id/rv_messages">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -60,11 +62,11 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:background="@null"
+            android:hint="天涯何处觅知音"
             android:maxLines="5"
             android:minHeight="40dp"
             android:paddingVertical="10dp"
             android:textSize="14sp"
-            android:hint="天涯何处觅知音"
             app:layout_constraintEnd_toStartOf="@id/bt_send"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />

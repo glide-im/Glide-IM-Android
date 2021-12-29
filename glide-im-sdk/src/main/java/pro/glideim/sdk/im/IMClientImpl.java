@@ -12,18 +12,15 @@ import java.util.concurrent.TimeUnit;
 import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.Single;
-import io.reactivex.disposables.Disposable;
 import io.reactivex.internal.operators.observable.ObservableSubscribeOn;
 import pro.glideim.sdk.Logger;
 import pro.glideim.sdk.ParameterizedTypeImpl;
-import pro.glideim.sdk.SilentObserver;
 import pro.glideim.sdk.http.RetrofitManager;
 import pro.glideim.sdk.protocol.AckMessage;
 import pro.glideim.sdk.protocol.AckRequest;
 import pro.glideim.sdk.protocol.Actions;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
-import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
 import pro.glideim.sdk.ws.NettyWsClient;
 import pro.glideim.sdk.ws.WsClient;
@@ -43,19 +40,19 @@ public class IMClientImpl implements IMClient {
     private final Type typeCommMsg = new TypeToken<CommMessage<Object>>() {
     }.getType();
     private final List<ConnStateListener> connStateListeners = new ArrayList<>();
+    private final Heartbeat heartbeat;
     private MessageListener messageListener;
     private long seq;
-    private String url;
 
-    private IMClientImpl() {
-        connection = new NettyWsClient();
-        connection.addStateListener(new ConnectionStateChangeListener());
+    private IMClientImpl(String wsUrl) {
+        connection = new NettyWsClient(wsUrl);
+        heartbeat = Heartbeat.start(this);
         connection.setMessageListener(msg -> onMessage(new Message(msg)));
         logger = SLogger.getLogger();
     }
 
-    public static IMClientImpl create() {
-        return new IMClientImpl();
+    public static IMClientImpl create(String wsUrl) {
+        return new IMClientImpl(wsUrl);
     }
 
     private static <T> T deserialize(Type t, Message msg) {
@@ -86,14 +83,22 @@ public class IMClientImpl implements IMClient {
     }
 
     @Override
-    public Single<Boolean> connect(String url) {
-        this.url = url;
-        return connection.connect(url);
+    public Single<Boolean> connect() {
+        return connection.connect();
     }
 
     @Override
     public void disconnect() {
         connection.disconnect();
+    }
+
+    @Override
+    public boolean send(Object obj) {
+        if (!connection.isConnected()) {
+            return false;
+        }
+        logger.d(TAG, "send message:" + RetrofitManager.toJson(obj));
+        return connection.write(obj);
     }
 
     @Override
@@ -118,7 +123,7 @@ public class IMClientImpl implements IMClient {
         if (!connection.isConnected()) {
             return Observable.error(new Exception("the server is not connected"));
         }
-        CommMessage<Object> m = new CommMessage<>(MESSAGE_VER, action, seq++, data);
+        CommMessage<Object> m = new CommMessage<>(MESSAGE_VER, action, ++seq, data);
 
         Type t;
         if (isArray) {
@@ -161,9 +166,6 @@ public class IMClientImpl implements IMClient {
         return flat;
     }
 
-    private boolean send(Object obj) {
-        return connection.write(obj);
-    }
 
     private void onMessage(Message msg) {
         logger.d(TAG, "new message:" + msg.message);
@@ -236,30 +238,6 @@ public class IMClientImpl implements IMClient {
         AckRequest a = new AckRequest(cm.getMid(), cm.getFrom(), 0);
         logger.d(TAG, "send ack");
         send(new CommMessage<>(MESSAGE_VER, Actions.Cli.ACTION_ACK_REQUEST, 0, a));
-    }
-
-    private class ConnectionStateChangeListener implements ConnStateListener {
-
-        private Disposable heartbeat;
-
-        @Override
-        public void onStateChange(int state, String msg) {
-            for (ConnStateListener stateListener : connStateListeners) {
-                stateListener.onStateChange(state, msg);
-            }
-            if (state == WsClient.STATE_OPENED) {
-                heartbeat = Observable
-                        .interval(3, TimeUnit.SECONDS)
-                        .doOnNext(aLong -> {
-                            send(new CommMessage<>(MESSAGE_VER, Actions.ACTION_HEARTBEAT, 0, ""));
-                        })
-                        .subscribe();
-            } else if (state == WsClient.STATE_CLOSED) {
-                if (heartbeat != null && !heartbeat.isDisposed()) {
-                    heartbeat.dispose();
-                }
-            }
-        }
     }
 
     @SuppressWarnings("rawtypes")

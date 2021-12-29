@@ -2,8 +2,6 @@ package pro.glideim.sdk.ws;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.ArrayList;
-import java.util.List;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
@@ -23,27 +21,30 @@ import pro.glideim.sdk.im.ConnStateListener;
 
 public class NettyWsClient extends ChannelInitializer<NioSocketChannel> implements WsClient {
 
-    private static Bootstrap bootstrap;
-    private final NioEventLoopGroup eventExecutors;
+    private NioEventLoopGroup eventExecutors;
+    private Bootstrap bootstrap;
     private WsInboundChHandler channelInboundHandler;
     private Channel channel;
-    private final List<ConnStateListener> connStateListener = new ArrayList<>();
+    private URI uri;
 
-    private MessageListener messageListener;
+    public NettyWsClient(String wsUrl) {
+        uri = null;
+        try {
+            uri = new URI(wsUrl);
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
 
-    public NettyWsClient() {
-        eventExecutors = new NioEventLoopGroup();
-        bootstrap = new Bootstrap();
-        bootstrap.option(ChannelOption.TCP_NODELAY, true)
-                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
-                .group(eventExecutors)
-                .channel(NioSocketChannel.class)
-                .handler(this);
+        }
+        channelInboundHandler = new WsInboundChHandler(uri);
     }
 
-    public Single<Boolean> connect(String url) {
+    public Single<Boolean> connect() {
+        if (getState() != WsClient.STATE_CLOSED) {
+            return Single.just(true);
+        }
+        channelInboundHandler.onStateChanged(WsClient.STATE_CONNECTING);
         return Single.create(emitter -> {
-            ChannelFuture connect = connect2(url).sync();
+            ChannelFuture connect = connect2().sync();
             if (connect.isDone() && !connect.isSuccess()) {
                 emitter.onError(connect.cause());
                 return;
@@ -52,24 +53,27 @@ public class NettyWsClient extends ChannelInitializer<NioSocketChannel> implemen
             if (sync.isSuccess()) {
                 this.channel = connect.channel();
                 emitter.onSuccess(true);
+                channelInboundHandler.onStateChanged(WsClient.STATE_OPENED);
             } else {
+                channelInboundHandler.onStateChanged(WsClient.STATE_CLOSED);
                 emitter.onError(sync.cause());
             }
         });
     }
 
-    public ChannelFuture connect2(String url) {
-        URI uri;
-        try {
-            uri = new URI(url);
-        } catch (URISyntaxException e) {
-            e.printStackTrace();
-            return null;
+    private ChannelFuture connect2() {
+        eventExecutors = new NioEventLoopGroup();
+        bootstrap = new Bootstrap();
+
+        if (channelInboundHandler != null) {
+            channelInboundHandler = channelInboundHandler.copy();
         }
 
-        channelInboundHandler = new WsInboundChHandler(uri);
-        channelInboundHandler.connStateListener = connStateListener;
-        channelInboundHandler.messageListener = messageListener;
+        bootstrap.option(ChannelOption.TCP_NODELAY, true)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
+                .group(eventExecutors)
+                .channel(NioSocketChannel.class)
+                .handler(this);
         return bootstrap.connect(uri.getHost(), uri.getPort());
     }
 
@@ -114,15 +118,17 @@ public class NettyWsClient extends ChannelInitializer<NioSocketChannel> implemen
 
     @Override
     public void addStateListener(ConnStateListener listener) {
-        this.connStateListener.add(listener);
-        channelInboundHandler.connStateListener = connStateListener;
+        this.channelInboundHandler.connStateListener.add(listener);
     }
 
-
+    @Override
+    public void removeStateListener(ConnStateListener listener) {
+        this.channelInboundHandler.connStateListener.remove(listener);
+    }
 
     @Override
     public void setMessageListener(MessageListener listener) {
-        this.messageListener = listener;
+        this.channelInboundHandler.messageListener = listener;
     }
 
     @Override

@@ -54,20 +54,18 @@ public class GlideIM {
     public static final String TAG = "GlideIM";
 
     private static final IMAccount S_IM_ACCOUNT = new IMAccount();
-    private static final IMClient sIM = IMClientImpl.create();
     private static final Map<Long, UserInfoBean> sTempUserInfo = new HashMap<>();
     private static final Map<Long, GroupInfoBean> sTempGroupInfo = new HashMap<>();
     private static final Map<String, SessionBean> sTempSession = new HashMap<>();
 
+    private static IMClient sIM;
     private static GlideIM sInstance;
-    private final String wsUrl;
     private final KeepAlive keepAlive;
     private DataStorage dataStorage = new DefaultDataStoreImpl();
     private int device = 1;
 
-    private GlideIM(String wsUrl) {
-        this.wsUrl = wsUrl;
-        this.keepAlive = new KeepAlive(sIM.getWebSocketClient(), wsUrl);
+    private GlideIM() {
+        this.keepAlive = KeepAlive.create(sIM.getWebSocketClient());
     }
 
     public static GlideIM getInstance() {
@@ -75,14 +73,14 @@ public class GlideIM {
     }
 
     public static void init(String wsUrl, String baseUrlApi) {
+        sIM = IMClientImpl.create(wsUrl);
         RetrofitManager.init(baseUrlApi);
-        sInstance = new GlideIM(wsUrl);
+        sInstance = new GlideIM();
     }
 
     public static void init(String wsUrl, String baseUrlApi, ConnStateListener listener) {
-        RetrofitManager.init(baseUrlApi);
+        init(wsUrl, baseUrlApi);
         sIM.addConnStateListener(listener);
-        sInstance = new GlideIM(wsUrl);
     }
 
     public static Observable<List<IMMessage>> subscribeChatMessageChanges(long to, int type) {
@@ -368,6 +366,7 @@ public class GlideIM {
         if (sIM.getWebSocketClient().getState() != WsClient.STATE_CLOSED) {
             return Observable.just(true);
         }
+        disconnect();
         return connect().flatMapObservable((Function<Boolean, ObservableSource<Boolean>>) aBoolean ->
                 authWs()
         );
@@ -381,12 +380,20 @@ public class GlideIM {
         return sIM.isConnected();
     }
 
-    public void setConnectionListener(ConnStateListener listener) {
+    public int getConnState() {
+        return sIM.getWebSocketClient().getState();
+    }
+
+    public void addConnectionListener(ConnStateListener listener) {
         sIM.addConnStateListener(listener);
     }
 
+    public void removeConnectionListener(ConnStateListener listener) {
+        sIM.removeConnStateListener(listener);
+    }
+
     public Single<Boolean> connect() {
-        return sIM.connect(this.wsUrl);
+        return sIM.connect();
     }
 
     public void disconnect() {

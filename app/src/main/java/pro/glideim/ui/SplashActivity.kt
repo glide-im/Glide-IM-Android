@@ -28,6 +28,7 @@ class SplashActivity : BaseActivity() {
                 }
                 onError {
                     it.printStackTrace()
+                    mTvState.text = it.message ?: it.localizedMessage
                     toast(it.message ?: it.localizedMessage)
                 }
             }

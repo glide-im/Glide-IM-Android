@@ -10,27 +10,29 @@ public class KeepAlive implements ConnStateListener {
     private static final String TAG = KeepAlive.class.getSimpleName();
 
     private final WsClient client;
-    private final String wsUrl;
 
-    KeepAlive(WsClient client, String wsUrl) {
+    private KeepAlive(WsClient client) {
         this.client = client;
-        this.wsUrl = wsUrl;
         this.client.addStateListener(this);
+    }
+
+    public static KeepAlive create(WsClient client) {
+        KeepAlive keepAlive = new KeepAlive(client);
+        client.addStateListener(keepAlive);
+        return keepAlive;
     }
 
     @Override
     public void onStateChange(int state, String msg) {
-        if (state == WsClient.STATE_CLOSED) {
-            check();
-        }
+        check();
     }
 
     void check() {
-        if (client.getState() == WsClient.STATE_CLOSED) {
+        if (client.getState() != WsClient.STATE_CLOSED) {
             return;
         }
         SLogger.d(TAG, "reconnecting the server");
-        client.connect(wsUrl)
+        client.connect()
                 .retry(10)
                 .compose(RxUtils.silentSchedulerSingle())
                 .doOnSuccess(aBoolean -> {

@@ -25,17 +25,34 @@ public class WsInboundChHandler extends SimpleChannelInboundHandler<Object> {
 
     private final WebSocketClientHandshaker handshaker;
     ChannelPromise handshakeFuture;
+
     List<ConnStateListener> connStateListener = new ArrayList<>();
     MessageListener messageListener;
-    int connectionState;
+    int connectionState = WsClient.STATE_CLOSED;
+    private URI uri;
+
+    private WsInboundChHandler(WebSocketClientHandshaker handshaker) {
+        this.handshaker = handshaker;
+    }
 
     public WsInboundChHandler(URI uri) {
+        this.uri = uri;
         this.handshaker = WebSocketClientHandshakerFactory.newHandshaker(
                 uri, WebSocketVersion.V13, null, true,
                 new DefaultHttpHeaders());
     }
 
-    private void onStateChanged(int state) {
+    public WsInboundChHandler copy() {
+        WsInboundChHandler inboundChHandler = new WsInboundChHandler(this.uri);
+        inboundChHandler.connStateListener = this.connStateListener;
+        inboundChHandler.messageListener = this.messageListener;
+        return inboundChHandler;
+    }
+
+    void onStateChanged(int state) {
+        if (connectionState == state) {
+            return;
+        }
         connectionState = state;
         for (ConnStateListener stateListener : connStateListener) {
             stateListener.onStateChange(state, "");
@@ -77,6 +94,7 @@ public class WsInboundChHandler extends SimpleChannelInboundHandler<Object> {
                 handshakeFuture.setSuccess();
             } catch (WebSocketHandshakeException e) {
                 System.out.println("WebSocket Client failed to connect");
+                onStateChanged(WsClient.STATE_CLOSED);
                 handshakeFuture.setFailure(e);
             }
             return;
@@ -114,6 +132,7 @@ public class WsInboundChHandler extends SimpleChannelInboundHandler<Object> {
             handshakeFuture.setFailure(cause);
         }
         ctx.close();
+        onStateChanged(WsClient.STATE_CLOSED);
     }
 
 }
