@@ -7,8 +7,6 @@ import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.im.ConnStateListener
 import pro.glideim.sdk.ws.WsClient
 import pro.glideim.utils.RequestStateCallback
-import pro.glideim.utils.io2main
-import pro.glideim.utils.request2
 
 abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnStateListener {
     abstract val layoutResId: Int
@@ -70,6 +68,6 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
             WsClient.STATE_OPENED -> ""
             else -> ""
         }
-        updateConnState(s)
+        runOnUiThread { updateConnState(s) }
     }
 }

@@ -22,7 +22,7 @@ import pro.glideim.sdk.protocol.Actions;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
 import pro.glideim.sdk.utils.SLogger;
-import pro.glideim.sdk.ws.NettyWsClient;
+import pro.glideim.sdk.ws.RetrofitWsClient;
 import pro.glideim.sdk.ws.WsClient;
 
 public class IMClientImpl implements IMClient {
@@ -45,7 +45,7 @@ public class IMClientImpl implements IMClient {
     private long seq;
 
     private IMClientImpl(String wsUrl) {
-        connection = new NettyWsClient(wsUrl);
+        connection = new RetrofitWsClient(wsUrl);
         heartbeat = Heartbeat.start(this);
         connection.setMessageListener(msg -> onMessage(new Message(msg)));
         logger = SLogger.getLogger();

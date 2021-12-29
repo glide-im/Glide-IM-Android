@@ -87,6 +87,8 @@ abstract class BaseFragment : Fragment(), RequestStateCallback, ConnStateListene
             WsClient.STATE_OPENED -> ""
             else -> ""
         }
-        updateConnState(s)
+        activity?.runOnUiThread {
+            updateConnState(s)
+        }
     }
 }

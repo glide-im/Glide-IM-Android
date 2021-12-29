@@ -32,11 +32,6 @@ class MainActivity : BaseActivity() {
 
     override fun initView() {
         initLayout()
-        GlideIM.getInstance().addConnectionListener { state, msg ->
-            runOnUiThread {
-                toast("connection state changed: $state $msg")
-            }
-        }
     }
 
     private fun initLayout() {

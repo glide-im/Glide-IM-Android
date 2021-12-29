@@ -78,11 +78,6 @@ public class GlideIM {
         sInstance = new GlideIM();
     }
 
-    public static void init(String wsUrl, String baseUrlApi, ConnStateListener listener) {
-        init(wsUrl, baseUrlApi);
-        sIM.addConnStateListener(listener);
-    }
-
     public static Observable<List<IMMessage>> subscribeChatMessageChanges(long to, int type) {
         return Observable.empty();
     }
@@ -385,11 +380,11 @@ public class GlideIM {
     }
 
     public void addConnectionListener(ConnStateListener listener) {
-        sIM.addConnStateListener(listener);
+        sIM.getWebSocketClient().addStateListener(listener);
     }
 
     public void removeConnectionListener(ConnStateListener listener) {
-        sIM.removeConnStateListener(listener);
+        sIM.getWebSocketClient().removeStateListener(listener);
     }
 
     public Single<Boolean> connect() {

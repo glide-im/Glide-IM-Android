@@ -17,11 +17,11 @@ import pro.glideim.sdk.im.ConnStateListener;
 
 public class RetrofitWsClient implements WsClient {
 
+    private final List<ConnStateListener> connStateListener = new ArrayList<>();
+    private final String url;
     private WebSocket ws;
-    private List<ConnStateListener> connStateListener = new ArrayList<>();
     private MessageListener messageListener;
     private int state = WsClient.STATE_CLOSED;
-    private final String url;
 
     public RetrofitWsClient(String url) {
         this.url = url;
@@ -31,7 +31,12 @@ public class RetrofitWsClient implements WsClient {
     public Single<Boolean> connect() {
         onStateChange(WsClient.STATE_CONNECTING);
         return Single.create(emitter -> {
-            ws = RetrofitManager.newWebSocket(url, new WebSocketListenerProxy());
+            try {
+                ws = RetrofitManager.newWebSocket(url, new WebSocketListenerProxy());
+                emitter.onSuccess(true);
+            } catch (Throwable throwable) {
+                emitter.onError(throwable);
+            }
         });
     }
 
@@ -43,6 +48,7 @@ public class RetrofitWsClient implements WsClient {
     @Override
     public void disconnect() {
         ws.close(1000, "");
+        onStateChange(WsClient.STATE_CLOSED);
     }
 
     @Override
@@ -63,7 +69,6 @@ public class RetrofitWsClient implements WsClient {
     @Override
     public boolean write(Object obj) {
         String json = RetrofitManager.toJson(obj);
-        System.out.println("WsClient.sendMessage:" + json);
         return this.ws.send(json);
     }
 
@@ -73,10 +78,13 @@ public class RetrofitWsClient implements WsClient {
     }
 
     private void onStateChange(int state) {
+        if (this.state == state) {
+            return;
+        }
+        this.state = state;
         for (ConnStateListener stateListener : connStateListener) {
             stateListener.onStateChange(state, "");
         }
-        this.state = state;
     }
 
     private class WebSocketListenerProxy extends WebSocketListener {
@@ -95,12 +103,8 @@ public class RetrofitWsClient implements WsClient {
 
         @Override
         public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
-            if (t instanceof EOFException) {
-                this.onClosed(webSocket, -1, "EOF, closed");
-                return;
-            }
             System.out.println("WsClient.onFailure " + t.getMessage());
-            if (state == WsClient.STATE_CONNECTING) {
+            if (state != WsClient.STATE_CLOSED) {
                 onStateChange(WsClient.STATE_CLOSED);
             }
         }
