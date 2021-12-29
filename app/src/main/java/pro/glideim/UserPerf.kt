@@ -3,6 +3,7 @@ package pro.glideim
 import android.app.Application
 import android.content.Context
 import pro.glideim.sdk.DataStorage
+import pro.glideim.sdk.api.group.GroupInfoBean
 import pro.glideim.sdk.api.user.UserInfoBean
 import pro.glideim.sdk.entity.IMSession
 
@@ -45,16 +46,23 @@ class UserPerf : DataStorage {
 
     }
 
-    override fun loadTempUserInfo(): List<UserInfoBean> {
-        return emptyList()
+    override fun loadTempUserInfo(uid: Long): UserInfoBean? {
+        return null
+    }
+
+    override fun storeTempGroupInfo(groupInfoBean: GroupInfoBean?) {
+
+    }
+
+    override fun loadTempGroupInfo(gid: Long): GroupInfoBean? {
+        return null
     }
 
     override fun storeSession(uid: Long, session: IMSession?) {
-        TODO("Not yet implemented")
+
     }
 
     override fun loadSessions(uid: Long): MutableList<IMSession> {
-        TODO("Not yet implemented")
+        return mutableListOf()
     }
-
 }
