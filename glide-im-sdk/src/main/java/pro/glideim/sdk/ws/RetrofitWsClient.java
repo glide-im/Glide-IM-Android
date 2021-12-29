@@ -30,7 +30,7 @@ public class RetrofitWsClient implements WsClient {
     @Override
     public Single<Boolean> connect() {
         onStateChange(WsClient.STATE_CONNECTING);
-        return Single.create(emitter -> {
+        Single<Boolean> booleanSingle = Single.create(emitter -> {
             try {
                 ws = RetrofitManager.newWebSocket(url, new WebSocketListenerProxy());
                 emitter.onSuccess(true);
@@ -38,6 +38,7 @@ public class RetrofitWsClient implements WsClient {
                 emitter.onError(throwable);
             }
         });
+        return booleanSingle.retry(100);
     }
 
     @Override

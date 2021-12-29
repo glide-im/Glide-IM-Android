@@ -64,8 +64,6 @@ class ChatActivity : BaseActivity() {
 
     override fun initView() {
         mMessage.l = SortedList(IMMessage::class.java, MessageListSorter(mAdapter))
-
-        mTvTitle.text = "Chat"
         mEtMessage.toggleEnable()
         mBtSend.toggleEnable()
 
@@ -82,6 +80,7 @@ class ChatActivity : BaseActivity() {
         mBtSend.setOnClickListener {
             sendMessage()
         }
+        setSessionInfo(mSession)
     }
 
     private fun setSessionInfo(s: IMSession) {
@@ -111,6 +110,11 @@ class ChatActivity : BaseActivity() {
         if (msg.isBlank()) {
             return
         }
+        if (!GlideIM.getInstance().isConnected) {
+            toast("IM server is disconnected")
+            return
+        }
+
         mBtSend.isEnabled = false
 
         GlideIM.sendChatMessage(mUID, 1, msg)

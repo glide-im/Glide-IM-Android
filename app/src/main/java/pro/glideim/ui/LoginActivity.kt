@@ -44,7 +44,6 @@ class LoginActivity : BaseActivity() {
     }
 
     private fun submit() {
-        MainActivity.start(this)
         if (!validate()) {
             return
         }

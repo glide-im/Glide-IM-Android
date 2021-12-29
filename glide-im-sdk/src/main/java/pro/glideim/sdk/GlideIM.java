@@ -265,6 +265,10 @@ public class GlideIM {
         });
     }
 
+    public static GroupInfoBean getTempGroupInfo(long gid){
+        return sTempGroupInfo.get(gid);
+    }
+
     public static UserInfoBean getTempUserInfo(long uid) {
         return sTempUserInfo.get(uid);
     }

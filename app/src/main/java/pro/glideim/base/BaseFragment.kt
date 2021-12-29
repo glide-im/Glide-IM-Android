@@ -1,5 +1,6 @@
 package pro.glideim.base
 
+import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -63,14 +64,14 @@ abstract class BaseFragment : Fragment(), RequestStateCallback, ConnStateListene
         toast(t.message ?: "error")
     }
 
-    override fun onResume() {
-        super.onResume()
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
         onStateChange(GlideIM.getInstance().connState, "")
         GlideIM.getInstance().addConnectionListener(this)
     }
 
-    override fun onPause() {
-        super.onPause()
+    override fun onDestroyView() {
+        super.onDestroyView()
         GlideIM.getInstance().removeConnectionListener(this)
     }
 

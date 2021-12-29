@@ -6,10 +6,12 @@ import io.reactivex.Observable;
 import io.reactivex.disposables.Disposable;
 import pro.glideim.sdk.protocol.Actions;
 import pro.glideim.sdk.protocol.CommMessage;
+import pro.glideim.sdk.utils.SLogger;
 import pro.glideim.sdk.ws.WsClient;
 
 public class Heartbeat implements ConnStateListener {
 
+    private static final String TAG = Heartbeat.class.getSimpleName();
     private final IMClient client;
     private Disposable heartbeat;
 
@@ -34,12 +36,14 @@ public class Heartbeat implements ConnStateListener {
 
     private void start() {
         stop();
+        SLogger.d(TAG, "start");
         heartbeat = Observable
                 .interval(3, TimeUnit.SECONDS)
                 .doOnNext(aLong -> {
                     if (client.isConnected()) {
                         client.send(new CommMessage<>(1, Actions.ACTION_HEARTBEAT, 0, ""));
                     } else {
+
                         stop();
                     }
                 })
@@ -52,6 +56,7 @@ public class Heartbeat implements ConnStateListener {
 
     public void stop() {
         if (heartbeat != null && !heartbeat.isDisposed()) {
+            SLogger.d(TAG, "stop");
             heartbeat.dispose();
         }
     }

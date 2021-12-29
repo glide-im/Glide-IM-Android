@@ -24,6 +24,8 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
             initView()
             inited = true
         }
+        onStateChange(GlideIM.getInstance().connState, "")
+        GlideIM.getInstance().addConnectionListener(this)
     }
 
     abstract fun initView()
@@ -44,14 +46,8 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
         toast(t.message ?: "error")
     }
 
-    override fun onResume() {
-        super.onResume()
-        onStateChange(GlideIM.getInstance().connState, "")
-        GlideIM.getInstance().addConnectionListener(this)
-    }
-
-    override fun onPause() {
-        super.onPause()
+    override fun onStop() {
+        super.onStop()
         GlideIM.getInstance().removeConnectionListener(this)
     }
 

@@ -50,6 +50,7 @@ public class IMSession {
         this.tag = IMSessionList.SessionTag.get(type, to);
         this.to = to;
         this.type = type;
+        this.updateAt = System.currentTimeMillis()/1000;
     }
 
     public static IMSession fromGroupState(GroupMessageStateBean stateBean) {

@@ -11,17 +11,18 @@ import java.util.TreeMap;
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
 import io.reactivex.Single;
-import io.reactivex.SingleSource;
 import io.reactivex.functions.Function;
 import io.reactivex.observables.GroupedObservable;
 import pro.glideim.sdk.GlideIM;
 import pro.glideim.sdk.SilentObserver;
 import pro.glideim.sdk.api.Response;
+import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.msg.GetGroupMessageStateDto;
 import pro.glideim.sdk.api.msg.GetGroupMsgHistoryDto;
 import pro.glideim.sdk.api.msg.GetSessionDto;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.MsgApi;
+import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
 
@@ -51,7 +52,7 @@ public class IMSessionList {
         return sessionMap.containsKey(t);
     }
 
-    private synchronized void updateSession(IMSession... ses) {
+    private synchronized void addOrUpdateSession(IMSession... ses) {
 
         tempNewSession.clear();
         tempUpdateSession.clear();
@@ -92,7 +93,7 @@ public class IMSessionList {
     }
 
     private void putSession(IMSession session) {
-        session.setOnUpdateListener(this::updateSession);
+        session.setOnUpdateListener(this::addOrUpdateSession);
         session.setIMSessionList(this);
         sessionMap.put(session.tag, session);
     }
@@ -106,26 +107,37 @@ public class IMSessionList {
         if (session == null) {
             session = IMSession.create(tag.id, tag.type, this);
             if (tag.type == 2) {
-                MsgApi.API.getGroupMessageState(new GetGroupMessageStateDto(tag.id))
-                        .map(RxUtils.bodyConverter())
-                        .map(stateBean -> {
-                            IMSession imSession = IMSession.fromGroupState(stateBean);
-                            updateSession(imSession);
-                            return imSession;
-                        })
-                        .compose(RxUtils.silentScheduler())
-                        .subscribe(new SilentObserver<>());
+                GroupInfoBean tempGroupInfo = GlideIM.getTempGroupInfo(tag.id);
+                if (tempGroupInfo != null) {
+                    session.setInfo(tempGroupInfo);
+                } else {
+                    MsgApi.API.getGroupMessageState(new GetGroupMessageStateDto(tag.id))
+                            .map(RxUtils.bodyConverter())
+                            .map(stateBean -> {
+                                IMSession imSession = IMSession.fromGroupState(stateBean);
+                                addOrUpdateSession(imSession);
+                                return imSession;
+                            })
+                            .compose(RxUtils.silentScheduler())
+                            .subscribe(new SilentObserver<>());
+                }
             } else if (tag.type == 1) {
-                MsgApi.API.getSession(new GetSessionDto(tag.id))
-                        .map(RxUtils.bodyConverter())
-                        .map(sessionBean -> {
-                            IMSession imSession = IMSession.fromSessionBean(GlideIM.getInstance().getMyUID(), sessionBean);
-                            updateSession(imSession);
-                            return imSession;
-                        })
-                        .compose(RxUtils.silentScheduler())
-                        .subscribe(new SilentObserver<>());
+                UserInfoBean tempUserInfo = GlideIM.getTempUserInfo(tag.id);
+                if (tempUserInfo != null) {
+                    session.setInfo(tempUserInfo);
+                } else {
+                    MsgApi.API.getSession(new GetSessionDto(tag.id))
+                            .map(RxUtils.bodyConverter())
+                            .map(sessionBean -> {
+                                IMSession imSession = IMSession.fromSessionBean(GlideIM.getInstance().getMyUID(), sessionBean);
+                                addOrUpdateSession(imSession);
+                                return imSession;
+                            })
+                            .compose(RxUtils.silentScheduler())
+                            .subscribe(new SilentObserver<>());
+                }
             }
+            addOrUpdateSession(session);
         }
         return session;
     }
@@ -146,7 +158,7 @@ public class IMSessionList {
 //                                    return sessions;
 //                                })
 //                )
-                .doOnSuccess(sessions -> updateSession(sessions.toArray(new IMSession[]{})))
+                .doOnSuccess(sessions -> addOrUpdateSession(sessions.toArray(new IMSession[]{})))
                 .map(sessions -> true);
     }
 
