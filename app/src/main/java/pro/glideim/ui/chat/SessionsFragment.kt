@@ -2,6 +2,7 @@ import android.annotation.SuppressLint
 import android.util.Log
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.recyclerview.widget.SortedList
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.dengzii.adapter.SuperAdapter
 import com.dengzii.ktx.android.content.getColorCompat
@@ -12,6 +13,8 @@ import pro.glideim.base.BaseFragment
 import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.IMSession
 import pro.glideim.sdk.SessionUpdateListener
+import pro.glideim.ui.chat.MySortedList
+import pro.glideim.ui.chat.SessionListSorter
 import pro.glideim.ui.chat.SessionViewHolder
 import pro.glideim.utils.*
 
@@ -22,7 +25,7 @@ class SessionsFragment : BaseFragment() {
     private val mRvSessions by lazy { findViewById<RecyclerView>(R.id.rv_sessions) }
     private val mSrfRefresh by lazy { findViewById<SwipeRefreshLayout>(R.id.srf_refresh) }
 
-    private val mSessionList = mutableListOf<Any>()
+    private val mSessionList = MySortedList<IMSession>()
     private val mAdapter = SuperAdapter(mSessionList)
 
     private val mIMSessionList by lazy { GlideIM.getAccount().imSessionList }
@@ -34,11 +37,11 @@ class SessionsFragment : BaseFragment() {
     override val layoutRes = R.layout.fragment_session
 
     override fun initView() {
-
+        mSessionList.l = SortedList(IMSession::class.java, SessionListSorter(mAdapter))
         mAdapter.addViewHolderForType(IMSession::class.java, SessionViewHolder::class.java)
 
-        mAdapter.setEnableEmptyView(true, SuperAdapter.EMPTY)
-        mAdapter.setEnableEmptyViewOnInit(true)
+//        mAdapter.setEnableEmptyView(true, SuperAdapter.EMPTY)
+//        mAdapter.setEnableEmptyViewOnInit(true)
         mRvSessions.adapter = mAdapter
         mRvSessions.layoutManager = LinearLayoutManager(requireContext())
         mRvSessions.addItemDecoration(
@@ -61,14 +64,7 @@ class SessionsFragment : BaseFragment() {
                         TAG,
                         "onUpdate() called with: session = ${session.joinToString { "${it.to}-${it.title}" }}"
                     )
-                    for (s in session) {
-                        val indexOf = mSessionList.indexOf(s)
-                        if (indexOf != -1) {
-                            activity?.runOnUiThread {
-                                mAdapter.notifyItemChanged(indexOf)
-                            }
-                        }
-                    }
+                    mSessionList.addAll(session.toList())
                 }
 
                 override fun onNewSession(vararg session: IMSession) {
@@ -76,13 +72,7 @@ class SessionsFragment : BaseFragment() {
                         TAG,
                         "onNewSession() called with: session = ${session.joinToString { "${it.to}-${it.title}" }}"
                     )
-                    mSessionList.addAll(session)
-                    mSessionList.sortBy {
-                        -((it as? IMSession)?.updateAt ?: 0)
-                    }
-                    activity?.runOnUiThread {
-                        mAdapter.notifyDataSetChanged()
-                    }
+                    mSessionList.addAll(session.toList())
                 }
             })
 
@@ -98,7 +88,7 @@ class SessionsFragment : BaseFragment() {
         mIMSessionList.initSessionsList()
             .io2main()
             .request(this) {
-
+                mSessionList.addAll(mIMSessionList.sessions)
             }
     }
 

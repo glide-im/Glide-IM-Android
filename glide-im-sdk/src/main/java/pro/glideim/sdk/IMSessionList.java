@@ -155,6 +155,10 @@ public class IMSessionList {
         return Observable.just(getOrCreateSession(SessionTag.get(type, id)));
     }
 
+    public List<IMSession> getSessions(){
+        return new ArrayList<>(this.sessionMap.values());
+    }
+
     public Single<Boolean> initSessionsList() {
         return getSessionList()
                 .toList()

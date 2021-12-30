@@ -1,13 +1,12 @@
 package pro.glideim.ui.chat
 
 import androidx.recyclerview.widget.SortedList
-import pro.glideim.sdk.IMMessage
 
-class MySortedList : List<IMMessage> {
+class MySortedList<T> : List<T> {
 
-    lateinit var l: SortedList<IMMessage>
+    lateinit var l: SortedList<T>
 
-    fun add(m: IMMessage) {
+    fun add(m: T) {
         l.add(m)
     }
 
@@ -15,17 +14,17 @@ class MySortedList : List<IMMessage> {
         l.clear()
     }
 
-    fun addAll(ms: List<IMMessage>) {
+    fun addAll(ms: List<T>) {
         l.addAll(ms)
     }
 
     override val size get() = l.size()
 
-    override fun contains(element: IMMessage): Boolean {
+    override fun contains(element: T): Boolean {
         return l.indexOf(element) != SortedList.INVALID_POSITION
     }
 
-    override fun containsAll(elements: Collection<IMMessage>): Boolean {
+    override fun containsAll(elements: Collection<T>): Boolean {
         for (element in elements) {
             if (!contains(element)) {
                 return false
@@ -34,11 +33,11 @@ class MySortedList : List<IMMessage> {
         return true
     }
 
-    override fun get(index: Int): IMMessage {
+    override fun get(index: Int): T {
         return l.get(index)
     }
 
-    override fun indexOf(element: IMMessage): Int {
+    override fun indexOf(element: T): Int {
         return l.indexOf(element)
     }
 
@@ -46,24 +45,24 @@ class MySortedList : List<IMMessage> {
         return l.size() == 0
     }
 
-    override fun iterator(): Iterator<IMMessage> {
-        return object : Iterator<IMMessage> {
+    override fun iterator(): Iterator<T> {
+        return object : Iterator<T> {
             override fun hasNext(): Boolean {
                 return false
             }
 
-            override fun next(): IMMessage {
+            override fun next(): T {
                 return get(0)
             }
         }
     }
 
-    override fun lastIndexOf(element: IMMessage): Int {
+    override fun lastIndexOf(element: T): Int {
         return l.indexOf(element)
     }
 
-    override fun listIterator(): ListIterator<IMMessage> {
-        return object : ListIterator<IMMessage> {
+    override fun listIterator(): ListIterator<T> {
+        return object : ListIterator<T> {
             override fun hasNext() = false
             override fun hasPrevious() = false
             override fun next() = get(0)
@@ -73,11 +72,11 @@ class MySortedList : List<IMMessage> {
         }
     }
 
-    override fun listIterator(index: Int): ListIterator<IMMessage> {
+    override fun listIterator(index: Int): ListIterator<T> {
         return listIterator()
     }
 
-    override fun subList(fromIndex: Int, toIndex: Int): List<IMMessage> {
+    override fun subList(fromIndex: Int, toIndex: Int): List<T> {
         return emptyList()
     }
 }

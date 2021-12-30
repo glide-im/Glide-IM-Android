@@ -12,60 +12,65 @@
         android:layout_weight="1"
         android:src="@drawable/ic_face" />
 
-    <androidx.appcompat.widget.LinearLayoutCompat
-        android:id="@+id/ll_message"
+    <FrameLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="8"
-        android:gravity="end"
         android:minHeight="40dp"
         android:orientation="horizontal"
         android:textSize="14sp">
 
-        <ImageView
-            android:id="@+id/iv_send_failed"
-            android:layout_width="10dp"
-            android:layout_height="10dp"
-            android:layout_gravity="bottom"
-            android:layout_marginVertical="10dp"
-            android:src="@drawable/shape_badge_circle" />
-
-        <androidx.cardview.widget.CardView
+        <androidx.appcompat.widget.LinearLayoutCompat
+            android:id="@+id/fl_message"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="6dp"
-            android:layout_marginVertical="8dp"
-            android:minHeight="40dp"
-            android:textSize="14sp">
+            android:layout_height="match_parent"
+            android:orientation="horizontal">
 
-            <androidx.appcompat.widget.LinearLayoutCompat
-                android:id="@+id/ll_message_container"
+            <ImageView
+                android:id="@+id/iv_send_failed"
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:layout_gravity="bottom"
+                android:layout_marginVertical="10dp"
+                android:src="@drawable/shape_badge_circle" />
+
+            <androidx.cardview.widget.CardView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_gravity="center_vertical"
-                android:orientation="vertical"
-                android:paddingHorizontal="8dp">
+                android:layout_marginHorizontal="6dp"
+                android:layout_marginVertical="8dp"
+                android:minHeight="40dp"
+                android:textSize="14sp">
 
-                <com.google.android.material.textview.MaterialTextView
-                    android:id="@+id/tv_msg"
+                <androidx.appcompat.widget.LinearLayoutCompat
+                    android:id="@+id/ll_message_container"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="this is message"
-                    android:textColor="@color/primaryTextColor" />
+                    android:layout_gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:paddingHorizontal="8dp">
 
-                <com.google.android.material.textview.MaterialTextView
-                    android:id="@+id/tv_time"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="end|bottom"
-                    android:layout_marginStart="8dp"
-                    android:text="123:112"
-                    android:textColor="@color/secondaryTextColor"
-                    android:textSize="10sp" />
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/tv_msg"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="this is message"
+                        android:textColor="@color/primaryTextColor" />
 
-            </androidx.appcompat.widget.LinearLayoutCompat>
-        </androidx.cardview.widget.CardView>
-    </androidx.appcompat.widget.LinearLayoutCompat>
+                    <com.google.android.material.textview.MaterialTextView
+                        android:id="@+id/tv_time"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end|bottom"
+                        android:layout_marginStart="8dp"
+                        android:text="123:112"
+                        android:textColor="@color/secondaryTextColor"
+                        android:textSize="10sp" />
+
+                </androidx.appcompat.widget.LinearLayoutCompat>
+            </androidx.cardview.widget.CardView>
+        </androidx.appcompat.widget.LinearLayoutCompat>
+    </FrameLayout>
 
     <ImageView
         android:id="@+id/iv_avatar_right"

@@ -2,6 +2,7 @@ package pro.glideim.ui.chat
 
 import android.view.Gravity
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.appcompat.widget.LinearLayoutCompat
 import com.dengzii.adapter.AbsViewHolder
@@ -20,7 +21,7 @@ class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<IMMessage>(v) {
     private val mTvTime by lazy { findViewById<MaterialTextView>(R.id.tv_time) }
     private val mTvMsg by lazy { findViewById<MaterialTextView>(R.id.tv_msg) }
     private val mLlMessageContainer by lazy { findViewById<LinearLayoutCompat>(R.id.ll_message_container) }
-    private val mLlMessage by lazy { findViewById<LinearLayoutCompat>(R.id.ll_message) }
+    private val mLlMessage by lazy { findViewById<LinearLayoutCompat>(R.id.fl_message) }
     private val mIvAvatarLeft by lazy { findViewById<ImageView>(R.id.iv_avatar_left) }
     private val mIvSendFailed by lazy { findViewById<ImageView>(R.id.iv_send_failed) }
 
@@ -38,14 +39,12 @@ class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<IMMessage>(v) {
             mIvAvatarRight.loadImage(data.avatar)
             mIvAvatarRight.show()
             mIvAvatarLeft.hide()
-            (mLlMessage.layoutParams as LinearLayoutCompat.LayoutParams).gravity =
-                Gravity.END
+            (mLlMessage.layoutParams as FrameLayout.LayoutParams).gravity = Gravity.END
         } else {
             mIvAvatarLeft.loadImage(data.avatar)
             mIvAvatarLeft.show()
             mIvAvatarRight.hide()
-            (mLlMessage.layoutParams as LinearLayoutCompat.LayoutParams).gravity =
-                Gravity.START
+            (mLlMessage.layoutParams as FrameLayout.LayoutParams).gravity = Gravity.START
         }
         mTvTime.text = data.sendAt.secToTimeSpan()
         mTvMsg.text = data.content

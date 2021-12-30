@@ -32,8 +32,7 @@ class ChatActivity : BaseActivity() {
     private val mRvMessages by lazy { findViewById<RecyclerView>(R.id.rv_messages) }
     private val mTvTitle by lazy { findViewById<MaterialTextView>(R.id.tv_title) }
 
-    private val mMidMap: TreeMap<Long, IMMessage> = TreeMap()
-    private val mMessage = MySortedList()
+    private val mMessage = MySortedList<IMMessage>()
     private val mAdapter = SuperAdapter(mMessage)
     private val mLayoutManger = GridLayoutManager(this, 1, RecyclerView.VERTICAL, true)
 
