@@ -20,7 +20,7 @@ class GlideIMTest {
     @BeforeEach
     void setUp() throws InterruptedException {
         GlideIM.init("ws://192.168.1.123:8080/ws", "http://192.168.1.123:8081/api/");
-        GlideIM.getInstance().connect().blockingGet();
+        GlideIM.getAccount().getIMClient().connect().blockingGet();
     }
 
     @AfterEach
@@ -55,37 +55,12 @@ class GlideIMTest {
     }
 
     @Test
-    void getContacts() {
-        GlideIM.getContacts().subscribe(new TestResObserver<List<IMContacts>>() {
-            @Override
-            public void onNext(@NonNull List<IMContacts> contacts) {
-                for (IMContacts contact : contacts) {
-                    System.out.println("getContacts.onNext: " + contact);
-                }
-            }
-        });
-    }
-
-    @Test
     void createGroup() {
         GlideIM.createGroup("HelloGroup")
                 .subscribe(new TestResObserver<CreateGroupBean>() {
                     @Override
                     public void onNext(@NonNull CreateGroupBean createGroupBean) {
                         System.out.println("createGroup.onNext: " + createGroupBean.getGid());
-                    }
-                });
-    }
-
-    @Test
-    void getMessageHistory() {
-        GlideIM.getChatMessageHistory(2, 1099)
-                .subscribe(new TestResObserver<List<IMMessage>>() {
-                    @Override
-                    public void onNext(@NonNull List<IMMessage> imMessages) {
-                        for (IMMessage imMessage : imMessages) {
-                            System.out.println(imMessage.toString());
-                        }
                     }
                 });
     }

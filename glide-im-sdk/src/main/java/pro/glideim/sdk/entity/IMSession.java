@@ -41,40 +41,38 @@ public class IMSession {
     private IMSessionList sessionList;
     private OnUpdateListener onUpdateListener;
     private MessageChangeListener messageChangeListener;
+    private IMAccount account;
 
-    private IMSession() {
-
-    }
-
-    private IMSession(long to, int type) {
+    private IMSession(IMAccount account, long to, int type) {
         this.tag = IMSessionList.SessionTag.get(type, to);
         this.to = to;
         this.type = type;
-        this.updateAt = System.currentTimeMillis()/1000;
+        this.updateAt = System.currentTimeMillis() / 1000;
+        this.account = account;
     }
 
-    public static IMSession fromGroupState(GroupMessageStateBean stateBean) {
-        IMSession s = new IMSession(stateBean.getGid(), 2);
+    public static IMSession fromGroupState(IMAccount account, GroupMessageStateBean stateBean) {
+        IMSession s = new IMSession(account, stateBean.getGid(), 2);
         s.unread = 0;
         s.updateAt = stateBean.getLastMsgAt();
         s.lastMsgId = stateBean.getLastMID();
         return s;
     }
 
-    public static IMSession fromSessionBean(Long myUid, SessionBean sessionBean) {
+    public static IMSession fromSessionBean(IMAccount account, SessionBean sessionBean) {
         IMSession s;
-        if (sessionBean.getUid1() == myUid) {
-            s = new IMSession(sessionBean.getUid2(), 1);
+        if (sessionBean.getUid1() == account.uid) {
+            s = new IMSession(account, sessionBean.getUid2(), 1);
         } else {
-            s = new IMSession(sessionBean.getUid1(), 1);
+            s = new IMSession(account, sessionBean.getUid1(), 1);
         }
         s.updateAt = sessionBean.getUpdateAt();
         s.lastMsgId = sessionBean.getLastMid();
         return s;
     }
 
-    public static IMSession fromIMMessage(IMMessage message) {
-        IMSession s = new IMSession(message.getTo(), message.getTargetType());
+    public static IMSession fromIMMessage(IMAccount account, IMMessage message) {
+        IMSession s = new IMSession(account, message.getTo(), message.getTargetType());
         s.updateAt = message.getSendAt();
         s.lastMsgId = message.getMid();
         s.lastMsg = message.getContent();
@@ -82,15 +80,15 @@ public class IMSession {
         return s;
     }
 
-    public static IMSession create(long to, int type, IMSessionList imSessionList) {
-        IMSession s = new IMSession(to, type);
+    public static IMSession create(IMAccount account, long to, int type, IMSessionList imSessionList) {
+        IMSession s = new IMSession(account, to, type);
         s.setIMSessionList(imSessionList);
         s.initTargetInfo();
         return s;
     }
 
-    public static IMSession create(IMSessionList.SessionTag t, IMSessionList imSessionList) {
-        IMSession s = new IMSession(t.getId(), t.getType());
+    public static IMSession create(IMAccount account, IMSessionList.SessionTag t, IMSessionList imSessionList) {
+        IMSession s = new IMSession(account, t.getId(), t.getType());
         s.setIMSessionList(imSessionList);
         s.initTargetInfo();
         return s;
@@ -268,7 +266,7 @@ public class IMSession {
         return MsgApi.API.getChatMessageHistory(getChatHistoryDto)
                 .map(RxUtils.bodyConverter())
                 .flatMap((Function<List<MessageBean>, ObservableSource<MessageBean>>) Observable::fromIterable)
-                .map(IMMessage::fromMessage)
+                .map(messageBean -> IMMessage.fromMessage(account, messageBean))
                 .toList()
                 .doOnSuccess(this::addMessages);
     }

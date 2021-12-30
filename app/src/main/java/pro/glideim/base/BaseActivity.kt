@@ -24,8 +24,8 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
             initView()
             inited = true
         }
-        onStateChange(GlideIM.getInstance().connState, "")
-        GlideIM.getInstance().addConnectionListener(this)
+        onStateChange(GlideIM.getAccount().imClient.webSocketClient.state, "")
+        GlideIM.getAccount().imClient.addConnStateListener(this)
     }
 
     abstract fun initView()
@@ -48,7 +48,7 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
 
     override fun onStop() {
         super.onStop()
-        GlideIM.getInstance().removeConnectionListener(this)
+        GlideIM.getAccount().imClient.removeConnStateListener(this)
     }
 
     open fun updateConnState(state: String) {

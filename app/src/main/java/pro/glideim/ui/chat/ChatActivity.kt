@@ -58,7 +58,7 @@ class ChatActivity : BaseActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        mSession = GlideIM.getInstance().account.imSessionList.getSession(1, mUID)
+        mSession = GlideIM.getAccount().imSessionList.getSession(1, mUID)
         super.onCreate(savedInstanceState)
     }
 
@@ -110,7 +110,7 @@ class ChatActivity : BaseActivity() {
         if (msg.isBlank()) {
             return
         }
-        if (!GlideIM.getInstance().isConnected) {
+        if (!GlideIM.getAccount().imClient.isConnected) {
             toast("IM server is disconnected")
             return
         }
@@ -160,23 +160,6 @@ class ChatActivity : BaseActivity() {
 //                    }
 //                })
 //            }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        GlideIM.getInstance().addConnectionListener { state, _ ->
-            checkIMServerState()
-        }
-    }
-
-    private fun checkIMServerState() {
-        if (!GlideIM.getInstance().isConnected) {
-            GlideIM.getInstance().tryReconnect()
-                .io2main()
-                .request2(this) {
-
-                }
-        }
     }
 
     private fun scrollToLastMessage() {

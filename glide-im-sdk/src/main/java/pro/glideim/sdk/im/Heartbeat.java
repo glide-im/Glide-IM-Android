@@ -12,14 +12,14 @@ import pro.glideim.sdk.ws.WsClient;
 public class Heartbeat implements ConnStateListener {
 
     private static final String TAG = Heartbeat.class.getSimpleName();
-    private final IMClient client;
+    private final pro.glideim.sdk.im.IMClient client;
     private Disposable heartbeat;
 
-    private Heartbeat(IMClient client) {
+    private Heartbeat(pro.glideim.sdk.im.IMClient client) {
         this.client = client;
     }
 
-    public static Heartbeat start(IMClient client) {
+    public static Heartbeat start(pro.glideim.sdk.im.IMClient client) {
         Heartbeat heartbeat = new Heartbeat(client);
         heartbeat.start();
         return heartbeat;

@@ -2,9 +2,12 @@ package pro.glideim.sdk;
 
 import androidx.annotation.NonNull;
 
+import org.json.JSONStringer;
+
 import io.reactivex.Observer;
 import io.reactivex.SingleObserver;
 import io.reactivex.disposables.Disposable;
+import pro.glideim.sdk.utils.SLogger;
 
 public class SilentObserver<T> implements Observer<T>, SingleObserver<T> {
 
@@ -25,7 +28,8 @@ public class SilentObserver<T> implements Observer<T>, SingleObserver<T> {
 
     @Override
     public void onError(@NonNull Throwable e) {
-        e.printStackTrace();
+        StackTraceElement stackTraceElement = e.getStackTrace()[1];
+        SLogger.d("SilentObserver", e.getMessage() + " : " + stackTraceElement.toString());
     }
 
     @Override

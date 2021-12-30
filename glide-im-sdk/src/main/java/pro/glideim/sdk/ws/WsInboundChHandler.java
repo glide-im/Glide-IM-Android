@@ -1,8 +1,8 @@
 package pro.glideim.sdk.ws;
 
 import java.net.URI;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -26,7 +26,7 @@ public class WsInboundChHandler extends SimpleChannelInboundHandler<Object> {
     private final WebSocketClientHandshaker handshaker;
     ChannelPromise handshakeFuture;
 
-    List<ConnStateListener> connStateListener = new ArrayList<>();
+    List<ConnStateListener> connStateListener = new CopyOnWriteArrayList<>();
     MessageListener messageListener;
     int connectionState = WsClient.STATE_CLOSED;
     private URI uri;

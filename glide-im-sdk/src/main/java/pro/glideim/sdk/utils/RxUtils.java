@@ -5,6 +5,7 @@ import io.reactivex.SingleTransformer;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import pro.glideim.sdk.api.Response;
+import pro.glideim.sdk.protocol.CommMessage;
 
 public class RxUtils {
     public static <T> ObservableTransformer<T, T> silentScheduler() {
@@ -22,5 +23,14 @@ public class RxUtils {
 
     public static <T> SingleTransformer<T, T> silentSchedulerSingle() {
         return upstream -> upstream.subscribeOn(Schedulers.io()).observeOn(Schedulers.newThread());
+    }
+
+    public static <T> Function<CommMessage<T>, T> bodyConverterForWsMsg() {
+        return r -> {
+            if (!r.success()) {
+                throw new Exception("");
+            }
+            return r.getData();
+        };
     }
 }

@@ -19,7 +19,7 @@ class IMSessionListTest {
     @BeforeEach
     void setUp() throws InterruptedException {
         GlideIM.init("ws://192.168.1.123:8080/ws", "http://192.168.1.123:8081/api/");
-        GlideIM.getInstance().connect().blockingGet();
+        GlideIM.getAccount().getIMClient().connect().blockingGet();
         GlideIM.login("abc", "abc", 1)
                 .subscribe(new TestObserver<>());
         Thread.sleep(1000);

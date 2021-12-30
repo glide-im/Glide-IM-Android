@@ -5,6 +5,7 @@ import pro.glideim.R
 import pro.glideim.UserPerf
 import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.GlideIM
+import pro.glideim.sdk.ws.WsClient
 import pro.glideim.utils.io2main
 import pro.glideim.utils.request
 import pro.glideim.utils.request2
@@ -17,7 +18,7 @@ class SplashActivity : BaseActivity() {
 
     override fun initView() {
 
-        GlideIM.getInstance().connect()
+        GlideIM.getAccount().imClient.connect()
             .io2main()
             .request {
                 onStart {
@@ -28,8 +29,14 @@ class SplashActivity : BaseActivity() {
                 }
                 onError {
                     it.printStackTrace()
-                    mTvState.text = it.message ?: it.localizedMessage
                     toast(it.message ?: it.localizedMessage)
+                    GlideIM.getAccount().imClient.addConnStateListener() { state, _ ->
+                        if (state == WsClient.STATE_OPENED) {
+                            runOnUiThread {
+                                checkToken()
+                            }
+                        }
+                    }
                 }
             }
     }

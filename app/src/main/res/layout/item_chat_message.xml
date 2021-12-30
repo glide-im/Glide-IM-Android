@@ -12,15 +12,25 @@
         android:layout_weight="1"
         android:src="@drawable/ic_face" />
 
-    <FrameLayout
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/ll_message"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="8"
+        android:gravity="end"
         android:minHeight="40dp"
+        android:orientation="horizontal"
         android:textSize="14sp">
 
+        <ImageView
+            android:id="@+id/iv_send_failed"
+            android:layout_width="10dp"
+            android:layout_height="10dp"
+            android:layout_gravity="bottom"
+            android:layout_marginVertical="10dp"
+            android:src="@drawable/shape_badge_circle" />
+
         <androidx.cardview.widget.CardView
-            android:id="@+id/cv_message_container"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="6dp"
@@ -55,7 +65,7 @@
 
             </androidx.appcompat.widget.LinearLayoutCompat>
         </androidx.cardview.widget.CardView>
-    </FrameLayout>
+    </androidx.appcompat.widget.LinearLayoutCompat>
 
     <ImageView
         android:id="@+id/iv_avatar_right"

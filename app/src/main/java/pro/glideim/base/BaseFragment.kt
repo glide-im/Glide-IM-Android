@@ -1,6 +1,5 @@
 package pro.glideim.base
 
-import android.content.Context
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -12,8 +11,6 @@ import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.im.ConnStateListener
 import pro.glideim.sdk.ws.WsClient
 import pro.glideim.utils.RequestStateCallback
-import pro.glideim.utils.io2main
-import pro.glideim.utils.request2
 
 abstract class BaseFragment : Fragment(), RequestStateCallback, ConnStateListener {
 
@@ -66,13 +63,13 @@ abstract class BaseFragment : Fragment(), RequestStateCallback, ConnStateListene
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        onStateChange(GlideIM.getInstance().connState, "")
-        GlideIM.getInstance().addConnectionListener(this)
+        onStateChange(GlideIM.getAccount().imClient.webSocketClient.state, "")
+        GlideIM.getAccount().imClient.addConnStateListener(this)
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        GlideIM.getInstance().removeConnectionListener(this)
+        GlideIM.getAccount().imClient.removeConnStateListener(this)
     }
 
     open fun updateConnState(state: String) {

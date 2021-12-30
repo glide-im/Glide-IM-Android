@@ -21,6 +21,7 @@ import pro.glideim.sdk.api.msg.GetGroupMessageStateDto;
 import pro.glideim.sdk.api.msg.GetGroupMsgHistoryDto;
 import pro.glideim.sdk.api.msg.GetSessionDto;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
+import pro.glideim.sdk.api.msg.MessageBean;
 import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.utils.RxUtils;
@@ -33,7 +34,12 @@ public class IMSessionList {
     private final TreeMap<SessionTag, IMSession> sessionMap = new TreeMap<>();
     private final List<IMSession> tempNewSession = new ArrayList<>();
     private final List<IMSession> tempUpdateSession = new ArrayList<>();
+    private final IMAccount account;
     private SessionUpdateListener sessionUpdateListener;
+
+    IMSessionList(IMAccount account) {
+        this.account = account;
+    }
 
     public void setSessionUpdateListener(SessionUpdateListener sessionUpdateListener) {
         this.sessionUpdateListener = sessionUpdateListener;
@@ -105,7 +111,7 @@ public class IMSessionList {
     private IMSession getOrCreateSession(SessionTag tag) {
         IMSession session = sessionMap.get(tag);
         if (session == null) {
-            session = IMSession.create(tag.id, tag.type, this);
+            session = IMSession.create(account, tag.id, tag.type, this);
             if (tag.type == 2) {
                 GroupInfoBean tempGroupInfo = GlideIM.getTempGroupInfo(tag.id);
                 if (tempGroupInfo != null) {
@@ -114,7 +120,7 @@ public class IMSessionList {
                     MsgApi.API.getGroupMessageState(new GetGroupMessageStateDto(tag.id))
                             .map(RxUtils.bodyConverter())
                             .map(stateBean -> {
-                                IMSession imSession = IMSession.fromGroupState(stateBean);
+                                IMSession imSession = IMSession.fromGroupState(account, stateBean);
                                 addOrUpdateSession(imSession);
                                 return imSession;
                             })
@@ -129,7 +135,7 @@ public class IMSessionList {
                     MsgApi.API.getSession(new GetSessionDto(tag.id))
                             .map(RxUtils.bodyConverter())
                             .map(sessionBean -> {
-                                IMSession imSession = IMSession.fromSessionBean(GlideIM.getInstance().getMyUID(), sessionBean);
+                                IMSession imSession = IMSession.fromSessionBean(account, sessionBean);
                                 addOrUpdateSession(imSession);
                                 return imSession;
                             })
@@ -167,7 +173,7 @@ public class IMSessionList {
         Observable<IMSession> groupSession = MsgApi.API.getAllGroupMessageState()
                 .map(RxUtils.bodyConverter())
                 .flatMap(Observable::fromIterable)
-                .map(IMSession::fromGroupState)
+                .map(stateBean -> IMSession.fromGroupState(account, stateBean))
                 .flatMap((Function<IMSession, ObservableSource<IMSession>>) session ->
                         GlideIM.getGroupInfo(session.to).map(session::setInfo)
                 );
@@ -175,7 +181,7 @@ public class IMSessionList {
         Observable<IMSession> chatSession = MsgApi.API.getRecentSession()
                 .map(RxUtils.bodyConverter())
                 .flatMap(Observable::fromIterable)
-                .map(sessionBean -> IMSession.fromSessionBean(GlideIM.getInstance().getMyUID(), sessionBean))
+                .map(sessionBean -> IMSession.fromSessionBean(account, sessionBean))
                 .flatMap((Function<IMSession, ObservableSource<IMSession>>) session -> session.getHistory(0)
                         .toObservable()
                         .zipWith(Observable.just(session), (messages, session1) -> session1)
@@ -191,17 +197,17 @@ public class IMSessionList {
         Observable<IMMessage> chat = MsgApi.API.getRecentChatMessage()
                 .map(RxUtils.bodyConverter())
                 .flatMap(Observable::fromIterable)
-                .map(IMMessage::fromMessage);
+                .map(messageBean -> IMMessage.fromMessage(account, messageBean));
 
         List<Observable<Response<List<GroupMessageBean>>>> gob = new ArrayList<>();
-        for (Long gid : GlideIM.getInstance().getAccount().getContactsGroup()) {
+        for (Long gid : GlideIM.getAccount().getContactsGroup()) {
             GetGroupMsgHistoryDto d = new GetGroupMsgHistoryDto(gid);
             gob.add(MsgApi.API.getRecentGroupMessage(d));
         }
         Observable<IMMessage> group = Observable.merge(gob)
                 .map(RxUtils.bodyConverter())
                 .flatMap(Observable::fromIterable)
-                .map(IMMessage::fromGroupMessage);
+                .map(messageBean -> IMMessage.fromGroupMessage(account, messageBean));
 
         return Observable.merge(chat, group)
                 .groupBy(message -> message.tag)
@@ -219,7 +225,7 @@ public class IMSessionList {
                         return go.toList()
                                 .toObservable()
                                 .map(messages -> {
-                                    IMSession session = IMSession.create(t, this);
+                                    IMSession session = IMSession.create(account, t, this);
                                     session.addMessages(messages);
                                     return session;
                                 });

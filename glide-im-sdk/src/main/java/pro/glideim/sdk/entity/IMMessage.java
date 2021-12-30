@@ -15,9 +15,9 @@ import pro.glideim.sdk.utils.RxUtils;
 public class IMMessage {
     public String avatar;
     public String title;
+    public boolean isMe = false;
 
     IMSessionList.SessionTag tag;
-
 
     private long mid;
     private long cliSeq;
@@ -35,7 +35,7 @@ public class IMMessage {
     private IMMessage() {
     }
 
-    public static IMMessage fromChatMessage(ChatMessage message) {
+    public static IMMessage fromChatMessage(IMAccount account, ChatMessage message) {
         IMMessage m = new IMMessage();
         m.setMid(message.getMid());
         m.setCliSeq(message.getcSeq());
@@ -47,16 +47,17 @@ public class IMMessage {
         m.setContent(message.getContent());
         m.setState(message.getState());
         long id = 0;
-        if (m.from == GlideIM.getInstance().getMyUID()) {
+        if (m.from == account.uid) {
             id = m.to;
+            m.isMe = true;
         } else {
             id = m.from;
         }
-        m.setTarget(1, id);
+        m.setTarget(account, 1, id);
         return m;
     }
 
-    public static IMMessage fromMessage(MessageBean messageBean) {
+    public static IMMessage fromMessage(IMAccount account, MessageBean messageBean) {
         IMMessage m = new IMMessage();
         m.setMid(messageBean.getMid());
         m.setCliSeq(messageBean.getCliSeq());
@@ -67,16 +68,17 @@ public class IMMessage {
         m.setCreateAt(messageBean.getCreateAt());
         m.setContent(messageBean.getContent());
         long id = 0;
-        if (m.from == GlideIM.getInstance().getMyUID()) {
+        if (m.from == account.uid) {
             id = m.to;
+            m.isMe = true;
         } else {
             id = m.from;
         }
-        m.setTarget(1, id);
+        m.setTarget(account, 1, id);
         return m;
     }
 
-    public static IMMessage fromGroupMessage(GroupMessageBean messageBean) {
+    public static IMMessage fromGroupMessage(IMAccount account, GroupMessageBean messageBean) {
         IMMessage m = new IMMessage();
         m.setMid(messageBean.getMid());
         m.setCliSeq(0);
@@ -85,18 +87,27 @@ public class IMMessage {
         m.setType(messageBean.getType());
         m.setSendAt(messageBean.getSentAt());
         m.setContent(messageBean.getContent());
-        m.setTarget(2, m.to);
+        m.setTarget(account, 2, m.to);
+        m.isMe = messageBean.getSender() == account.uid;
         return m;
     }
 
-    private void setTarget(int type, long id) {
+    public boolean isSendFailed() {
+        return getState() == ChatMessage.STATE_SRV_FAILED;
+    }
+
+    public boolean isReceived() {
+        return getState() == ChatMessage.STATE_RCV_RECEIVED;
+    }
+
+    private void setTarget(IMAccount account, int type, long id) {
         this.targetType = type;
         this.targetId = id;
         this.tag = IMSessionList.SessionTag.get(type, id);
         if (targetType == 1) {
-            if (id == GlideIM.getInstance().getMyUID()) {
-                this.avatar = GlideIM.getInstance().getAccount().getProfile().getAvatar();
-                this.title = GlideIM.getInstance().getAccount().getProfile().getNickname();
+            if (id == account.uid) {
+                this.avatar = account.getProfile().getAvatar();
+                this.title = account.getProfile().getNickname();
             } else {
                 GlideIM.getUserInfo(id)
                         .compose(RxUtils.silentScheduler())

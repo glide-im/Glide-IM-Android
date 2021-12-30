@@ -25,7 +25,7 @@ import pro.glideim.sdk.utils.SLogger;
 import pro.glideim.sdk.ws.RetrofitWsClient;
 import pro.glideim.sdk.ws.WsClient;
 
-public class IMClientImpl implements IMClient {
+public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
 
     private static final String TAG = "WsIMClientImp";
     private static final int MESSAGE_VER = 1;
@@ -41,12 +41,14 @@ public class IMClientImpl implements IMClient {
     }.getType();
     private final List<ConnStateListener> connStateListeners = new ArrayList<>();
     private final Heartbeat heartbeat;
+    private final KeepAlive keepAlive;
     private MessageListener messageListener;
     private long seq;
 
     private IMClientImpl(String wsUrl) {
         connection = new RetrofitWsClient(wsUrl);
         heartbeat = Heartbeat.start(this);
+        keepAlive = KeepAlive.create(connection);
         connection.setMessageListener(msg -> onMessage(new Message(msg)));
         logger = SLogger.getLogger();
     }
@@ -138,7 +140,9 @@ public class IMClientImpl implements IMClient {
         return ObservableSubscribeOn.<CommMessage<T>>create(emitter -> {
             e.emitter = emitter;
             e.send(m);
-        }).timeout(TIMEOUT_REQUEST_SEC, TimeUnit.SECONDS);
+        }).timeout(TIMEOUT_REQUEST_SEC, TimeUnit.SECONDS).doOnError(throwable ->
+                keepAlive.check()
+        );
     }
 
     @SuppressWarnings("UnnecessaryLocalVariable")
@@ -162,7 +166,8 @@ public class IMClientImpl implements IMClient {
                     if (msg.getState() == ChatMessage.STATE_RCV_RECEIVED) {
                         messages.remove(msg.getMid());
                     }
-                });
+                })
+                .doOnError(throwable -> keepAlive.check());
         return flat;
     }
 

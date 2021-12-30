@@ -88,7 +88,7 @@ class ContactsFragment : BaseFragment() {
     }
 
     private fun startChat(id: Long, type: Int) {
-        GlideIM.getInstance().account.imSessionList.getSession(id, type)
+        GlideIM.getAccount().imSessionList.getSession(id, type)
             .io2main()
             .request2(this) {
                 when (type) {
@@ -101,7 +101,7 @@ class ContactsFragment : BaseFragment() {
 
     private fun requestData() {
 
-        GlideIM.getContacts()
+        GlideIM.getAccount().contacts
             .io2main()
             .request2(this) {
                 mContacts.clear()

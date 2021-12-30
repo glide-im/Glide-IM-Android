@@ -1,6 +1,6 @@
-package pro.glideim.sdk;
+package pro.glideim.sdk.im;
 
-import pro.glideim.sdk.im.ConnStateListener;
+import pro.glideim.sdk.SilentObserver;
 import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
 import pro.glideim.sdk.ws.WsClient;
@@ -10,6 +10,7 @@ public class KeepAlive implements ConnStateListener {
     private static final String TAG = KeepAlive.class.getSimpleName();
 
     private final WsClient client;
+    private boolean reconnecting = false;
 
     private KeepAlive(WsClient client) {
         this.client = client;
@@ -28,20 +29,22 @@ public class KeepAlive implements ConnStateListener {
     }
 
     void check() {
-        if (client.getState() != WsClient.STATE_CLOSED) {
+        if (client.getState() != WsClient.STATE_CLOSED || reconnecting) {
             return;
         }
+        reconnecting = true;
+        client.removeStateListener(this);
         SLogger.d(TAG, "reconnecting the server");
         client.connect()
                 .retry(10)
                 .compose(RxUtils.silentSchedulerSingle())
                 .doOnSuccess(aBoolean -> {
-                    GlideIM.authWs().compose(RxUtils.silentScheduler())
-                            .subscribe(new SilentObserver<>());
+                    reconnecting = false;
+                    client.addStateListener(this);
+                    SLogger.d(TAG, "reconnect server success");
                 })
                 .doOnError(e -> {
-                    SLogger.d(TAG, "reconnect server failed");
-                    SLogger.e(TAG, e);
+                    SLogger.d(TAG, "reconnect server failed: " + e.getMessage());
                 })
                 .subscribe(new SilentObserver<>());
     }

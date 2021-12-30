@@ -3,9 +3,8 @@ package pro.glideim.sdk.ws;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.EOFException;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import io.reactivex.Single;
 import okhttp3.Response;
@@ -14,14 +13,17 @@ import okhttp3.WebSocketListener;
 import okio.ByteString;
 import pro.glideim.sdk.http.RetrofitManager;
 import pro.glideim.sdk.im.ConnStateListener;
+import pro.glideim.sdk.utils.SLogger;
 
 public class RetrofitWsClient implements WsClient {
 
-    private final List<ConnStateListener> connStateListener = new ArrayList<>();
+    private static final String TAG = RetrofitWsClient.class.getSimpleName();
+    private final List<ConnStateListener> connStateListener = new CopyOnWriteArrayList<>();
     private final String url;
     private WebSocket ws;
     private MessageListener messageListener;
     private int state = WsClient.STATE_CLOSED;
+    private Throwable connectError;
 
     public RetrofitWsClient(String url) {
         this.url = url;
@@ -29,16 +31,39 @@ public class RetrofitWsClient implements WsClient {
 
     @Override
     public Single<Boolean> connect() {
-        onStateChange(WsClient.STATE_CONNECTING);
+        if (WsClient.STATE_CONNECTING == getState()) {
+            return Single.error(new Exception("WebSocket connecting"));
+        }
         Single<Boolean> booleanSingle = Single.create(emitter -> {
             try {
+                onStateChange(WsClient.STATE_CONNECTING);
+                connectError = null;
                 ws = RetrofitManager.newWebSocket(url, new WebSocketListenerProxy());
-                emitter.onSuccess(true);
+                long l = System.currentTimeMillis();
+                while (getState() == STATE_CONNECTING) {
+                    if ((System.currentTimeMillis() - l) / 1000 > 10) {
+                        try {
+                            disconnect();
+                        } catch (Exception ignored) {
+                        }
+                        emitter.onError(new Exception("connect timeout"));
+                        return;
+                    }
+                }
+                if (getState() != STATE_OPENED ) {
+                    if (connectError == null) {
+                        connectError = new Exception("connect failed");
+                    }
+                    emitter.onError(connectError);
+                } else {
+                    SLogger.d(TAG, "connect success");
+                    emitter.onSuccess(true);
+                }
             } catch (Throwable throwable) {
                 emitter.onError(throwable);
             }
         });
-        return booleanSingle.retry(100);
+        return booleanSingle;
     }
 
     @Override
@@ -47,28 +72,28 @@ public class RetrofitWsClient implements WsClient {
     }
 
     @Override
-    public void disconnect() {
+    public synchronized void disconnect() {
         ws.close(1000, "");
         onStateChange(WsClient.STATE_CLOSED);
     }
 
     @Override
-    public boolean isConnected() {
-        return state == WsClient.STATE_OPENED;
+    public synchronized boolean isConnected() {
+        return getState() == WsClient.STATE_OPENED;
     }
 
     @Override
-    public int getState() {
+    public synchronized int getState() {
         return state;
     }
 
     @Override
-    public void addStateListener(ConnStateListener listener) {
+    public synchronized void addStateListener(ConnStateListener listener) {
         this.connStateListener.add(listener);
     }
 
     @Override
-    public boolean write(Object obj) {
+    public synchronized boolean write(Object obj) {
         String json = RetrofitManager.toJson(obj);
         return this.ws.send(json);
     }
@@ -78,8 +103,8 @@ public class RetrofitWsClient implements WsClient {
         this.messageListener = listener;
     }
 
-    private void onStateChange(int state) {
-        if (this.state == state) {
+    private synchronized void onStateChange(int state) {
+        if (getState() == state) {
             return;
         }
         this.state = state;
@@ -92,27 +117,27 @@ public class RetrofitWsClient implements WsClient {
 
         @Override
         public void onClosed(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
-            System.out.println("WsClient.onClosed");
             onStateChange(WsClient.STATE_CLOSED);
         }
 
         @Override
         public void onClosing(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
-            System.out.println("WsClient.onClosing");
 
         }
 
         @Override
         public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
-            System.out.println("WsClient.onFailure " + t.getMessage());
-            if (state != WsClient.STATE_CLOSED) {
+            SLogger.e(TAG, t);
+            if (getState() == WsClient.STATE_CONNECTING) {
+                connectError = t;
+            }
+            if (getState() != WsClient.STATE_CLOSED) {
                 onStateChange(WsClient.STATE_CLOSED);
             }
         }
 
         @Override
         public void onMessage(@NotNull WebSocket webSocket, @NotNull String text) {
-            System.out.println("WsClient.onMessage " + text);
             if (messageListener != null) {
                 messageListener.onNewMessage(text);
             }
@@ -120,13 +145,11 @@ public class RetrofitWsClient implements WsClient {
 
         @Override
         public void onMessage(@NotNull WebSocket webSocket, @NotNull ByteString bytes) {
-            System.out.println("WsClient.onMessage bytes=" + bytes);
 
         }
 
         @Override
         public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
-            System.out.println("WsClient.onOpen");
             onStateChange(WsClient.STATE_OPENED);
         }
     }

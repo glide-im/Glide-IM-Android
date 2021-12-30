@@ -13,6 +13,7 @@ import okhttp3.Request;
 import okhttp3.WebSocket;
 import okhttp3.WebSocketListener;
 import okhttp3.logging.HttpLoggingInterceptor;
+import pro.glideim.sdk.utils.SLogger;
 import retrofit2.Retrofit;
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.gson.GsonConverterFactory;
@@ -21,7 +22,7 @@ public class RetrofitManager {
     private static final HttpLoggingInterceptor sLoggerInterceptor = new HttpLoggingInterceptor(new HttpLoggingInterceptor.Logger() {
         @Override
         public void log(String message) {
-            System.out.println("RetrofitManager.log: " + message);
+            SLogger.d(RetrofitManager.class.getSimpleName(), message);
         }
     });
     private static RetrofitManager sInstance;
