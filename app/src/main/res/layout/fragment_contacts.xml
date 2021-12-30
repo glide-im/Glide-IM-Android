@@ -43,7 +43,7 @@
         android:orientation="vertical">
 
         <androidx.appcompat.widget.LinearLayoutCompat
-            android:id="@+id/ll_new_contacts"
+            android:id="@+id/ll_notify"
             android:layout_width="match_parent"
             android:layout_height="50dp"
             android:background="@color/colorForeground"
@@ -51,16 +51,16 @@
             android:paddingHorizontal="10dp">
 
             <ImageView
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:src="@drawable/ic_contacts_add" />
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:src="@drawable/ic_notify" />
 
             <com.google.android.material.textview.MaterialTextView
                 android:id="@+id/tv_new_contacts"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
-                android:text="@string/new_contacts" />
+                android:text="@string/notifications" />
 
         </androidx.appcompat.widget.LinearLayoutCompat>
 

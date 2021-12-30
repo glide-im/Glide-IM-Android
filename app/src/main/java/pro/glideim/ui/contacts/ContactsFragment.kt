@@ -2,7 +2,10 @@ package pro.glideim.ui.contacts
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.view.Gravity
+import android.view.ViewGroup
 import android.widget.ImageView
+import androidx.appcompat.widget.PopupMenu
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -10,7 +13,10 @@ import com.dengzii.adapter.SuperAdapter
 import com.dengzii.adapter.addViewHolderForType
 import com.dengzii.ktx.android.content.getColorCompat
 import com.dengzii.ktx.android.px2dp
+import com.dengzii.ktx.android.showWithLifecycle
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.base.BaseFragment
@@ -72,8 +78,20 @@ class ContactsFragment : BaseFragment() {
             requestData()
         }
         mBtAdd.setOnClickListener {
-            AddContactsActivity.start(requireContext())
+            val popupMenu = PopupMenu(requireContext(), mBtAdd)
+            popupMenu.gravity = Gravity.BOTTOM
+            popupMenu.menuInflater.inflate(R.menu.menu_contacts_add, popupMenu.menu)
+            popupMenu.setOnMenuItemClickListener {
+                when (it.itemId) {
+                    R.id.item_add_friend -> AddContactsActivity.start(requireContext(), false)
+                    R.id.item_add_group -> AddContactsActivity.start(requireContext(), true)
+                    R.id.item_create_group -> showCreateGroup()
+                }
+                return@setOnMenuItemClickListener true
+            }
+            popupMenu.show()
         }
+
         mSrfRefresh.startRefresh()
     }
 
@@ -109,6 +127,43 @@ class ContactsFragment : BaseFragment() {
                 mAdapter.notifyDataSetChanged()
                 mSrfRefresh.finishRefresh()
             }
+    }
+
+    private fun showCreateGroup() {
+        MaterialAlertDialogBuilder(requireContext()).apply {
+            setTitle("Create Group")
+            val et = TextInputEditText(requireContext())
+            et.layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            et.hint = "Input Group Name"
+            setView(et)
+
+            setPositiveButton("Create") { d, _ ->
+                if (createGroup(et.text.toString())) {
+                    d.dismiss()
+                }
+            }
+            setNegativeButton("Cancel") { d, _ ->
+                d.dismiss()
+            }
+            create().showWithLifecycle(this@ContactsFragment)
+        }
+
+    }
+
+    private fun createGroup(name: String): Boolean {
+        if (name.trim().isBlank()) {
+            return false
+        }
+
+        GlideIM.createGroup(name.trim())
+            .io2main()
+            .request2(this) {
+
+            }
+        return true
     }
 
     @SuppressLint("SetTextI18n")

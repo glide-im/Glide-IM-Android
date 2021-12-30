@@ -2,6 +2,7 @@ package pro.glideim.ui.contacts
 
 import android.content.Context
 import android.content.Intent
+import com.dengzii.ktx.android.content.intentExtra
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import pro.glideim.R
@@ -17,17 +18,26 @@ class AddContactsActivity : BaseActivity() {
     private val mBtSearch by lazy { findViewById<MaterialButton>(R.id.bt_search) }
     private val mEtId by lazy { findViewById<TextInputEditText>(R.id.et_id) }
 
+    private val mSearchGroup by intentExtra("group", false)
+
     override val layoutResId = R.layout.activity_add_contacts
 
     companion object {
         @JvmStatic
-        fun start(context: Context) {
-            val starter = Intent(context, AddContactsActivity::class.java)
+        fun start(context: Context, isGroup: Boolean) {
+            val starter = Intent(context, AddContactsActivity::class.java).apply {
+                putExtra("group", isGroup)
+            }
             context.startActivity(starter)
         }
     }
 
     override fun initView() {
+        if (mSearchGroup) {
+            mEtId.hint = "Input Group ID"
+        } else {
+            mEtId.hint = "Input User ID"
+        }
         mBtSearch.setOnClickListener {
             search()
         }

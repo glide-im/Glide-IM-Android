@@ -22,4 +22,10 @@
     <string name="qr_code">QR Code</string>
     <string name="new_contacts">New Contacts</string>
     <string name="chat">Chat</string>
+    <string name="notifications">Notifications</string>
+    <string name="add_friend">Add Friend</string>
+    <string name="add_group">Add Group</string>
+    <string name="create_group">Create Group</string>
+    <string name="search_user">Search User</string>
+    <string name="join_group">Join Group</string>
 </resources>

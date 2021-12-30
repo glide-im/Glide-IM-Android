@@ -30,6 +30,13 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
 
     abstract fun initView()
 
+    override fun onResume() {
+        super.onResume()
+        if (inited) {
+            onStateChange(GlideIM.getAccount().imClient.webSocketClient.state, "")
+        }
+    }
+
     fun toast(msg: String) {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
     }
