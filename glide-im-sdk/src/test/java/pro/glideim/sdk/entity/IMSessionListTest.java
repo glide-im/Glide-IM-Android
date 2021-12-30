@@ -1,16 +1,15 @@
 package pro.glideim.sdk.entity;
 
-import android.opengl.EGLImage;
-
 import androidx.annotation.NonNull;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.List;
-
 import pro.glideim.sdk.GlideIM;
+import pro.glideim.sdk.IMSession;
+import pro.glideim.sdk.IMSessionList;
+import pro.glideim.sdk.SessionUpdateListener;
 import pro.glideim.sdk.TestObserver;
 import pro.glideim.sdk.TestResObserver;
 

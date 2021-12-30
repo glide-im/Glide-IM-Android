@@ -3,13 +3,15 @@ package pro.glideim
 import android.app.Application
 import android.content.Context
 import pro.glideim.sdk.DataStorage
+import pro.glideim.sdk.DefaultDataStoreImpl
 import pro.glideim.sdk.api.group.GroupInfoBean
 import pro.glideim.sdk.api.user.UserInfoBean
-import pro.glideim.sdk.entity.IMSession
+import pro.glideim.sdk.IMSession
 
 class UserPerf : DataStorage {
 
     private var token = ""
+    private val d = DefaultDataStoreImpl()
 
     companion object {
         private val instance = UserPerf()
@@ -43,26 +45,26 @@ class UserPerf : DataStorage {
     }
 
     override fun storeTempUserInfo(userInfoBean: UserInfoBean?) {
-
+        d.storeTempUserInfo(userInfoBean)
     }
 
     override fun loadTempUserInfo(uid: Long): UserInfoBean? {
-        return null
+        return d.loadTempUserInfo(uid)
     }
 
     override fun storeTempGroupInfo(groupInfoBean: GroupInfoBean?) {
-
+        d.storeTempGroupInfo(groupInfoBean)
     }
 
     override fun loadTempGroupInfo(gid: Long): GroupInfoBean? {
-        return null
+        return d.loadTempGroupInfo(gid)
     }
 
     override fun storeSession(uid: Long, session: IMSession?) {
-
+        d.storeSession(uid, session)
     }
 
     override fun loadSessions(uid: Long): MutableList<IMSession> {
-        return mutableListOf()
+        return d.loadSessions(uid)
     }
 }

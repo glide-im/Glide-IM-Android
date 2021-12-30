@@ -1,4 +1,4 @@
-package pro.glideim.sdk.entity;
+package pro.glideim.sdk;
 
 import androidx.annotation.NonNull;
 
@@ -11,8 +11,6 @@ import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
 import io.reactivex.Single;
 import io.reactivex.functions.Function;
-import pro.glideim.sdk.GlideIM;
-import pro.glideim.sdk.SilentObserver;
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.msg.GetChatHistoryDto;
 import pro.glideim.sdk.api.msg.GroupMessageStateBean;

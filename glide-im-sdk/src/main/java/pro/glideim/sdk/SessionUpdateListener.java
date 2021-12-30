@@ -1,4 +1,4 @@
-package pro.glideim.sdk.entity;
+package pro.glideim.sdk;
 
 public interface SessionUpdateListener {
     void onUpdate(IMSession...session);

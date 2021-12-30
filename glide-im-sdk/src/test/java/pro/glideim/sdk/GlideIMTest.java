@@ -11,9 +11,6 @@ import java.util.List;
 
 import pro.glideim.sdk.api.group.CreateGroupBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
-import pro.glideim.sdk.entity.IMContacts;
-import pro.glideim.sdk.entity.IMMessage;
-import pro.glideim.sdk.entity.IMSession;
 
 class GlideIMTest {
 

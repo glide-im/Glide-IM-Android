@@ -10,7 +10,7 @@ import com.dengzii.ktx.android.hide
 import com.dengzii.ktx.android.show
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
-import pro.glideim.sdk.entity.IMMessage
+import pro.glideim.sdk.IMMessage
 import pro.glideim.utils.loadImage
 import pro.glideim.utils.secToTimeSpan
 

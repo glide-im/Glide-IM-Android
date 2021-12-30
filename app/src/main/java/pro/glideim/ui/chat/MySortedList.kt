@@ -1,7 +1,7 @@
 package pro.glideim.ui.chat
 
 import androidx.recyclerview.widget.SortedList
-import pro.glideim.sdk.entity.IMMessage
+import pro.glideim.sdk.IMMessage
 
 class MySortedList : List<IMMessage> {
 

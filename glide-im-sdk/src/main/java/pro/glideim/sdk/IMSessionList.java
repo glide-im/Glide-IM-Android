@@ -1,4 +1,4 @@
-package pro.glideim.sdk.entity;
+package pro.glideim.sdk;
 
 import androidx.annotation.NonNull;
 
@@ -13,15 +13,12 @@ import io.reactivex.ObservableSource;
 import io.reactivex.Single;
 import io.reactivex.functions.Function;
 import io.reactivex.observables.GroupedObservable;
-import pro.glideim.sdk.GlideIM;
-import pro.glideim.sdk.SilentObserver;
 import pro.glideim.sdk.api.Response;
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.msg.GetGroupMessageStateDto;
 import pro.glideim.sdk.api.msg.GetGroupMsgHistoryDto;
 import pro.glideim.sdk.api.msg.GetSessionDto;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
-import pro.glideim.sdk.api.msg.MessageBean;
 import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.utils.RxUtils;
@@ -39,6 +36,11 @@ public class IMSessionList {
 
     IMSessionList(IMAccount account) {
         this.account = account;
+    }
+
+    void init() {
+        List<IMSession> imSessions = GlideIM.getDataStorage().loadSessions(account.uid);
+        addOrUpdateSession(imSessions.toArray(new IMSession[]{}));
     }
 
     public void setSessionUpdateListener(SessionUpdateListener sessionUpdateListener) {
@@ -101,6 +103,7 @@ public class IMSessionList {
     private void putSession(IMSession session) {
         session.setOnUpdateListener(this::addOrUpdateSession);
         session.setIMSessionList(this);
+        GlideIM.getDataStorage().storeSession(account.uid, session);
         sessionMap.put(session.tag, session);
     }
 
@@ -113,7 +116,7 @@ public class IMSessionList {
         if (session == null) {
             session = IMSession.create(account, tag.id, tag.type, this);
             if (tag.type == 2) {
-                GroupInfoBean tempGroupInfo = GlideIM.getTempGroupInfo(tag.id);
+                GroupInfoBean tempGroupInfo = GlideIM.getDataStorage().loadTempGroupInfo(tag.id);
                 if (tempGroupInfo != null) {
                     session.setInfo(tempGroupInfo);
                 } else {
@@ -128,7 +131,7 @@ public class IMSessionList {
                             .subscribe(new SilentObserver<>());
                 }
             } else if (tag.type == 1) {
-                UserInfoBean tempUserInfo = GlideIM.getTempUserInfo(tag.id);
+                UserInfoBean tempUserInfo = GlideIM.getDataStorage().loadTempUserInfo(tag.id);
                 if (tempUserInfo != null) {
                     session.setInfo(tempUserInfo);
                 } else {
@@ -153,7 +156,6 @@ public class IMSessionList {
     }
 
     public Single<Boolean> initSessionsList() {
-
         return getSessionList()
                 .toList()
 //                .flatMap((Function<List<IMSession>, SingleSource<List<IMSession>>>) sessions ->

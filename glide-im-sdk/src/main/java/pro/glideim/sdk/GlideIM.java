@@ -2,9 +2,7 @@ package pro.glideim.sdk;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
@@ -22,13 +20,10 @@ import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.msg.AckOfflineMsgDto;
 import pro.glideim.sdk.api.msg.MessageBean;
 import pro.glideim.sdk.api.msg.MsgApi;
-import pro.glideim.sdk.api.msg.SessionBean;
 import pro.glideim.sdk.api.user.GetUserInfoDto;
 import pro.glideim.sdk.api.user.ProfileBean;
 import pro.glideim.sdk.api.user.UserApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
-import pro.glideim.sdk.entity.IMAccount;
-import pro.glideim.sdk.entity.IMMessage;
 import pro.glideim.sdk.http.RetrofitManager;
 import pro.glideim.sdk.im.IMClientImpl;
 import pro.glideim.sdk.utils.RxUtils;
@@ -36,9 +31,6 @@ import pro.glideim.sdk.utils.RxUtils;
 public class GlideIM {
 
     public static final String TAG = "GlideIM";
-    private static final Map<Long, UserInfoBean> sTempUserInfo = new HashMap<>();
-    private static final Map<Long, GroupInfoBean> sTempGroupInfo = new HashMap<>();
-    private static final Map<String, SessionBean> sTempSession = new HashMap<>();
     private static GlideIM sInstance;
     public DataStorage dataStorage = new DefaultDataStoreImpl();
     private IMAccount account;
@@ -55,10 +47,6 @@ public class GlideIM {
         RetrofitManager.init(baseUrlApi);
         sInstance = new GlideIM();
         sInstance.account = new IMAccount(im);
-    }
-
-    public static Observable<List<IMMessage>> subscribeChatMessageChanges(long to, int type) {
-        return Observable.empty();
     }
 
     public static Observable<IMMessage> sendChatMessage(long to, int type, String content) {
@@ -79,6 +67,7 @@ public class GlideIM {
                 .flatMap((Function<AuthBean, ObservableSource<Boolean>>) authBean -> {
                     getDataStorage().storeToken(getAccount().uid, authBean.getToken());
                     getAccount().uid = authBean.getUid();
+                    getAccount().init();
                     return authWs();
                 });
     }
@@ -102,14 +91,15 @@ public class GlideIM {
     }
 
     public static Observable<GroupInfoBean> getGroupInfo(long gid) {
-        if (sTempGroupInfo.containsKey(gid)) {
-            return Observable.just(sTempGroupInfo.get(gid));
+        GroupInfoBean groupInfoBean = getDataStorage().loadTempGroupInfo(gid);
+        if (groupInfoBean != null) {
+            return Observable.just(groupInfoBean);
         }
         return GroupApi.API.getGroupInfo(new GetGroupInfoDto(Collections.singletonList(gid)))
                 .map(RxUtils.bodyConverter())
                 .map(groupInfo -> {
                     GroupInfoBean g = groupInfo.get(0);
-                    sTempGroupInfo.put(g.getGid(), g);
+                    getDataStorage().storeTempGroupInfo(g);
                     return g;
                 });
     }
@@ -119,10 +109,11 @@ public class GlideIM {
         final List<GroupInfoBean> temped = new ArrayList<>();
         List<Long> filtered = new ArrayList<>();
         for (Long id : gid) {
-            if (!sTempGroupInfo.containsKey(id)) {
-                filtered.add(id);
+            GroupInfoBean temp = getDataStorage().loadTempGroupInfo(id);
+            if (temp != null) {
+                temped.add(temp);
             } else {
-                temped.add(sTempGroupInfo.get(id));
+                filtered.add(id);
             }
         }
         if (filtered.isEmpty()) {
@@ -131,30 +122,23 @@ public class GlideIM {
         Observable<Response<List<GroupInfoBean>>> s = GroupApi.API.getGroupInfo(new GetGroupInfoDto(filtered));
         return s.map(RxUtils.bodyConverter()).map(r -> {
             for (GroupInfoBean u : r) {
-                sTempGroupInfo.put(u.getGid(), u);
+                getDataStorage().storeTempGroupInfo(u);
             }
             temped.addAll(r);
             return r;
         });
     }
 
-    public static GroupInfoBean getTempGroupInfo(long gid) {
-        return sTempGroupInfo.get(gid);
-    }
-
-    public static UserInfoBean getTempUserInfo(long uid) {
-        return sTempUserInfo.get(uid);
-    }
-
     public static Observable<UserInfoBean> getUserInfo(long uid) {
-        if (sTempUserInfo.containsKey(uid)) {
-            return Observable.just(sTempUserInfo.get(uid));
+        UserInfoBean temp = getDataStorage().loadTempUserInfo(uid);
+        if (temp != null) {
+            return Observable.just(temp);
         }
         return UserApi.API.getUserInfo(new GetUserInfoDto(Collections.singletonList(uid)))
                 .map(RxUtils.bodyConverter())
                 .map(userInfoBeans -> {
                     UserInfoBean g = userInfoBeans.get(0);
-                    sTempUserInfo.put(g.getUid(), g);
+                    getDataStorage().storeTempUserInfo(g);
                     return g;
                 });
     }
@@ -163,10 +147,11 @@ public class GlideIM {
         final List<UserInfoBean> temped = new ArrayList<>();
         List<Long> filtered = new ArrayList<>();
         for (Long id : uid) {
-            if (!sTempUserInfo.containsKey(id)) {
-                filtered.add(id);
+            UserInfoBean temp = getDataStorage().loadTempUserInfo(id);
+            if (temp != null) {
+                temped.add(temp);
             } else {
-                temped.add(sTempUserInfo.get(id));
+                filtered.add(id);
             }
         }
         if (filtered.isEmpty()) {
@@ -175,7 +160,7 @@ public class GlideIM {
         Observable<Response<List<UserInfoBean>>> s = UserApi.API.getUserInfo(new GetUserInfoDto(filtered));
         return s.map(RxUtils.bodyConverter()).map(r -> {
             for (UserInfoBean u : r) {
-                sTempUserInfo.put(u.getUid(), u);
+                getDataStorage().storeTempUserInfo(u);
             }
             temped.addAll(r);
             return r;

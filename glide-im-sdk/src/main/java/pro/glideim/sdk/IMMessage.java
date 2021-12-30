@@ -1,11 +1,9 @@
-package pro.glideim.sdk.entity;
+package pro.glideim.sdk;
 
 import androidx.annotation.NonNull;
 
 import java.util.Objects;
 
-import pro.glideim.sdk.GlideIM;
-import pro.glideim.sdk.SilentObserver;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.MessageBean;
 import pro.glideim.sdk.api.user.UserInfoBean;

@@ -10,8 +10,8 @@ import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.base.BaseFragment
 import pro.glideim.sdk.GlideIM
-import pro.glideim.sdk.entity.IMSession
-import pro.glideim.sdk.entity.SessionUpdateListener
+import pro.glideim.sdk.IMSession
+import pro.glideim.sdk.SessionUpdateListener
 import pro.glideim.ui.chat.SessionViewHolder
 import pro.glideim.utils.*
 
@@ -22,11 +22,10 @@ class SessionsFragment : BaseFragment() {
     private val mRvSessions by lazy { findViewById<RecyclerView>(R.id.rv_sessions) }
     private val mSrfRefresh by lazy { findViewById<SwipeRefreshLayout>(R.id.srf_refresh) }
 
-
     private val mSessionList = mutableListOf<Any>()
     private val mAdapter = SuperAdapter(mSessionList)
 
-    private val mIMSessionList by lazy { GlideIM.getInstance().account.imSessionList }
+    private val mIMSessionList by lazy { GlideIM.getAccount().imSessionList }
 
     companion object {
         private val TAG = SessionsFragment::class.java.simpleName

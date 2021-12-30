@@ -1,4 +1,4 @@
-package pro.glideim.sdk.entity;
+package pro.glideim.sdk;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -9,7 +9,6 @@ import java.util.TreeMap;
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
 import io.reactivex.functions.Function;
-import pro.glideim.sdk.GlideIM;
 import pro.glideim.sdk.api.auth.AuthApi;
 import pro.glideim.sdk.api.auth.AuthBean;
 import pro.glideim.sdk.api.auth.AuthDto;
@@ -37,6 +36,10 @@ public class IMAccount implements MessageListener {
 
     public IMAccount(IMClient im) {
         this.im = im;
+    }
+
+    public void init() {
+        sessionList.init();
     }
 
     public List<IMContacts> updateContacts(List<UserInfoBean> userInfoBeans) {
@@ -192,7 +195,6 @@ public class IMAccount implements MessageListener {
     public void setContactsChangeListener(ContactsChangeListener contactsChangeListener) {
         this.contactsChangeListener = contactsChangeListener;
     }
-
 
     public Observable<List<IMContacts>> getContacts() {
         return UserApi.API.getContactsList()

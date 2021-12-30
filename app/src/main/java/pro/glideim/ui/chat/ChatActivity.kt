@@ -17,13 +17,12 @@ import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.GlideIM
-import pro.glideim.sdk.entity.IMMessage
-import pro.glideim.sdk.entity.IMSession
-import pro.glideim.sdk.entity.MessageChangeListener
+import pro.glideim.sdk.IMMessage
+import pro.glideim.sdk.IMSession
+import pro.glideim.sdk.MessageChangeListener
 import pro.glideim.sdk.protocol.ChatMessage
 import pro.glideim.utils.io2main
 import pro.glideim.utils.request
-import pro.glideim.utils.request2
 import java.util.*
 
 class ChatActivity : BaseActivity() {
@@ -94,7 +93,8 @@ class ChatActivity : BaseActivity() {
         mMessage.addAll(latest)
         scrollToLastMessage()
 
-        mSession.setMessageListener(object : MessageChangeListener {
+        mSession.setMessageListener(object :
+            MessageChangeListener {
             override fun onChange(mid: Long, message: IMMessage) {}
 
             override fun onInsertMessage(mid: Long, message: IMMessage) {}

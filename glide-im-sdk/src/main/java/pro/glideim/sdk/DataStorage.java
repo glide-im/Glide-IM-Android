@@ -4,7 +4,6 @@ import java.util.List;
 
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
-import pro.glideim.sdk.entity.IMSession;
 
 public interface DataStorage {
 

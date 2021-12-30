@@ -1,4 +1,4 @@
-package pro.glideim.sdk.entity;
+package pro.glideim.sdk;
 
 import pro.glideim.sdk.api.user.ContactsBean;
 

@@ -7,9 +7,8 @@ import java.util.Map;
 
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
-import pro.glideim.sdk.entity.IMSession;
 
-class DefaultDataStoreImpl implements DataStorage {
+public class DefaultDataStoreImpl implements DataStorage {
 
 
     private static final Map<Long, UserInfoBean> sTempUserInfo = new HashMap<>();
@@ -54,7 +53,6 @@ class DefaultDataStoreImpl implements DataStorage {
             sTempSession.put(uid, new HashMap<>());
         }
         sTempSession.get(uid).put(session.to, session);
-
     }
 
     @Override
