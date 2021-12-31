@@ -4,13 +4,14 @@ import android.app.Application
 import android.content.Context
 import pro.glideim.sdk.DataStorage
 import pro.glideim.sdk.DefaultDataStoreImpl
+import pro.glideim.sdk.IMSession
 import pro.glideim.sdk.api.group.GroupInfoBean
 import pro.glideim.sdk.api.user.UserInfoBean
-import pro.glideim.sdk.IMSession
 
 class UserPerf : DataStorage {
 
     private var token = ""
+    private var uid = 0L
     private val d = DefaultDataStoreImpl()
 
     companion object {
@@ -20,11 +21,12 @@ class UserPerf : DataStorage {
         fun init(app: Application) {
             val sp = app.getSharedPreferences("u", Context.MODE_PRIVATE)
             instance.token = sp.getString("token", "") ?: ""
+            instance.uid = sp.getLong("d_uid", 0)
             application = app
         }
 
         fun logout() {
-            instance.storeToken(0, "")
+            instance.storeToken(instance.uid, "")
         }
 
         fun getInstance(): UserPerf {
@@ -32,11 +34,16 @@ class UserPerf : DataStorage {
         }
     }
 
+    override fun getDefaultAccountUid(): Long {
+        return uid
+    }
+
     override fun storeToken(uid: Long, token: String?) {
         this.token = token ?: ""
         val sp = application.getSharedPreferences("u", Context.MODE_PRIVATE)
         val edit = sp.edit()
         edit.putString("token", token)
+        edit.putLong("d_uid", uid)
         edit.apply()
     }
 

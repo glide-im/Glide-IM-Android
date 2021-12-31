@@ -16,9 +16,16 @@ public class DefaultDataStoreImpl implements DataStorage {
     private static final Map<Long, HashMap<Long, IMSession>> sTempSession = new HashMap<>();
 
     private String token = "";
+    private long uid = 0;
+
+    @Override
+    public long getDefaultAccountUid() {
+        return uid;
+    }
 
     @Override
     public void storeToken(long uid, String token) {
+        this.uid = uid;
         this.token = token;
     }
 

@@ -4,6 +4,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.appcompat.widget.AppCompatImageView
 import com.dengzii.adapter.AbsViewHolder
+import com.dengzii.ktx.android.antiShakeClick
 import com.dengzii.ktx.android.hide
 import com.dengzii.ktx.android.show
 import com.google.android.material.textview.MaterialTextView
@@ -36,8 +37,8 @@ class SessionViewHolder(v: ViewGroup) : AbsViewHolder<IMSession>(v) {
         }
         mTvTime.text = data.updateAt.secToTimeSpan()
 
-        itemView.setOnClickListener {
-            ChatActivity.start(context, data.to)
+        itemView.antiShakeClick {
+            ChatActivity.start(context, data.to, data.type)
         }
     }
 

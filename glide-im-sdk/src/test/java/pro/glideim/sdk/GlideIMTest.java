@@ -16,7 +16,7 @@ class GlideIMTest {
 
     @BeforeEach
     void setUp() throws InterruptedException {
-        GlideIM.init("ws://192.168.1.123:8080/ws", "http://192.168.1.123:8081/api/");
+        GlideIM.init("http://192.168.1.123:8081/api/");
         GlideIM.getAccount().getIMClient().connect().blockingGet();
     }
 
@@ -24,12 +24,6 @@ class GlideIMTest {
     void tearDown() {
     }
 
-    @Test
-    void auth() throws InterruptedException {
-        login();
-        Thread.sleep(1000);
-        GlideIM.auth();
-    }
 
     @Test
     void login() {

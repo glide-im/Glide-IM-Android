@@ -2,16 +2,22 @@ package pro.glideim.ui.contacts
 
 import android.content.Context
 import android.content.Intent
+import android.util.SparseArray
+import android.util.SparseLongArray
 import com.dengzii.ktx.android.content.intentExtra
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
+import pro.glideim.sdk.GlideIM
+import pro.glideim.sdk.IMSession
 import pro.glideim.sdk.api.user.ContactsUidDto
 import pro.glideim.sdk.api.user.UserApi
 import pro.glideim.ui.Events
 import pro.glideim.utils.BusUtils
+import pro.glideim.utils.io2main
 import pro.glideim.utils.request
+import pro.glideim.utils.request2
 
 class AddContactsActivity : BaseActivity() {
     private val mBtQrCode by lazy { findViewById<MaterialButton>(R.id.bt_qr_code) }
@@ -48,15 +54,25 @@ class AddContactsActivity : BaseActivity() {
 
     private fun search() {
         val id = mEtId.text.toString()
-        if (id.toLongOrNull() == null || id.length < 5) {
+        if (id.toLongOrNull() == null || id.length < 2) {
             toast("check id")
             return
         }
-        UserApi.API.addContacts(ContactsUidDto(id.toLong(), ""))
-            .request(this) {
-                toast("Contacts added")
-                BusUtils.post(Events.EVENT_UPDATE_CONTACTS)
-                finish()
-            }
+        if (mSearchGroup) {
+            GlideIM.getAccount().joinGroup(id.toLong())
+                .io2main()
+                .request2(this) {
+                    toast("Group added")
+                    BusUtils.post(Events.EVENT_UPDATE_CONTACTS)
+                    finish()
+                }
+        } else {
+            UserApi.API.addContacts(ContactsUidDto(id.toLong(), ""))
+                .request(this) {
+                    toast("Contacts added")
+                    BusUtils.post(Events.EVENT_UPDATE_CONTACTS)
+                    finish()
+                }
+        }
     }
 }

@@ -4,6 +4,7 @@ import io.reactivex.ObservableTransformer;
 import io.reactivex.SingleTransformer;
 import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
+import pro.glideim.sdk.GlideException;
 import pro.glideim.sdk.api.Response;
 import pro.glideim.sdk.protocol.CommMessage;
 
@@ -15,7 +16,7 @@ public class RxUtils {
     public static <T> Function<Response<T>, T> bodyConverter() {
         return r -> {
             if (!r.success()) {
-                throw new Exception(r.getCode() + "," + r.getMsg());
+                throw new GlideException(r.getCode() + "," + r.getMsg());
             }
             return r.getData();
         };
@@ -28,7 +29,7 @@ public class RxUtils {
     public static <T> Function<CommMessage<T>, T> bodyConverterForWsMsg() {
         return r -> {
             if (!r.success()) {
-                throw new Exception("");
+                throw new GlideException(r.getData().toString());
             }
             return r.getData();
         };

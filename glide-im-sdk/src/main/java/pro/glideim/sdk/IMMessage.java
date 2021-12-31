@@ -78,6 +78,7 @@ public class IMMessage {
 
     public static IMMessage fromGroupMessage(IMAccount account, GroupMessageBean messageBean) {
         IMMessage m = new IMMessage();
+        m.isMe = messageBean.getSender() == account.uid;
         m.setMid(messageBean.getMid());
         m.setCliSeq(0);
         m.setFrom(messageBean.getSender());
@@ -86,7 +87,6 @@ public class IMMessage {
         m.setSendAt(messageBean.getSentAt());
         m.setContent(messageBean.getContent());
         m.setTarget(account, 2, m.to);
-        m.isMe = messageBean.getSender() == account.uid;
         return m;
     }
 
@@ -103,13 +103,13 @@ public class IMMessage {
         this.targetId = id;
         this.tag = IMSessionList.SessionTag.get(type, id);
         if (targetType == 1) {
-            if (id == account.uid) {
+            if (isMe) {
                 this.avatar = account.getProfile().getAvatar();
                 this.title = account.getProfile().getNickname();
             } else {
                 GlideIM.getUserInfo(id)
                         .compose(RxUtils.silentScheduler())
-                        .subscribe(new SilentObserver<pro.glideim.sdk.api.user.UserInfoBean>() {
+                        .subscribe(new SilentObserver<UserInfoBean>() {
                             @Override
                             public void onNext(@NonNull UserInfoBean userInfoBean) {
                                 avatar = userInfoBean.getAvatar();

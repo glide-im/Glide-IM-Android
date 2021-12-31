@@ -25,6 +25,7 @@ public class IMSession {
 
     public static final String TAG = IMSession.class.getSimpleName();
     private final TreeMap<Long, IMMessage> messageTreeMap = new TreeMap<>();
+    private final IMAccount account;
     public long to;
     public long lastMsgSender;
     public String title;
@@ -39,7 +40,7 @@ public class IMSession {
     private IMSessionList sessionList;
     private OnUpdateListener onUpdateListener;
     private MessageChangeListener messageChangeListener;
-    private IMAccount account;
+    private boolean infoInit = false;
 
     private IMSession(IMAccount account, long to, int type) {
         this.tag = IMSessionList.SessionTag.get(type, to);
@@ -92,7 +93,7 @@ public class IMSession {
         return s;
     }
 
-    public IMSession update(IMSession session) {
+    public IMSession merge(IMSession session) {
         this.updateAt = session.updateAt;
         this.lastMsg = session.lastMsg;
         this.messageTreeMap.putAll(session.messageTreeMap);
@@ -228,22 +229,6 @@ public class IMSession {
         return getMessages(0, 20);
     }
 
-    public IMSession setInfo(GroupInfoBean groupInfoBean) {
-        to = groupInfoBean.getGid();
-        title = groupInfoBean.getName();
-        avatar = groupInfoBean.getAvatar();
-        onSessionUpdate();
-        return this;
-    }
-
-    public IMSession setInfo(UserInfoBean userInfoBean) {
-        to = userInfoBean.getUid();
-        title = userInfoBean.getNickname();
-        avatar = userInfoBean.getAvatar();
-        onSessionUpdate();
-        return this;
-    }
-
     private void onSessionUpdate() {
         lastUpdateAt = System.currentTimeMillis();
 //        if (latestMessage.size() > 0) {
@@ -269,6 +254,38 @@ public class IMSession {
                 .doOnSuccess(this::addMessages);
     }
 
+    public Observable<IMSession> initInfo() {
+        if (infoInit) {
+            return Observable.just(this);
+        }
+        switch (type) {
+            case 1:
+                return GlideIM.getUserInfo(to).map(this::setInfo);
+            case 2:
+                return GlideIM.getGroupInfo(to).map(this::setInfo);
+            default:
+                return Observable.just(this);
+        }
+    }
+
+    public IMSession setInfo(GroupInfoBean groupInfoBean) {
+        infoInit = true;
+        to = groupInfoBean.getGid();
+        title = groupInfoBean.getName();
+        avatar = groupInfoBean.getAvatar();
+        onSessionUpdate();
+        return this;
+    }
+
+    public IMSession setInfo(UserInfoBean userInfoBean) {
+        infoInit = true;
+        to = userInfoBean.getUid();
+        title = userInfoBean.getNickname();
+        avatar = userInfoBean.getAvatar();
+        onSessionUpdate();
+        return this;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -277,6 +294,10 @@ public class IMSession {
         return to == imSession.to && type == imSession.type;
     }
 
+
+    public Observable<IMMessage> sendMessage(String msg) {
+        return account.sendChatMessage(to, 1, msg);
+    }
 
     @Override
     public int hashCode() {

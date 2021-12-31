@@ -1,11 +1,17 @@
 package pro.glideim.sdk.api.msg;
 
+import androidx.annotation.NonNull;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import pro.glideim.sdk.IMMessage;
 import pro.glideim.sdk.TestObserver;
 import pro.glideim.sdk.http.RetrofitManager;
+import pro.glideim.sdk.utils.RxUtils;
 
 import java.util.Arrays;
+import java.util.List;
 
 class MsgApiTest {
 
@@ -21,7 +27,14 @@ class MsgApiTest {
 
     @Test
     void history() {
-        MsgApi.API.getChatMessageHistory(new GetChatHistoryDto(2,0)).subscribe(new TestObserver<>());
+        MsgApi.API.getChatMessageHistory(new GetChatHistoryDto(2,0))
+                .map(RxUtils.bodyConverter())
+                .subscribe(new TestObserver<List<MessageBean>>(){
+                    @Override
+                    public void onNext(@NonNull List<MessageBean> messageBeans) {
+                        System.out.println("history.onNext:"+messageBeans.toString());
+                    }
+                });
     }
 
     @Test

@@ -3,10 +3,10 @@ package pro.glideim.sdk;
 import androidx.annotation.NonNull;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
@@ -29,8 +29,6 @@ public class IMSessionList {
     public static final String TAG = IMSessionList.class.getSimpleName();
 
     private final TreeMap<SessionTag, IMSession> sessionMap = new TreeMap<>();
-    private final List<IMSession> tempNewSession = new ArrayList<>();
-    private final List<IMSession> tempUpdateSession = new ArrayList<>();
     private final IMAccount account;
     private SessionUpdateListener sessionUpdateListener;
 
@@ -62,35 +60,26 @@ public class IMSessionList {
 
     private synchronized void addOrUpdateSession(IMSession... ses) {
 
-        tempNewSession.clear();
-        tempUpdateSession.clear();
-
         for (IMSession se : ses) {
             long oldUpdateAt = se.tag.updateAt;
             se.tag.updateAt = se.updateAt;
             IMSession s = getSession(se.tag);
             if (s == null) {
                 s = se;
-                tempNewSession.add(s);
                 putSession(s);
+                if (sessionUpdateListener != null) {
+                    sessionUpdateListener.onNewSession(s);
+                }
                 SLogger.d(TAG, "session add:" + s.toString());
             } else {
                 if (oldUpdateAt != s.tag.updateAt) {
-                    tempUpdateSession.add(s);
+                    if (sessionUpdateListener != null) {
+                        sessionUpdateListener.onUpdate(s);
+                    }
                 }
                 sessionMap.remove(s.tag);
-                putSession(s.update(s));
+                putSession(s.merge(s));
                 SLogger.d(TAG, "session update:" + s.toString());
-            }
-        }
-        if (sessionUpdateListener != null) {
-            if (!tempUpdateSession.isEmpty()) {
-                SLogger.d(TAG, "updates session count:" + tempUpdateSession.size());
-                sessionUpdateListener.onUpdate(tempUpdateSession.toArray(new IMSession[]{}));
-            }
-            if (!tempNewSession.isEmpty()) {
-                SLogger.d(TAG, "add session count:" + tempNewSession.size());
-                sessionUpdateListener.onNewSession(tempNewSession.toArray(new IMSession[]{}));
             }
         }
     }
@@ -155,7 +144,7 @@ public class IMSessionList {
         return Observable.just(getOrCreateSession(SessionTag.get(type, id)));
     }
 
-    public List<IMSession> getSessions(){
+    public List<IMSession> getSessions() {
         return new ArrayList<>(this.sessionMap.values());
     }
 
@@ -179,10 +168,7 @@ public class IMSessionList {
         Observable<IMSession> groupSession = MsgApi.API.getAllGroupMessageState()
                 .map(RxUtils.bodyConverter())
                 .flatMap(Observable::fromIterable)
-                .map(stateBean -> IMSession.fromGroupState(account, stateBean))
-                .flatMap((Function<IMSession, ObservableSource<IMSession>>) session ->
-                        GlideIM.getGroupInfo(session.to).map(session::setInfo)
-                );
+                .map(stateBean -> IMSession.fromGroupState(account, stateBean));
 
         Observable<IMSession> chatSession = MsgApi.API.getRecentSession()
                 .map(RxUtils.bodyConverter())
@@ -191,11 +177,9 @@ public class IMSessionList {
                 .flatMap((Function<IMSession, ObservableSource<IMSession>>) session -> session.getHistory(0)
                         .toObservable()
                         .zipWith(Observable.just(session), (messages, session1) -> session1)
-                )
-                .flatMap((Function<IMSession, ObservableSource<IMSession>>) imSession ->
-                        GlideIM.getUserInfo(imSession.to).map(imSession::setInfo)
                 );
-        return Observable.merge(groupSession, chatSession);
+        return Observable.merge(groupSession, chatSession)
+                .flatMap((Function<IMSession, ObservableSource<IMSession>>) IMSession::initInfo);
     }
 
     private Observable<IMSession> initRecentMessages() {
@@ -241,7 +225,7 @@ public class IMSessionList {
     }
 
     static class SessionTag implements Comparable<SessionTag> {
-        private static final Map<String, SessionTag> temp = new HashMap<>();
+        private static final Map<String, SessionTag> temp = new ConcurrentHashMap<>();
         int type;
         long id;
         long updateAt = 0;

@@ -106,11 +106,15 @@ class ContactsFragment : BaseFragment() {
     }
 
     private fun startChat(id: Long, type: Int) {
+        if (type == 2) {
+            ChatActivity.start(requireContext(), id, type)
+            return
+        }
         GlideIM.getAccount().imSessionList.getSession(id, type)
             .io2main()
             .request2(this) {
                 when (type) {
-                    1 -> ChatActivity.start(requireContext(), id)
+                    1 -> ChatActivity.start(requireContext(), id, type)
                     else -> toast("TODO")
                 }
             }
@@ -161,7 +165,7 @@ class ContactsFragment : BaseFragment() {
         GlideIM.createGroup(name.trim())
             .io2main()
             .request2(this) {
-
+                updateContacts()
             }
         return true
     }

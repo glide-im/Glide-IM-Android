@@ -50,7 +50,7 @@ public class RetrofitWsClient implements WsClient {
                         return;
                     }
                 }
-                if (getState() != STATE_OPENED ) {
+                if (getState() != STATE_OPENED) {
                     if (connectError == null) {
                         connectError = new Exception("connect failed");
                     }
@@ -117,6 +117,7 @@ public class RetrofitWsClient implements WsClient {
 
         @Override
         public void onClosed(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
+            SLogger.d(TAG, "ws closed, code=" + code + ", reason=" + reason);
             onStateChange(WsClient.STATE_CLOSED);
         }
 
@@ -150,6 +151,7 @@ public class RetrofitWsClient implements WsClient {
 
         @Override
         public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
+            SLogger.d(TAG, "ws opened");
             onStateChange(WsClient.STATE_OPENED);
         }
     }

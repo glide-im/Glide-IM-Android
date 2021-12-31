@@ -27,6 +27,7 @@ public interface Actions {
     interface Cli {
         String ACTION_ACK_REQUEST = "ack.request";
 
-        String ACTION_USER_AUTH = "api.user.auth";
+        String ACTION_API_USER_AUTH = "api.user.auth";
+        String ACTION_API_LOGOUT = "api.user.logout";
     }
 }

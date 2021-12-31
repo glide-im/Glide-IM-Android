@@ -12,34 +12,58 @@ import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.auth.AuthApi;
 import pro.glideim.sdk.api.auth.AuthBean;
 import pro.glideim.sdk.api.auth.AuthDto;
+import pro.glideim.sdk.api.group.GroupApi;
 import pro.glideim.sdk.api.group.GroupInfoBean;
+import pro.glideim.sdk.api.group.JoinGroupDto;
 import pro.glideim.sdk.api.msg.MessageIDBean;
 import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.user.ProfileBean;
 import pro.glideim.sdk.api.user.UserApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.im.IMClient;
+import pro.glideim.sdk.im.IMClientImpl;
 import pro.glideim.sdk.im.MessageListener;
 import pro.glideim.sdk.protocol.Actions;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.utils.RxUtils;
+import pro.glideim.sdk.ws.WsClient;
 
 public class IMAccount implements MessageListener {
 
     private final IMSessionList sessionList = new IMSessionList(this);
     private final TreeMap<String, IMContacts> contactsMap = new TreeMap<>();
     private final IMClient im;
+    private final int device = 1;
     public long uid;
     public ContactsChangeListener contactsChangeListener;
     private ProfileBean profileBean;
-    private boolean auth;
+    private final List<String> servers = new ArrayList<>();
+    private boolean wsAuthed = false;
 
-    public IMAccount(IMClient im) {
-        this.im = im;
+    public IMAccount(long uid) {
+        this.uid = uid;
+        this.im = IMClientImpl.create(servers.get(0));
+        this.im.addConnStateListener((state, msg) -> {
+            if (state == WsClient.STATE_OPENED) {
+                authWs().compose(RxUtils.silentScheduler())
+                        .subscribe(new SilentObserver<>());
+            } else {
+                wsAuthed = false;
+            }
+        });
     }
 
-    public void init() {
+    public void setServers(List<String> servers){
+        this.servers.addAll(servers);
+    }
+
+    public Observable<Boolean> initAccountAndConn() {
+        String token = GlideIM.getDataStorage().loadToken(uid);
+        if (token.isEmpty()) {
+            return Observable.error(new Exception("invalid token"));
+        }
         sessionList.init();
+        return im.connect().flatMapObservable(aBoolean -> authWs());
     }
 
     public List<IMContacts> updateContacts(List<UserInfoBean> userInfoBeans) {
@@ -117,23 +141,16 @@ public class IMAccount implements MessageListener {
         if (token == null) {
             return Observable.error(new Exception("invalid token"));
         }
-        return AuthApi.API.auth(new AuthDto(token, 1))
+        return AuthApi.API.auth(new AuthDto(token, device))
                 .map(RxUtils.bodyConverter())
-                .doOnNext(authBean -> uid = authBean.getUid())
-                .flatMap((Function<AuthBean, ObservableSource<Boolean>>) aBoolean -> authWs())
+                .doOnNext(authBean -> {
+                    this.uid = authBean.getUid();
+                    this.servers.clear();
+                    this.servers.addAll(authBean.getServers());
+                })
+                .flatMap((Function<AuthBean, ObservableSource<Boolean>>) aBoolean -> initAccountAndConn())
                 .flatMap((Function<Boolean, ObservableSource<ProfileBean>>) aBoolean -> initUserProfile());
     }
-
-    public Observable<Boolean> authWs() {
-        AuthDto d = new AuthDto(GlideIM.getDataStorage().loadToken(uid), 1);
-        return im.request(Actions.Cli.ACTION_USER_AUTH, AuthBean.class, false, d)
-                .map(RxUtils.bodyConverterForWsMsg())
-                .map(authBean -> {
-                    im.setMessageListener(this);
-                    return authBean.getUid() != 0;
-                });
-    }
-
 
     public Observable<IMMessage> sendChatMessage(long to, int type, String content) {
 
@@ -206,6 +223,42 @@ public class IMAccount implements MessageListener {
                 .flatMapObservable((Function<List<IMContacts>, ObservableSource<List<IMContacts>>>) contacts ->
                         updateContactInfo()
                 );
+    }
+
+    public Observable<Boolean> joinGroup(long gid) {
+        return GroupApi.API.joinGroup(new JoinGroupDto(gid))
+                .map(RxUtils.bodyConverter())
+                .map(o -> true);
+    }
+
+    public void logout() {
+        GlideIM.getDataStorage().storeToken(uid, "");
+        if (!wsAuthed) {
+            return;
+        }
+        im.request(Actions.Cli.ACTION_API_LOGOUT, Object.class, false, "")
+                .compose(RxUtils.silentScheduler())
+                .subscribe(new SilentObserver<>());
+    }
+
+    private Observable<Boolean> authWs() {
+        String token = GlideIM.getDataStorage().loadToken(uid);
+        if (token.isEmpty()) {
+            return Observable.error(new Exception("invalid token"));
+        }
+        AuthDto d = new AuthDto(token, device);
+        return im.request(Actions.Cli.ACTION_API_USER_AUTH, AuthBean.class, false, d)
+                .map(RxUtils.bodyConverterForWsMsg())
+                .doOnError(throwable -> {
+                    if (throwable instanceof GlideException) {
+                        GlideIM.getDataStorage().storeToken(uid, "");
+                    }
+                })
+                .map(authBean -> {
+                    wsAuthed = true;
+                    im.setMessageListener(this);
+                    return authBean.getUid() != 0;
+                });
     }
 
     private Observable<List<IMContacts>> updateContactInfo() {

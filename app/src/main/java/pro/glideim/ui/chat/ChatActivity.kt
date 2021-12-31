@@ -9,7 +9,6 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SortedList
 import com.dengzii.adapter.SuperAdapter
-import com.dengzii.ktx.android.content.intentExtra
 import com.dengzii.ktx.android.toggleEnable
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
@@ -23,7 +22,6 @@ import pro.glideim.sdk.MessageChangeListener
 import pro.glideim.sdk.protocol.ChatMessage
 import pro.glideim.utils.io2main
 import pro.glideim.utils.request
-import java.util.*
 
 class ChatActivity : BaseActivity() {
 
@@ -37,26 +35,31 @@ class ChatActivity : BaseActivity() {
     private val mLayoutManger = GridLayoutManager(this, 1, RecyclerView.VERTICAL, true)
 
     private lateinit var mSession: IMSession
-    private val mUID by intentExtra(EXTRA_UID, 0L)
-    private var mLastMid = 0L
 
     override val layoutResId = R.layout.activity_chat
 
     companion object {
 
-        const val EXTRA_UID = "EXTRA_UID"
+        const val EXTRA_ID = "EXTRA_ID"
+        const val EXTRA_TYPE = "EXTRA_TYPE"
 
         @JvmStatic
-        fun start(context: Context, uid: Long) {
+        fun start(context: Context, id: Long, type: Int) {
             val starter = Intent(context, ChatActivity::class.java).apply {
-                putExtra(EXTRA_UID, uid)
+                putExtra(EXTRA_ID, id)
+                putExtra(EXTRA_TYPE, type)
+            }
+            if (id == 0L || type == 0) {
+                return
             }
             context.startActivity(starter)
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        mSession = GlideIM.getAccount().imSessionList.getSession(1, mUID)
+        val id = intent.getLongExtra(EXTRA_ID, 0)
+        val type = intent.getIntExtra(EXTRA_TYPE, 0)
+        mSession = GlideIM.getAccount().imSessionList.getSession(type, id)
         super.onCreate(savedInstanceState)
     }
 
@@ -88,7 +91,7 @@ class ChatActivity : BaseActivity() {
 
         mMessage.clear()
 
-        val latest = mSession.getMessages(mLastMid, 20)
+        val latest = mSession.getMessages(mSession.lastMsgId, 20)
         mMessage.addAll(latest)
         scrollToLastMessage()
 
@@ -99,7 +102,10 @@ class ChatActivity : BaseActivity() {
             override fun onInsertMessage(mid: Long, message: IMMessage) {}
 
             override fun onNewMessage(message: IMMessage) {
-                mMessage.add(message)
+                runOnUiThread {
+                    mMessage.add(message)
+                    scrollToLastMessage()
+                }
             }
         })
     }
@@ -116,7 +122,7 @@ class ChatActivity : BaseActivity() {
 
         mBtSend.isEnabled = false
 
-        GlideIM.sendChatMessage(mUID, 1, msg)
+        mSession.sendMessage(msg)
             .io2main()
             .request {
                 onSuccess {

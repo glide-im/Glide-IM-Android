@@ -59,20 +59,12 @@ class SessionsFragment : BaseFragment() {
 
         mIMSessionList.setSessionUpdateListener(
             object : SessionUpdateListener {
-                override fun onUpdate(vararg session: IMSession) {
-                    Log.d(
-                        TAG,
-                        "onUpdate() called with: session = ${session.joinToString { "${it.to}-${it.title}" }}"
-                    )
-                    mSessionList.addAll(session.toList())
+                override fun onUpdate(session: IMSession) {
+                    requireActivity().runOnUiThread { mSessionList.add(session) }
                 }
 
-                override fun onNewSession(vararg session: IMSession) {
-                    Log.d(
-                        TAG,
-                        "onNewSession() called with: session = ${session.joinToString { "${it.to}-${it.title}" }}"
-                    )
-                    mSessionList.addAll(session.toList())
+                override fun onNewSession(session: IMSession) {
+                    requireActivity().runOnUiThread { mSessionList.add(session) }
                 }
             })
 

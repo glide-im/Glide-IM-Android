@@ -28,19 +28,20 @@ public class KeepAlive implements ConnStateListener {
         check();
     }
 
-    void check() {
+    synchronized void check() {
         if (client.getState() != WsClient.STATE_CLOSED || reconnecting) {
             return;
         }
         reconnecting = true;
-        client.removeStateListener(this);
         SLogger.d(TAG, "reconnecting the server");
         client.connect()
-                .retry(10)
+                .retry((integer, throwable) -> {
+                    SLogger.d(TAG, "retry connect to server, times:" + integer);
+                    return true;
+                })
                 .compose(RxUtils.silentSchedulerSingle())
                 .doOnSuccess(aBoolean -> {
                     reconnecting = false;
-                    client.addStateListener(this);
                     SLogger.d(TAG, "reconnect server success");
                 })
                 .doOnError(e -> {

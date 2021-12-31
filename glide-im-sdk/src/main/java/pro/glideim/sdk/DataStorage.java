@@ -7,7 +7,7 @@ import pro.glideim.sdk.api.user.UserInfoBean;
 
 public interface DataStorage {
 
-
+    long getDefaultAccountUid();
 
     void storeToken(long uid, String token);
 

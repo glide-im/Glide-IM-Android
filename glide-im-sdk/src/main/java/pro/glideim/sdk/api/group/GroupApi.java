@@ -19,5 +19,5 @@ public interface GroupApi {
     Observable<Response<CreateGroupBean>> createGroup(@Body CreateGroupDto d);
 
     @POST("group/join")
-    Observable<Response<GroupInfoBean>> joinGroup();
+    Observable<Response<Object>> joinGroup(@Body JoinGroupDto d);
 }

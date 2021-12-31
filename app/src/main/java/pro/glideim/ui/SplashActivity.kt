@@ -2,13 +2,10 @@ package pro.glideim.ui
 
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
-import pro.glideim.UserPerf
 import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.GlideIM
-import pro.glideim.sdk.ws.WsClient
 import pro.glideim.utils.io2main
 import pro.glideim.utils.request
-import pro.glideim.utils.request2
 
 class SplashActivity : BaseActivity() {
 
@@ -18,47 +15,21 @@ class SplashActivity : BaseActivity() {
 
     override fun initView() {
 
-        GlideIM.getAccount().imClient.connect()
+        GlideIM.authDefaultAccount()
             .io2main()
             .request {
                 onStart {
                     mTvState.text = "Connecting to server"
                 }
                 onSuccess {
-                    checkToken()
+                    MainActivity.start(this@SplashActivity)
+                    finish()
                 }
                 onError {
                     it.printStackTrace()
-                    toast(it.message ?: it.localizedMessage)
-                    GlideIM.getAccount().imClient.addConnStateListener() { state, _ ->
-                        if (state == WsClient.STATE_OPENED) {
-                            runOnUiThread {
-                                checkToken()
-                            }
-                        }
-                    }
+                    LoginActivity.start(this@SplashActivity)
+                    finish()
                 }
-            }
-    }
-
-    private fun checkToken() {
-        val token = UserPerf.getInstance().loadToken(0)
-        if (token.isBlank()) {
-            LoginActivity.start(this)
-            finish()
-            return
-        }
-
-        mTvState.text = "Logging in ..."
-        GlideIM.auth()
-            .io2main()
-            .doOnError {
-                LoginActivity.start(this)
-                finish()
-            }
-            .request2(this) {
-                MainActivity.start(this)
-                finish()
             }
     }
 
