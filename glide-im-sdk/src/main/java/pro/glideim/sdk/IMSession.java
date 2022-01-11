@@ -15,9 +15,11 @@ import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.msg.GetChatHistoryDto;
 import pro.glideim.sdk.api.msg.GroupMessageStateBean;
 import pro.glideim.sdk.api.msg.MessageBean;
+import pro.glideim.sdk.api.msg.MessageIDBean;
 import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.msg.SessionBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
+import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
 
@@ -296,7 +298,59 @@ public class IMSession {
 
 
     public Observable<IMMessage> sendMessage(String msg) {
-        return account.sendChatMessage(to, 1, msg);
+        if (account.getIMClient() == null) {
+            return Observable.error(new NullPointerException("the connection is not init"));
+        }
+
+        Observable<ChatMessage> creator = Observable.create(emitter -> {
+            ChatMessage message = new ChatMessage();
+            message.setMid(0);
+            message.setContent(msg);
+            message.setFrom(account.uid);
+            message.setTo(to);
+            message.setType(type);
+            message.setState(ChatMessage.STATE_INIT);
+            message.setcTime(System.currentTimeMillis() / 1000);
+            emitter.onNext(message);
+            emitter.onComplete();
+        });
+
+        Observable<MessageIDBean> midRequest = MsgApi.API.getMessageID()
+                .map(RxUtils.bodyConverter());
+
+        return creator
+                .flatMap((Function<ChatMessage, ObservableSource<ChatMessage>>) message -> {
+                    Observable<ChatMessage> init = Observable.just(message);
+                    Observable<ChatMessage> create = Observable.just(message)
+                            .zipWith(midRequest, (m1, messageIDBean) -> {
+                                m1.setState(ChatMessage.STATE_CREATED);
+                                m1.setMid(messageIDBean.getMid());
+                                return m1;
+                            })
+                            .flatMap((Function<ChatMessage, ObservableSource<ChatMessage>>) m2 -> {
+                                Observable<ChatMessage> ob = account.getIMClient().sendChatMessage(m2);
+                                return Observable.concat(Observable.just(m2), ob);
+                            });
+                    return Observable.concat(init, create);
+                })
+                .map(chatMessage -> {
+                    IMMessage r = IMMessage.fromChatMessage(account, chatMessage);
+                    IMSession session = sessionList.getSession(chatMessage.getType(), chatMessage.getTo());
+                    switch (chatMessage.getState()) {
+                        case ChatMessage.STATE_INIT:
+                            break;
+                        case ChatMessage.STATE_CREATED:
+                            session.addMessage(r);
+                            break;
+                        case ChatMessage.STATE_SRV_RECEIVED:
+                            session.onMessageSendSuccess(r);
+                            break;
+                        case ChatMessage.STATE_RCV_RECEIVED:
+                            session.onMessageReceived(r);
+                            break;
+                    }
+                    return r;
+                });
     }
 
     @Override

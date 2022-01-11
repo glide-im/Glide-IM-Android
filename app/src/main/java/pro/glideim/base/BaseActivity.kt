@@ -3,7 +3,9 @@ package pro.glideim.base
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import pro.glideim.UserPerf
 import pro.glideim.sdk.GlideIM
+import pro.glideim.sdk.IMAccount
 import pro.glideim.sdk.im.ConnStateListener
 import pro.glideim.sdk.ws.WsClient
 import pro.glideim.utils.RequestStateCallback
@@ -12,6 +14,8 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
     abstract val layoutResId: Int
 
     private var inited = false
+
+    open val account: IMAccount = GlideIM.getAccount()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,8 +28,11 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
             initView()
             inited = true
         }
-        onStateChange(GlideIM.getAccount().imClient.webSocketClient.state, "")
-        GlideIM.getAccount().imClient.addConnStateListener(this)
+
+        account.apply {
+            onStateChange(imClient.webSocketClient.state, "")
+        }
+        account.imClient.addConnStateListener(this)
     }
 
     abstract fun initView()
@@ -33,7 +40,7 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
     override fun onResume() {
         super.onResume()
         if (inited) {
-            onStateChange(GlideIM.getAccount().imClient.webSocketClient.state, "")
+            onStateChange(account.imClient.webSocketClient.state, "")
         }
     }
 
@@ -55,7 +62,7 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
 
     override fun onStop() {
         super.onStop()
-        GlideIM.getAccount().imClient.removeConnStateListener(this)
+        account.imClient.removeConnStateListener(this)
     }
 
     open fun updateConnState(state: String) {

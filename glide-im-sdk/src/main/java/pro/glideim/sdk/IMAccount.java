@@ -8,6 +8,8 @@ import java.util.TreeMap;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
+import io.reactivex.annotations.NonNull;
+import io.reactivex.annotations.Nullable;
 import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.auth.AuthApi;
 import pro.glideim.sdk.api.auth.AuthBean;
@@ -15,8 +17,6 @@ import pro.glideim.sdk.api.auth.AuthDto;
 import pro.glideim.sdk.api.group.GroupApi;
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.group.JoinGroupDto;
-import pro.glideim.sdk.api.msg.MessageIDBean;
-import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.user.ProfileBean;
 import pro.glideim.sdk.api.user.UserApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
@@ -32,16 +32,21 @@ public class IMAccount implements MessageListener {
 
     private final IMSessionList sessionList = new IMSessionList(this);
     private final TreeMap<String, IMContacts> contactsMap = new TreeMap<>();
-    private final IMClient im;
     private final int device = 1;
-    public long uid;
-    public ContactsChangeListener contactsChangeListener;
-    private ProfileBean profileBean;
     private final List<String> servers = new ArrayList<>();
+    public long uid;
+    @Nullable
+    private IMClient im;
+    private ProfileBean profileBean = new ProfileBean();
     private boolean wsAuthed = false;
 
     public IMAccount(long uid) {
         this.uid = uid;
+    }
+
+    public IMAccount(long uid, List<String> servers) {
+        this.uid = uid;
+        this.servers.addAll(servers);
         this.im = IMClientImpl.create(servers.get(0));
         this.im.addConnStateListener((state, msg) -> {
             if (state == WsClient.STATE_OPENED) {
@@ -53,7 +58,7 @@ public class IMAccount implements MessageListener {
         });
     }
 
-    public void setServers(List<String> servers){
+    public void setServers(List<String> servers) {
         this.servers.addAll(servers);
     }
 
@@ -63,10 +68,16 @@ public class IMAccount implements MessageListener {
             return Observable.error(new Exception("invalid token"));
         }
         sessionList.init();
-        return im.connect().flatMapObservable(aBoolean -> authWs());
+        if (im == null) {
+            return Observable.error(new NullPointerException("the connection init failed"));
+        }
+        return im.connect()
+                .flatMapObservable(aBoolean ->
+                        authWs()
+                );
     }
 
-    public List<IMContacts> updateContacts(List<UserInfoBean> userInfoBeans) {
+    public List<IMContacts> updateContacts(@NonNull List<UserInfoBean> userInfoBeans) {
         List<IMContacts> res = new ArrayList<>();
         for (UserInfoBean userInfoBean : userInfoBeans) {
             IMContacts c = contactsMap.get(1 + "_" + userInfoBean.getUid());
@@ -86,7 +97,7 @@ public class IMAccount implements MessageListener {
         return sessionList;
     }
 
-    public List<IMContacts> updateContactsGroup(List<GroupInfoBean> groupInfoBeans) {
+    public List<IMContacts> updateContactsGroup(@NonNull List<GroupInfoBean> groupInfoBeans) {
         List<IMContacts> res = new ArrayList<>();
         for (GroupInfoBean groupInfoBean : groupInfoBeans) {
             IMContacts c = contactsMap.get(2 + "_" + groupInfoBean.getGid());
@@ -102,7 +113,7 @@ public class IMAccount implements MessageListener {
         return res;
     }
 
-    public void addContacts(List<IMContacts> contacts) {
+    public void addContacts(@NonNull List<IMContacts> contacts) {
         for (IMContacts c : contacts) {
             addContacts(c);
         }
@@ -145,72 +156,24 @@ public class IMAccount implements MessageListener {
                 .map(RxUtils.bodyConverter())
                 .doOnNext(authBean -> {
                     this.uid = authBean.getUid();
-                    this.servers.clear();
-                    this.servers.addAll(authBean.getServers());
+                    this.setServers(authBean.getServers());
+                    this.im = IMClientImpl.create(servers.get(0));
                 })
-                .flatMap((Function<AuthBean, ObservableSource<Boolean>>) aBoolean -> initAccountAndConn())
-                .flatMap((Function<Boolean, ObservableSource<ProfileBean>>) aBoolean -> initUserProfile());
+                .flatMap((Function<AuthBean, ObservableSource<Boolean>>) aBoolean ->
+                        initAccountAndConn()
+                )
+                .flatMap((Function<Boolean, ObservableSource<ProfileBean>>) aBoolean ->
+                        initUserProfile()
+                );
     }
 
     public Observable<IMMessage> sendChatMessage(long to, int type, String content) {
-
-        Observable<ChatMessage> creator = Observable.create(emitter -> {
-            ChatMessage message = new ChatMessage();
-            message.setMid(0);
-            message.setContent(content);
-            message.setFrom(uid);
-            message.setTo(to);
-            message.setType(type);
-            message.setState(ChatMessage.STATE_INIT);
-            message.setcTime(System.currentTimeMillis() / 1000);
-            emitter.onNext(message);
-            emitter.onComplete();
-        });
-
-        Observable<MessageIDBean> midRequest = MsgApi.API.getMessageID()
-                .map(RxUtils.bodyConverter());
-
-        return creator
-                .flatMap((Function<ChatMessage, ObservableSource<ChatMessage>>) message -> {
-                    Observable<ChatMessage> init = Observable.just(message);
-                    Observable<ChatMessage> create = Observable.just(message)
-                            .zipWith(midRequest, (m1, messageIDBean) -> {
-                                m1.setState(ChatMessage.STATE_CREATED);
-                                m1.setMid(messageIDBean.getMid());
-                                return m1;
-                            })
-                            .flatMap((Function<ChatMessage, ObservableSource<ChatMessage>>) m2 -> {
-                                Observable<ChatMessage> ob = im.sendChatMessage(m2);
-                                return Observable.concat(Observable.just(m2), ob);
-                            });
-                    return Observable.concat(init, create);
-                })
-                .map(chatMessage -> {
-                    IMMessage r = IMMessage.fromChatMessage(this, chatMessage);
-                    IMSession session = getIMSessionList().getSession(chatMessage.getType(), chatMessage.getTo());
-                    switch (chatMessage.getState()) {
-                        case ChatMessage.STATE_INIT:
-                            break;
-                        case ChatMessage.STATE_CREATED:
-                            session.addMessage(r);
-                            break;
-                        case ChatMessage.STATE_SRV_RECEIVED:
-                            session.onMessageSendSuccess(r);
-                            break;
-                        case ChatMessage.STATE_RCV_RECEIVED:
-                            session.onMessageReceived(r);
-                            break;
-                    }
-                    return r;
-                });
+        IMSession session = getIMSessionList().getSession(type, to);
+        return session.sendMessage(content);
     }
 
     public IMClient getIMClient() {
         return im;
-    }
-
-    public void setContactsChangeListener(ContactsChangeListener contactsChangeListener) {
-        this.contactsChangeListener = contactsChangeListener;
     }
 
     public Observable<List<IMContacts>> getContacts() {
@@ -236,12 +199,18 @@ public class IMAccount implements MessageListener {
         if (!wsAuthed) {
             return;
         }
+        if (im == null) {
+            return;
+        }
         im.request(Actions.Cli.ACTION_API_LOGOUT, Object.class, false, "")
                 .compose(RxUtils.silentScheduler())
                 .subscribe(new SilentObserver<>());
     }
 
     private Observable<Boolean> authWs() {
+        if (im == null) {
+            return Observable.error(new NullPointerException("the connection is not init"));
+        }
         String token = GlideIM.getDataStorage().loadToken(uid);
         if (token.isEmpty()) {
             return Observable.error(new Exception("invalid token"));

@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.ImageView
+import android.widget.ShareActionProvider
 import androidx.appcompat.widget.PopupMenu
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -110,15 +111,8 @@ class ContactsFragment : BaseFragment() {
             ChatActivity.start(requireContext(), id, type)
             return
         }
-        GlideIM.getAccount().imSessionList.getSession(id, type)
-            .io2main()
-            .request2(this) {
-                when (type) {
-                    1 -> ChatActivity.start(requireContext(), id, type)
-                    else -> toast("TODO")
-                }
-            }
-
+        val session = GlideIM.getAccount().imSessionList.getSession(type, id)
+        ChatActivity.start(requireContext(), session)
     }
 
     private fun requestData() {

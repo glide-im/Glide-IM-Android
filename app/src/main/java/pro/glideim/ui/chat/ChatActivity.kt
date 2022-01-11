@@ -43,6 +43,10 @@ class ChatActivity : BaseActivity() {
         const val EXTRA_ID = "EXTRA_ID"
         const val EXTRA_TYPE = "EXTRA_TYPE"
 
+        fun start(context: Context, s: IMSession) {
+            start(context, s.to, s.type)
+        }
+
         @JvmStatic
         fun start(context: Context, id: Long, type: Int) {
             val starter = Intent(context, ChatActivity::class.java).apply {

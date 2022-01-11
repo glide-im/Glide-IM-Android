@@ -140,10 +140,6 @@ public class IMSessionList {
         return session;
     }
 
-    public Observable<IMSession> getSession(long id, int type) {
-        return Observable.just(getOrCreateSession(SessionTag.get(type, id)));
-    }
-
     public List<IMSession> getSessions() {
         return new ArrayList<>(this.sessionMap.values());
     }

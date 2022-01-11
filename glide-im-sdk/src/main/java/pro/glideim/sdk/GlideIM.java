@@ -10,7 +10,6 @@ import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.Response;
 import pro.glideim.sdk.api.auth.AuthApi;
 import pro.glideim.sdk.api.auth.AuthBean;
-import pro.glideim.sdk.api.auth.AuthDto;
 import pro.glideim.sdk.api.auth.LoginDto;
 import pro.glideim.sdk.api.auth.RegisterDto;
 import pro.glideim.sdk.api.group.CreateGroupBean;
@@ -22,6 +21,7 @@ import pro.glideim.sdk.api.msg.AckOfflineMsgDto;
 import pro.glideim.sdk.api.msg.MessageBean;
 import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.user.GetUserInfoDto;
+import pro.glideim.sdk.api.user.ProfileBean;
 import pro.glideim.sdk.api.user.UserApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.http.RetrofitManager;
@@ -33,7 +33,9 @@ public class GlideIM {
     private static final int device = 1;
     private static GlideIM sInstance;
     public DataStorage dataStorage = new DefaultDataStoreImpl();
-    private IMAccount account;
+    private IMAccount account = new IMAccount(0, new ArrayList<String>() {{
+        add("ws://localhost:8080/ws");
+    }});
 
     private GlideIM() {
     }
@@ -51,27 +53,21 @@ public class GlideIM {
         return getAccount().sendChatMessage(to, type, content);
     }
 
-    public static Observable<Boolean> authDefaultAccount() {
+    public static Observable<ProfileBean> authDefaultAccount() {
         long defaultUid = getDataStorage().getDefaultAccountUid();
         if (defaultUid == 0) {
-            return Observable.error(new Exception("not default account"));
+            return Observable.error(new Exception("no default account"));
         }
         return authLoggedAccount(defaultUid);
     }
 
-    public static Observable<Boolean> authLoggedAccount(Long uid) {
+    public static Observable<ProfileBean> authLoggedAccount(Long uid) {
         String token = getDataStorage().loadToken(uid);
         if (token.isEmpty()) {
             return Observable.error(new Exception("invalid token"));
         }
-        return AuthApi.API.auth(new AuthDto(token, device))
-                .map(RxUtils.bodyConverter())
-                .flatMap((Function<AuthBean, ObservableSource<Boolean>>) authBean -> {
-                    IMAccount account = new IMAccount(uid);
-                    getInstance().account = account;
-                    account.setServers(authBean.getServers());
-                    return account.initAccountAndConn();
-                });
+        getInstance().account = new IMAccount(uid);
+        return getInstance().account.auth();
     }
 
     public static Observable<Boolean> login(String account, String password, int device) {
@@ -79,9 +75,8 @@ public class GlideIM {
                 .map(RxUtils.bodyConverter())
                 .flatMap((Function<AuthBean, ObservableSource<Boolean>>) authBean -> {
                     getDataStorage().storeToken(authBean.getUid(), authBean.getToken());
-                    IMAccount account1 = new IMAccount(authBean.getUid());
+                    IMAccount account1 = new IMAccount(authBean.getUid(), authBean.getServers());
                     GlideIM.getInstance().account = account1;
-                    account1.setServers(authBean.getServers());
                     return account1.initAccountAndConn();
                 });
     }
