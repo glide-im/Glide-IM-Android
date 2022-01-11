@@ -29,7 +29,6 @@ public class IMMessage {
     private int targetType;
     private int state;
 
-
     private IMMessage() {
     }
 
@@ -88,6 +87,14 @@ public class IMMessage {
         m.setContent(messageBean.getContent());
         m.setTarget(account, 2, m.to);
         return m;
+    }
+
+    public boolean isSendSuccess() {
+        return getState() == ChatMessage.STATE_SRV_RECEIVED;
+    }
+
+    public boolean isSending() {
+        return getState() == ChatMessage.STATE_SRV_SENDING;
     }
 
     public boolean isSendFailed() {

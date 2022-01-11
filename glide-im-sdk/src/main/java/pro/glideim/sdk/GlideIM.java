@@ -49,10 +49,6 @@ public class GlideIM {
         sInstance = new GlideIM();
     }
 
-    public static Observable<IMMessage> sendChatMessage(long to, int type, String content) {
-        return getAccount().sendChatMessage(to, type, content);
-    }
-
     public static Observable<ProfileBean> authDefaultAccount() {
         long defaultUid = getDataStorage().getDefaultAccountUid();
         if (defaultUid == 0) {

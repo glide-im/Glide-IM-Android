@@ -5,7 +5,9 @@ import androidx.annotation.NonNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.SortedSet;
 import java.util.TreeMap;
+import java.util.TreeSet;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
@@ -27,6 +29,8 @@ public class IMSession {
 
     public static final String TAG = IMSession.class.getSimpleName();
     private final TreeMap<Long, IMMessage> messageTreeMap = new TreeMap<>();
+
+    private final TreeSet<IMMessage> messages = new TreeSet<>();
     private final IMAccount account;
     public long to;
     public long lastMsgSender;
@@ -102,19 +106,15 @@ public class IMSession {
         return this;
     }
 
-    public void addMessage(IMMessage msg) {
+    public IMMessage getMessage(long mid) {
+        return messageTreeMap.get(mid);
+    }
+
+    private void onSendMessageCreated(IMMessage msg) {
         updateAt = msg.getSendAt();
-        SLogger.d(TAG, "addMessage:" + msg);
-        // TODO cache msg to file
-        long mid = msg.getMid();
-        long last = 0;
-        if (!messageTreeMap.isEmpty()) {
-            last = messageTreeMap.lastKey();
-        }
-        messageTreeMap.put(mid, msg);
-        if (last < mid) {
-            setLastMessage(msg);
-        }
+        SLogger.d(TAG, "onSendMessageCreated:" + msg);
+        messageTreeMap.put(msg.getMid(), msg);
+        setLastMessage(msg);
         onSessionUpdate();
     }
 
@@ -141,10 +141,21 @@ public class IMSession {
 
     }
 
-    public void onNewMessage(IMMessage m) {
-        addMessage(m);
+    void onNewMessage(IMMessage msg) {
+        updateAt = msg.getSendAt();
+        SLogger.d(TAG, "onNewMessage:" + msg);
+        long mid = msg.getMid();
+        long last = 0;
+        if (!messageTreeMap.isEmpty()) {
+            last = messageTreeMap.lastKey();
+        }
+        messageTreeMap.put(mid, msg);
+        if (last < mid) {
+            setLastMessage(msg);
+        }
+        onSessionUpdate();
         if (messageChangeListener != null) {
-            messageChangeListener.onNewMessage(m);
+            messageChangeListener.onNewMessage(msg);
         }
     }
 
@@ -171,7 +182,6 @@ public class IMSession {
     public void setOnUpdateListener(OnUpdateListener onUpdateListener) {
         this.onUpdateListener = onUpdateListener;
     }
-
 
     public void setMessageListener(MessageChangeListener l) {
         this.messageChangeListener = l;
@@ -296,25 +306,27 @@ public class IMSession {
         return to == imSession.to && type == imSession.type;
     }
 
-
-    public Observable<IMMessage> sendMessage(String msg) {
-        if (account.getIMClient() == null) {
-            return Observable.error(new NullPointerException("the connection is not init"));
-        }
-
-        Observable<ChatMessage> creator = Observable.create(emitter -> {
+    private Observable<ChatMessage> createMessage(int msgType, String msg) {
+        return Observable.create(emitter -> {
             ChatMessage message = new ChatMessage();
             message.setMid(0);
             message.setContent(msg);
             message.setFrom(account.uid);
             message.setTo(to);
-            message.setType(type);
+            message.setType(msgType);
             message.setState(ChatMessage.STATE_INIT);
             message.setcTime(System.currentTimeMillis() / 1000);
             emitter.onNext(message);
             emitter.onComplete();
         });
+    }
 
+    public Observable<IMMessage> sendTextMessage(String msg) {
+        if (account.getIMClient() == null) {
+            return Observable.error(new NullPointerException("the connection is not init"));
+        }
+
+        Observable<ChatMessage> creator = createMessage(1, msg);
         Observable<MessageIDBean> midRequest = MsgApi.API.getMessageID()
                 .map(RxUtils.bodyConverter());
 
@@ -323,34 +335,49 @@ public class IMSession {
                     Observable<ChatMessage> init = Observable.just(message);
                     Observable<ChatMessage> create = Observable.just(message)
                             .zipWith(midRequest, (m1, messageIDBean) -> {
+                                // set message id
                                 m1.setState(ChatMessage.STATE_CREATED);
                                 m1.setMid(messageIDBean.getMid());
                                 return m1;
                             })
                             .flatMap((Function<ChatMessage, ObservableSource<ChatMessage>>) m2 -> {
-                                Observable<ChatMessage> ob = account.getIMClient().sendChatMessage(m2);
+                                // send message
+                                Observable<ChatMessage> ob = send(m2);
                                 return Observable.concat(Observable.just(m2), ob);
                             });
                     return Observable.concat(init, create);
                 })
                 .map(chatMessage -> {
-                    IMMessage r = IMMessage.fromChatMessage(account, chatMessage);
-                    IMSession session = sessionList.getSession(chatMessage.getType(), chatMessage.getTo());
+                    IMMessage r;
+                    if (chatMessage.getState() <= ChatMessage.STATE_CREATED) {
+                        r = IMMessage.fromChatMessage(account, chatMessage);
+                    } else {
+                        r = getMessage(chatMessage.getMid());
+                        r.setState(chatMessage.getState());
+                    }
+
                     switch (chatMessage.getState()) {
                         case ChatMessage.STATE_INIT:
                             break;
                         case ChatMessage.STATE_CREATED:
-                            session.addMessage(r);
+                            onSendMessageCreated(r);
                             break;
                         case ChatMessage.STATE_SRV_RECEIVED:
-                            session.onMessageSendSuccess(r);
+                            onMessageSendSuccess(r);
                             break;
                         case ChatMessage.STATE_RCV_RECEIVED:
-                            session.onMessageReceived(r);
+                            onMessageReceived(r);
                             break;
                     }
                     return r;
                 });
+    }
+
+    private Observable<ChatMessage> send(ChatMessage m) {
+        if (account.getIMClient() == null) {
+            return Observable.error(new NullPointerException("the im connection is not init"));
+        }
+        return account.getIMClient().sendChatMessage(m);
     }
 
     @Override

@@ -17,6 +17,7 @@ public class Heartbeat implements ConnStateListener {
 
     private Heartbeat(pro.glideim.sdk.im.IMClient client) {
         this.client = client;
+        this.client.getWebSocketClient().addStateListener(this);
     }
 
     public static Heartbeat start(pro.glideim.sdk.im.IMClient client) {
@@ -41,7 +42,7 @@ public class Heartbeat implements ConnStateListener {
                 .interval(3, TimeUnit.SECONDS)
                 .doOnNext(aLong -> {
                     if (client.isConnected()) {
-                        boolean send = client.send(new CommMessage<>(1, Actions.ACTION_HEARTBEAT, 0, ""));
+                        client.send(new CommMessage<>(1, Actions.ACTION_HEARTBEAT, 0, ""));
                     } else {
                         stop();
                     }

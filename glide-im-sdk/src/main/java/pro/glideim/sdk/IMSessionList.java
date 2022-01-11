@@ -85,7 +85,7 @@ public class IMSessionList {
     }
 
     void onNewMessage(IMMessage message) {
-        IMSession session = getSession(message.tag);
+        IMSession session = getOrCreateSession(message.tag);
         session.onNewMessage(message);
     }
 

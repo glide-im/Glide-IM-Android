@@ -14,7 +14,7 @@ class MessageListSorter(adapter: SuperAdapter) : SortedListAdapterCallback<IMMes
     }
 
     override fun areContentsTheSame(oldItem: IMMessage, newItem: IMMessage): Boolean {
-        return oldItem.mid == newItem.mid && oldItem.state == newItem.state && oldItem.type == newItem.type
+        return oldItem.mid == newItem.mid && oldItem.state == newItem.state
     }
 
     override fun areItemsTheSame(item1: IMMessage, item2: IMMessage): Boolean {

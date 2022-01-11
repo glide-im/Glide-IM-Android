@@ -8,6 +8,7 @@ import androidx.appcompat.widget.LinearLayoutCompat
 import com.dengzii.adapter.AbsViewHolder
 import com.dengzii.ktx.android.gone
 import com.dengzii.ktx.android.hide
+import com.dengzii.ktx.android.setImageTintColor
 import com.dengzii.ktx.android.show
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
@@ -33,8 +34,18 @@ class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<IMMessage>(v) {
         mIvSendFailed.gone()
 
         if (data.isMe) {
-            if (data.isSendFailed) {
-                mIvSendFailed.show()
+            when {
+                data.isSendFailed -> {
+                    mIvSendFailed.show()
+                }
+                data.isSending -> {
+                    mIvSendFailed.show()
+                    mIvSendFailed.setImageTintColor(R.color.gray)
+                }
+                data.isSendSuccess -> {
+                    mIvSendFailed.show()
+                    mIvSendFailed.setImageTintColor(R.color.primaryLightColor)
+                }
             }
             mIvAvatarRight.loadImage(data.avatar)
             mIvAvatarRight.show()

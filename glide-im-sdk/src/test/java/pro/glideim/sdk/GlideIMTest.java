@@ -32,20 +32,6 @@ class GlideIMTest {
     }
 
     @Test
-    void sendChatMessage() throws InterruptedException {
-        login();
-        Thread.sleep(1000);
-        GlideIM.sendChatMessage(543604L, 1, "hello world")
-                .subscribe(new TestResObserver<IMMessage>() {
-                    @Override
-                    public void onNext(@NonNull IMMessage chatMessage) {
-                        System.out.println("===================" + chatMessage.getState());
-                    }
-                });
-        Thread.sleep(50000);
-    }
-
-    @Test
     void createGroup() {
         GlideIM.createGroup("HelloGroup")
                 .subscribe(new TestResObserver<CreateGroupBean>() {

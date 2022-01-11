@@ -167,11 +167,6 @@ public class IMAccount implements MessageListener {
                 );
     }
 
-    public Observable<IMMessage> sendChatMessage(long to, int type, String content) {
-        IMSession session = getIMSessionList().getSession(type, to);
-        return session.sendMessage(content);
-    }
-
     public IMClient getIMClient() {
         return im;
     }
