@@ -206,7 +206,7 @@ public class IMAccount implements MessageListener {
         if (token == null) {
             return Observable.error(new Exception("invalid token"));
         }
-        Log.d(TAG, "authToken: " + uid);
+        SLogger.d(TAG, "authToken: " + uid);
         return AuthApi.API.auth(new AuthDto(token, device))
                 .map(RxUtils.bodyConverter())
                 .doOnNext(authBean -> this.setServers(authBean.getServers()));

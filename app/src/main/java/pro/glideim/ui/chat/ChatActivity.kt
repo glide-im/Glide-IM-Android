@@ -95,7 +95,7 @@ class ChatActivity : BaseActivity() {
 
         mMessage.clear()
 
-        val latest = mSession.getMessages(mSession.lastMsgId, 20)
+        val latest = mSession.getMessages(Long.MAX_VALUE, 20)
         mMessage.addAll(latest)
         scrollToLastMessage()
 
@@ -124,35 +124,32 @@ class ChatActivity : BaseActivity() {
             return
         }
 
-        mBtSend.isEnabled = false
-
+        mEtMessage.setText("")
         mSession.sendTextMessage(msg)
             .io2main()
             .request {
                 onError {
                     it.printStackTrace()
                     toast(it.localizedMessage ?: it.message ?: "send failed")
-                    mEtMessage.setText("")
-                    mBtSend.isEnabled = true
                 }
                 onSuccess {
-                    mMessage.add(it)
                     when (it.state) {
                         ChatMessage.STATE_INIT -> {
                         }
                         ChatMessage.STATE_CREATED -> {
-                            mEtMessage.setText("")
+                            mMessage.add(it)
                             scrollToLastMessage()
                         }
                         ChatMessage.STATE_SRV_RECEIVED -> {
+                            mMessage.add(it)
                         }
                         ChatMessage.STATE_RCV_RECEIVED -> {
+                            mMessage.add(it)
                         }
                         else -> {
 
                         }
                     }
-                    mBtSend.isEnabled = true
                 }
             }
     }

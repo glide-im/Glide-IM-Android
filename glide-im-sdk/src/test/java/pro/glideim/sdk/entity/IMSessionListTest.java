@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import pro.glideim.sdk.GlideIM;
+import pro.glideim.sdk.IMMessage;
 import pro.glideim.sdk.IMSession;
 import pro.glideim.sdk.IMSessionList;
 import pro.glideim.sdk.SessionUpdateListener;
@@ -16,16 +17,27 @@ import pro.glideim.sdk.TestResObserver;
 class IMSessionListTest {
 
     @BeforeEach
-    void setUp() throws InterruptedException {
+    void setUp() {
         GlideIM.init("http://192.168.1.123:8081/api/");
-        GlideIM.getAccount().getIMClient().connect().blockingGet();
-        GlideIM.login("abc", "abc", 1)
-                .subscribe(new TestObserver<>());
-        Thread.sleep(1000);
+        GlideIM.login("abc", "abc", 1).blockingFirst();
     }
 
     @AfterEach
     void tearDown() {
+        GlideIM.getAccount().logout();
+    }
+
+    @Test
+    void sendMessage() {
+        GlideIM.getAccount().getIMSessionList().initSessionsList().blockingGet();
+        IMSession imSession = GlideIM.getAccount().getIMSessionList().getSessions().get(0);
+        imSession.sendTextMessage("~~~")
+                .subscribe(new TestResObserver<IMMessage>() {
+                    @Override
+                    public void onNext(@NonNull IMMessage imMessage) {
+                        System.out.println("sendMessage.onNext: id=" + imMessage.getMid() + ", state=" + imMessage.getState());
+                    }
+                });
 
     }
 
