@@ -70,6 +70,6 @@ class MainActivity : BaseActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        GlideIM.getAccount().imClient.disconnect()
+        GlideIM.getAccount().imClient?.disconnect()
     }
 }

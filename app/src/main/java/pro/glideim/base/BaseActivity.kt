@@ -1,9 +1,9 @@
 package pro.glideim.base
 
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import pro.glideim.UserPerf
 import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.IMAccount
 import pro.glideim.sdk.im.ConnStateListener
@@ -11,11 +11,14 @@ import pro.glideim.sdk.ws.WsClient
 import pro.glideim.utils.RequestStateCallback
 
 abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnStateListener {
+
+    private val TAG = BaseActivity::class.java.simpleName
+
     abstract val layoutResId: Int
 
     private var inited = false
 
-    open val account: IMAccount = GlideIM.getAccount()
+    open val account: IMAccount? = GlideIM.getAccount()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,21 +31,13 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
             initView()
             inited = true
         }
-
-        account.apply {
-            onStateChange(imClient.webSocketClient.state, "")
+        account?.imClient?.apply {
+            onStateChange(webSocketClient.state, "")
         }
-        account.imClient.addConnStateListener(this)
+        account?.imClient?.addConnStateListener(this)
     }
 
     abstract fun initView()
-
-    override fun onResume() {
-        super.onResume()
-        if (inited) {
-            onStateChange(account.imClient.webSocketClient.state, "")
-        }
-    }
 
     fun toast(msg: String) {
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
@@ -62,7 +57,7 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
 
     override fun onStop() {
         super.onStop()
-        account.imClient.removeConnStateListener(this)
+        account?.imClient?.removeConnStateListener(this)
     }
 
     open fun updateConnState(state: String) {
@@ -70,6 +65,7 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
     }
 
     override fun onStateChange(state: Int, msg: String?) {
+        Log.d(TAG, "onStateChange: $state")
         val s = when (state) {
             WsClient.STATE_CLOSED -> {
                 "disconnected"

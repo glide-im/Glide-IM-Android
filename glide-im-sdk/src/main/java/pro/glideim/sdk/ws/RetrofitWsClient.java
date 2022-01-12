@@ -23,7 +23,7 @@ public class RetrofitWsClient implements WsClient {
     private WebSocket ws;
     private MessageListener messageListener;
     private int state = WsClient.STATE_CLOSED;
-    private Throwable connectError;
+    private int lastNotifyState = 0;
 
     public RetrofitWsClient(String url) {
         this.url = url;
@@ -32,38 +32,25 @@ public class RetrofitWsClient implements WsClient {
     @Override
     public Single<Boolean> connect() {
         if (WsClient.STATE_CONNECTING == getState()) {
-            return Single.error(new Exception("WebSocket connecting"));
+            return Single.error(new IllegalStateException("WebSocket in connecting"));
         }
-        Single<Boolean> booleanSingle = Single.create(emitter -> {
-            try {
-                onStateChange(WsClient.STATE_CONNECTING);
-                connectError = null;
-                ws = RetrofitManager.newWebSocket(url, new WebSocketListenerProxy());
-                long l = System.currentTimeMillis();
-                while (getState() == STATE_CONNECTING) {
-                    if ((System.currentTimeMillis() - l) / 1000 > 10) {
-                        try {
-                            disconnect();
-                        } catch (Exception ignored) {
-                        }
-                        emitter.onError(new Exception("connect timeout"));
-                        return;
-                    }
+        return Single.create(emitter -> {
+            onStateChange(WsClient.STATE_CONNECTING);
+            ws = RetrofitManager.newWebSocket(url, new WebSocketListenerProxy((success, t) -> {
+                if (emitter.isDisposed()) {
+                    return;
                 }
-                if (getState() != STATE_OPENED) {
-                    if (connectError == null) {
-                        connectError = new Exception("connect failed");
-                    }
-                    emitter.onError(connectError);
-                } else {
-                    SLogger.d(TAG, "connect success");
+                if (success) {
                     emitter.onSuccess(true);
+                } else {
+                    try {
+                        ws.close(1000, "");
+                    } catch (Throwable ignored) {
+                    }
+                    emitter.onError(t);
                 }
-            } catch (Throwable throwable) {
-                emitter.onError(throwable);
-            }
+            }));
         });
-        return booleanSingle;
     }
 
     @Override
@@ -108,12 +95,27 @@ public class RetrofitWsClient implements WsClient {
             return;
         }
         this.state = state;
+        if (lastNotifyState == state) {
+            return;
+        }
+        lastNotifyState = state;
         for (ConnStateListener stateListener : connStateListener) {
             stateListener.onStateChange(state, "");
         }
     }
 
+
+    private interface ConnectListener {
+        void finish(boolean success, Throwable t);
+    }
+
     private class WebSocketListenerProxy extends WebSocketListener {
+
+        private ConnectListener connectListener;
+
+        public WebSocketListenerProxy(ConnectListener connectListener) {
+            this.connectListener = connectListener;
+        }
 
         @Override
         public void onClosed(@NotNull WebSocket webSocket, int code, @NotNull String reason) {
@@ -128,10 +130,11 @@ public class RetrofitWsClient implements WsClient {
 
         @Override
         public void onFailure(@NotNull WebSocket webSocket, @NotNull Throwable t, @Nullable Response response) {
-            SLogger.e(TAG, t);
-            if (getState() == WsClient.STATE_CONNECTING) {
-                connectError = t;
+            if (returnConnectResult(false, t) && getState() == WsClient.STATE_CONNECTING) {
+                state = WsClient.STATE_CLOSED;
+                return;
             }
+            SLogger.e(TAG, t);
             if (getState() != WsClient.STATE_CLOSED) {
                 onStateChange(WsClient.STATE_CLOSED);
             }
@@ -153,6 +156,16 @@ public class RetrofitWsClient implements WsClient {
         public void onOpen(@NotNull WebSocket webSocket, @NotNull Response response) {
             SLogger.d(TAG, "ws opened");
             onStateChange(WsClient.STATE_OPENED);
+            returnConnectResult(true, null);
+        }
+
+        private boolean returnConnectResult(boolean ok, Throwable t) {
+            if (connectListener != null) {
+                connectListener.finish(ok, t);
+                connectListener = null;
+                return true;
+            }
+            return false;
         }
     }
 }

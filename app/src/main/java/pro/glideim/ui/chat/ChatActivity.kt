@@ -119,7 +119,7 @@ class ChatActivity : BaseActivity() {
         if (msg.isBlank()) {
             return
         }
-        if (!GlideIM.getAccount().imClient.isConnected) {
+        if (!GlideIM.getAccount().isIMAvailable) {
             toast("IM server is disconnected")
             return
         }

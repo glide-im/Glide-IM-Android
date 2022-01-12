@@ -4,7 +4,6 @@ import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.GlideIM
-import pro.glideim.sdk.IMAccount
 import pro.glideim.utils.io2main
 import pro.glideim.utils.request
 

@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.annotation.IdRes
 import androidx.fragment.app.Fragment
 import pro.glideim.sdk.GlideIM
+import pro.glideim.sdk.IMAccount
 import pro.glideim.sdk.im.ConnStateListener
 import pro.glideim.sdk.ws.WsClient
 import pro.glideim.utils.RequestStateCallback
@@ -21,6 +22,8 @@ abstract class BaseFragment : Fragment(), RequestStateCallback, ConnStateListene
     abstract fun initView()
 
     private var inited = false
+
+    private val account: IMAccount? = GlideIM.getAccount()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -63,13 +66,18 @@ abstract class BaseFragment : Fragment(), RequestStateCallback, ConnStateListene
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        onStateChange(GlideIM.getAccount().imClient.webSocketClient.state, "")
-        GlideIM.getAccount().imClient.addConnStateListener(this)
+
+        account?.imClient?.apply {
+            onStateChange(webSocketClient.state, "")
+            addConnStateListener(this@BaseFragment)
+        }
     }
 
     override fun onDestroyView() {
         super.onDestroyView()
-        GlideIM.getAccount().imClient.removeConnStateListener(this)
+        account?.imClient?.apply {
+            removeConnStateListener(this@BaseFragment)
+        }
     }
 
     open fun updateConnState(state: String) {

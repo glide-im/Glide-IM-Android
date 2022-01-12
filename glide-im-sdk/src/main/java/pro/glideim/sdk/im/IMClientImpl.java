@@ -39,7 +39,6 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
     private final Map<Long, MessageEmitter> messages = new ConcurrentHashMap<>();
     private final Type typeCommMsg = new TypeToken<CommMessage<Object>>() {
     }.getType();
-    private final List<ConnStateListener> connStateListeners = new ArrayList<>();
     private final Heartbeat heartbeat;
     private final KeepAlive keepAlive;
     private MessageListener messageListener;
@@ -63,15 +62,12 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
 
     @Override
     public void addConnStateListener(ConnStateListener connStateListener) {
-        this.connStateListeners.add(connStateListener);
+        this.connection.addStateListener(connStateListener);
     }
 
     @Override
     public void removeConnStateListener(ConnStateListener connStateListener) {
-        if (!this.connStateListeners.contains(connStateListener)) {
-            return;
-        }
-        this.connStateListeners.remove(connStateListener);
+        this.connection.removeStateListener(connStateListener);
     }
 
     @Override
@@ -91,6 +87,8 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
 
     @Override
     public void disconnect() {
+        heartbeat.stop();
+        keepAlive.stop();
         connection.disconnect();
     }
 

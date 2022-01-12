@@ -1,5 +1,7 @@
 package pro.glideim.sdk;
 
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -8,6 +10,7 @@ import java.util.TreeMap;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
+import io.reactivex.Single;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.annotations.Nullable;
 import io.reactivex.functions.Function;
@@ -20,15 +23,20 @@ import pro.glideim.sdk.api.group.JoinGroupDto;
 import pro.glideim.sdk.api.user.ProfileBean;
 import pro.glideim.sdk.api.user.UserApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
+import pro.glideim.sdk.im.ConnStateListener;
 import pro.glideim.sdk.im.IMClient;
 import pro.glideim.sdk.im.IMClientImpl;
 import pro.glideim.sdk.im.MessageListener;
 import pro.glideim.sdk.protocol.Actions;
 import pro.glideim.sdk.protocol.ChatMessage;
+import pro.glideim.sdk.protocol.CommMessage;
 import pro.glideim.sdk.utils.RxUtils;
+import pro.glideim.sdk.utils.SLogger;
 import pro.glideim.sdk.ws.WsClient;
 
 public class IMAccount implements MessageListener {
+
+    private static final String TAG = "IMAccount";
 
     private final IMSessionList sessionList = new IMSessionList(this);
     private final TreeMap<String, IMContacts> contactsMap = new TreeMap<>();
@@ -39,42 +47,34 @@ public class IMAccount implements MessageListener {
     private IMClient im;
     private ProfileBean profileBean = new ProfileBean();
     private boolean wsAuthed = false;
-
-    public IMAccount(long uid) {
-        this.uid = uid;
-    }
-
-    public IMAccount(long uid, List<String> servers) {
-        this.uid = uid;
-        this.servers.addAll(servers);
-        this.im = IMClientImpl.create(servers.get(0));
-        this.im.addConnStateListener((state, msg) -> {
-            if (state == WsClient.STATE_OPENED) {
-                authWs().compose(RxUtils.silentScheduler())
+    private final ConnStateListener reLoginConnStateListener = new ConnStateListener() {
+        @Override
+        public void onStateChange(int state, String msg) {
+            if (state == WsClient.STATE_OPENED && uid > 0) {
+                authIMConnection().compose(RxUtils.silentScheduler())
                         .subscribe(new SilentObserver<>());
             } else {
                 wsAuthed = false;
             }
-        });
+        }
+    };
+
+    public IMAccount(long uid) {
+        this.uid = uid;
     }
 
     public void setServers(List<String> servers) {
         this.servers.addAll(servers);
     }
 
+    // when account just set uid, init im client and account info.
     public Observable<Boolean> initAccountAndConn() {
         String token = GlideIM.getDataStorage().loadToken(uid);
         if (token.isEmpty()) {
             return Observable.error(new Exception("invalid token"));
         }
         sessionList.init();
-        if (im == null) {
-            return Observable.error(new NullPointerException("the connection init failed"));
-        }
-        return im.connect()
-                .flatMapObservable(aBoolean ->
-                        authWs()
-                );
+        return getOrInitConnectedIM().toObservable().map(c -> true);
     }
 
     public List<IMContacts> updateContacts(@NonNull List<UserInfoBean> userInfoBeans) {
@@ -147,28 +147,13 @@ public class IMAccount implements MessageListener {
         return g;
     }
 
-    public Observable<ProfileBean> auth() {
-        String token = GlideIM.getDataStorage().loadToken(uid);
-        if (token == null) {
-            return Observable.error(new Exception("invalid token"));
-        }
-        return AuthApi.API.auth(new AuthDto(token, device))
-                .map(RxUtils.bodyConverter())
-                .doOnNext(authBean -> {
-                    this.uid = authBean.getUid();
-                    this.setServers(authBean.getServers());
-                    this.im = IMClientImpl.create(servers.get(0));
-                })
-                .flatMap((Function<AuthBean, ObservableSource<Boolean>>) aBoolean ->
-                        initAccountAndConn()
-                )
-                .flatMap((Function<Boolean, ObservableSource<ProfileBean>>) aBoolean ->
-                        initUserProfile()
-                );
-    }
-
+    @Nullable
     public IMClient getIMClient() {
         return im;
+    }
+
+    public boolean isIMAvailable() {
+        return im != null && im.isConnected();
     }
 
     public Observable<List<IMContacts>> getContacts() {
@@ -202,17 +187,43 @@ public class IMAccount implements MessageListener {
                 .subscribe(new SilentObserver<>());
     }
 
-    private Observable<Boolean> authWs() {
-        if (im == null) {
-            return Observable.error(new NullPointerException("the connection is not init"));
+    public Observable<String> auth() {
+        return authAccount()
+                .flatMap((Function<AuthBean, ObservableSource<IMClient>>) authBean ->
+                        getOrInitConnectedIM().toObservable()
+                )
+                .flatMap((Function<IMClient, ObservableSource<Boolean>>) client ->
+                        authIMConnection()
+                )
+                .flatMap((Function<Boolean, ObservableSource<?>>) aBoolean ->
+                        initUserProfile()
+                )
+                .map(s -> "auth success");
+    }
+
+    public Observable<AuthBean> authAccount() {
+        String token = GlideIM.getDataStorage().loadToken(uid);
+        if (token == null) {
+            return Observable.error(new Exception("invalid token"));
         }
+        Log.d(TAG, "authToken: " + uid);
+        return AuthApi.API.auth(new AuthDto(token, device))
+                .map(RxUtils.bodyConverter())
+                .doOnNext(authBean -> this.setServers(authBean.getServers()));
+    }
+
+    private Observable<Boolean> authIMConnection() {
         String token = GlideIM.getDataStorage().loadToken(uid);
         if (token.isEmpty()) {
             return Observable.error(new Exception("invalid token"));
         }
         AuthDto d = new AuthDto(token, device);
-        return im.request(Actions.Cli.ACTION_API_USER_AUTH, AuthBean.class, false, d)
-                .map(RxUtils.bodyConverterForWsMsg())
+        SLogger.d(TAG, "auth im connection " + uid);
+        return getOrInitConnectedIM()
+                .toObservable()
+                .flatMap((Function<IMClient, ObservableSource<CommMessage<AuthBean>>>) client ->
+                        client.request(Actions.Cli.ACTION_API_USER_AUTH, AuthBean.class, false, d)
+                ).map(RxUtils.bodyConverterForWsMsg())
                 .doOnError(throwable -> {
                     if (throwable instanceof GlideException) {
                         GlideIM.getDataStorage().storeToken(uid, "");
@@ -220,7 +231,6 @@ public class IMAccount implements MessageListener {
                 })
                 .map(authBean -> {
                     wsAuthed = true;
-                    im.setMessageListener(this);
                     return authBean.getUid() != 0;
                 });
     }
@@ -252,6 +262,27 @@ public class IMAccount implements MessageListener {
         });
 
         return Observable.merge(obs).toList().map(s -> this.getTempContacts()).toObservable();
+    }
+
+    private Single<IMClient> getOrInitConnectedIM() {
+        if (im != null) {
+            if (im.isConnected()) {
+                return Single.just(im);
+            } else {
+                return im.connect().map(s -> im);
+            }
+        } else {
+            if (servers.isEmpty()) {
+                return Single.error(new IllegalStateException("the chat server list is empty"));
+            }
+            Single<IMClient> create = Single.create(emitter -> {
+                im = IMClientImpl.create(servers.get(0));
+                im.setMessageListener(this);
+                im.addConnStateListener(reLoginConnStateListener);
+                emitter.onSuccess(im);
+            });
+            return create.flatMap(client -> client.connect().map(s -> client));
+        }
     }
 
     @Override

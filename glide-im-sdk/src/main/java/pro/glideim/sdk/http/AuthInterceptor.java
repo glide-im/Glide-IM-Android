@@ -1,8 +1,7 @@
 package pro.glideim.sdk.http;
 
-import androidx.annotation.NonNull;
-
 import java.io.IOException;
+import java.net.ConnectException;
 
 import okhttp3.Interceptor;
 import okhttp3.Request;
@@ -13,17 +12,16 @@ public class AuthInterceptor implements Interceptor {
 
     private static final AuthInterceptor instance = new AuthInterceptor();
 
-    public static AuthInterceptor create(){
+    public static AuthInterceptor create() {
         return instance;
     }
 
-    @NonNull
     @Override
-    public Response intercept(@NonNull Chain chain) throws IOException {
+    public Response intercept(Chain chain) throws IOException {
         Request.Builder request = chain.request().newBuilder();
 
         String jwtToken = GlideIM.getDataStorage().loadToken(GlideIM.getAccount().uid);
-        request.addHeader("Authorization", "Bearer "+jwtToken);
+        request.addHeader("Authorization", "Bearer " + jwtToken);
         return chain.proceed(request.build());
     }
 }

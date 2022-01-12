@@ -1,6 +1,13 @@
 package pro.glideim.sdk.im;
 
-import pro.glideim.sdk.SilentObserver;
+
+import org.reactivestreams.Publisher;
+
+import java.util.concurrent.TimeUnit;
+
+import io.reactivex.Flowable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Function;
 import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
 import pro.glideim.sdk.ws.WsClient;
@@ -11,35 +18,58 @@ public class KeepAlive implements ConnStateListener {
 
     private final WsClient client;
     private boolean reconnecting = false;
+    private boolean stopped = false;
+    private Disposable reconnect;
+    private int retry = 0;
 
     private KeepAlive(WsClient client) {
         this.client = client;
         this.client.addStateListener(this);
     }
 
-    public static KeepAlive create(WsClient client) {
-        KeepAlive keepAlive = new KeepAlive(client);
-        client.addStateListener(keepAlive);
-        return keepAlive;
+    static KeepAlive create(WsClient client) {
+        return new KeepAlive(client);
     }
 
     @Override
     public void onStateChange(int state, String msg) {
-        check();
+        if (state == WsClient.STATE_CLOSED) {
+            check();
+        }
     }
 
-    synchronized void check() {
+    void stop() {
+        stopped = true;
+        if (reconnect != null && !reconnect.isDisposed()) {
+            reconnect.dispose();
+        }
+    }
+
+    void check() {
+        if (stopped) {
+            return;
+        }
         if (client.getState() != WsClient.STATE_CLOSED || reconnecting) {
             return;
         }
+        if (reconnect != null && !reconnect.isDisposed()) {
+            reconnect.dispose();
+        }
         reconnecting = true;
-        SLogger.d(TAG, "reconnecting the server");
-        client.connect()
-                .retry((integer, throwable) -> {
-                    SLogger.d(TAG, "retry connect to server, times:" + integer);
-                    return true;
-                })
+        reconnect = client
+                .connect()
                 .compose(RxUtils.silentSchedulerSingle())
+                .retryWhen(throwableFlowable -> throwableFlowable.<Object>flatMap(throwable -> {
+                    if (stopped || reconnect.isDisposed()) {
+                        return Flowable.error(throwable);
+                    }
+                    retry++;
+                    SLogger.d(TAG, "reconnect server failed: " + throwable.getMessage() + ", retry times:" + retry);
+                    return Flowable.timer(3, TimeUnit.SECONDS);
+                }).onErrorResumeNext((Function<Throwable, Publisher<?>>) Flowable::error))
+                .doOnSubscribe(disposable -> {
+                    SLogger.d(TAG, "reconnecting the server");
+                })
                 .doOnSuccess(aBoolean -> {
                     reconnecting = false;
                     SLogger.d(TAG, "reconnect server success");
@@ -47,6 +77,6 @@ public class KeepAlive implements ConnStateListener {
                 .doOnError(e -> {
                     SLogger.d(TAG, "reconnect server failed: " + e.getMessage());
                 })
-                .subscribe(new SilentObserver<>());
+                .subscribe();
     }
 }
