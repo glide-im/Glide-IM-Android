@@ -35,7 +35,7 @@ public class Heartbeat implements ConnStateListener {
         }
     }
 
-    private void start() {
+    public void start() {
         stop();
         SLogger.d(TAG, "start");
         heartbeat = Observable

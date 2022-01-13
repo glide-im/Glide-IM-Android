@@ -38,6 +38,12 @@ public class KeepAlive implements ConnStateListener {
         }
     }
 
+    void start() {
+        stop();
+        stopped = false;
+        check();
+    }
+
     void stop() {
         stopped = true;
         if (reconnect != null && !reconnect.isDisposed()) {

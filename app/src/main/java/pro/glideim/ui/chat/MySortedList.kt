@@ -6,6 +6,10 @@ class MySortedList<T> : List<T> {
 
     lateinit var l: SortedList<T>
 
+    fun remove(i: T): Boolean {
+        return l.remove(i)
+    }
+
     fun add(m: T) {
         l.add(m)
     }

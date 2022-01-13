@@ -27,6 +27,7 @@ class SplashActivity : BaseActivity() {
                 }
                 onError {
                     it.printStackTrace()
+                    GlideIM.getAccount()?.logout()
                     LoginActivity.start(this@SplashActivity)
                     finish()
                 }

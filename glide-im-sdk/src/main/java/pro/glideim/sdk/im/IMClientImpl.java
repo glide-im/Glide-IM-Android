@@ -3,7 +3,6 @@ package pro.glideim.sdk.im;
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,6 +41,7 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
     private final Heartbeat heartbeat;
     private final KeepAlive keepAlive;
     private MessageListener messageListener;
+    private IMMessageListener imMessageListener;
     private long seq;
 
     private IMClientImpl(String wsUrl) {
@@ -82,7 +82,12 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
 
     @Override
     public Single<Boolean> connect() {
-        return connection.connect();
+        return connection.connect()
+                .doOnSubscribe(disposable -> {
+                    heartbeat.start();
+                    keepAlive.start();
+
+                });
     }
 
     @Override
@@ -198,6 +203,18 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
                 send(new CommMessage<>(MESSAGE_VER, Actions.ACTION_HEARTBEAT, 0, ""));
                 return;
             case Actions.ACTION_NOTIFY:
+                return;
+            case Actions.Srv.ACTION_KICK_OUT:
+                disconnect();
+                return;
+            case Actions.Srv.ACTION_NEW_CONTACT:
+                if (imMessageListener != null) {
+                    imMessageListener.onNewContact();
+                }
+                return;
+            case Actions.Srv.ACTION_NOTIFY_NEED_AUTH:
+                disconnect();
+                connect();
                 return;
         }
 

@@ -13,7 +13,7 @@ import pro.glideim.sdk.IMSession
 import pro.glideim.utils.loadImage
 import pro.glideim.utils.secToTimeSpan
 
-class SessionViewHolder(v: ViewGroup) : AbsViewHolder<IMSession>(v) {
+class SessionViewHolder(v: ViewGroup) : AbsViewHolder<SessionViewData>(v) {
 
     private val mTvNewMessage by lazy { findViewById<TextView>(R.id.tv_new_message) }
     private val mTvTime by lazy { findViewById<MaterialTextView>(R.id.tv_time) }
@@ -25,7 +25,7 @@ class SessionViewHolder(v: ViewGroup) : AbsViewHolder<IMSession>(v) {
         setContentView(R.layout.item_session)
     }
 
-    override fun onBindData(data: IMSession, position: Int) {
+    override fun onBindData(data: SessionViewData, position: Int) {
         mIvAvatar.loadImage(data.avatar)
         mTvTitle.text = data.title + "${data.to}"
         mTvContent.text = data.lastMsg
@@ -42,7 +42,7 @@ class SessionViewHolder(v: ViewGroup) : AbsViewHolder<IMSession>(v) {
         }
     }
 
-    override fun onBindData(data: IMSession, position: Int, payloads: MutableList<Any>?) {
+    override fun onBindData(data: SessionViewData, position: Int, payloads: MutableList<Any>?) {
         super.onBindData(data, position, payloads)
 
     }

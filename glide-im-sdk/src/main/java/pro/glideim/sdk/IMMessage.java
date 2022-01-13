@@ -28,6 +28,7 @@ public class IMMessage {
     private long targetId;
     private int targetType;
     private int state;
+    private long seq;
 
     private IMMessage() {
     }
@@ -82,11 +83,20 @@ public class IMMessage {
         m.setCliSeq(0);
         m.setFrom(messageBean.getSender());
         m.setTo(0);
+        m.setSeq(messageBean.getSeq());
         m.setType(messageBean.getType());
         m.setSendAt(messageBean.getSentAt());
         m.setContent(messageBean.getContent());
         m.setTarget(account, 2, m.to);
         return m;
+    }
+
+    public long getSeq() {
+        return seq;
+    }
+
+    public void setSeq(long seq) {
+        this.seq = seq;
     }
 
     public boolean isSendSuccess() {
@@ -109,21 +119,28 @@ public class IMMessage {
         this.targetType = type;
         this.targetId = id;
         this.tag = IMSessionList.SessionTag.get(type, id);
-        if (targetType == 1) {
-            if (isMe) {
-                this.avatar = account.getProfile().getAvatar();
-                this.title = account.getProfile().getNickname();
-            } else {
-                GlideIM.getUserInfo(id)
-                        .compose(RxUtils.silentScheduler())
-                        .subscribe(new SilentObserver<UserInfoBean>() {
-                            @Override
-                            public void onNext(@NonNull UserInfoBean userInfoBean) {
-                                avatar = userInfoBean.getAvatar();
-                                title = userInfoBean.getNickname();
-                            }
-                        });
-            }
+        switch (targetType) {
+            case 1:
+                if (isMe) {
+                    this.avatar = account.getProfile().getAvatar();
+                    this.title = account.getProfile().getNickname();
+                } else {
+                    GlideIM.getUserInfo(id)
+                            .compose(RxUtils.silentScheduler())
+                            .subscribe(new SilentObserver<UserInfoBean>() {
+                                @Override
+                                public void onNext(@NonNull UserInfoBean userInfoBean) {
+                                    avatar = userInfoBean.getAvatar();
+                                    title = userInfoBean.getNickname();
+                                }
+                            });
+                }
+                break;
+            case 2:
+
+                break;
+            default:
+
         }
     }
 
@@ -133,6 +150,38 @@ public class IMMessage {
         if (o == null || getClass() != o.getClass()) return false;
         IMMessage imMessage = (IMMessage) o;
         return imMessage.mid == this.mid;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
+    }
+
+    public boolean isMe() {
+        return isMe;
+    }
+
+    public void setMe(boolean me) {
+        isMe = me;
+    }
+
+    public IMSessionList.SessionTag getTag() {
+        return tag;
+    }
+
+    public void setTag(IMSessionList.SessionTag tag) {
+        this.tag = tag;
     }
 
     @Override

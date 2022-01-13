@@ -1,5 +1,4 @@
 import android.annotation.SuppressLint
-import android.util.Log
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SortedList
@@ -15,6 +14,7 @@ import pro.glideim.sdk.IMSession
 import pro.glideim.sdk.SessionUpdateListener
 import pro.glideim.ui.chat.MySortedList
 import pro.glideim.ui.chat.SessionListSorter
+import pro.glideim.ui.chat.SessionViewData
 import pro.glideim.ui.chat.SessionViewHolder
 import pro.glideim.utils.*
 
@@ -25,7 +25,7 @@ class SessionsFragment : BaseFragment() {
     private val mRvSessions by lazy { findViewById<RecyclerView>(R.id.rv_sessions) }
     private val mSrfRefresh by lazy { findViewById<SwipeRefreshLayout>(R.id.srf_refresh) }
 
-    private val mSessionList = MySortedList<IMSession>()
+    private val mSessionList = MySortedList<SessionViewData>()
     private val mAdapter = SuperAdapter(mSessionList)
 
     private val mIMSessionList by lazy { GlideIM.getAccount().imSessionList }
@@ -37,8 +37,8 @@ class SessionsFragment : BaseFragment() {
     override val layoutRes = R.layout.fragment_session
 
     override fun initView() {
-        mSessionList.l = SortedList(IMSession::class.java, SessionListSorter(mAdapter))
-        mAdapter.addViewHolderForType(IMSession::class.java, SessionViewHolder::class.java)
+        mSessionList.l = SortedList(SessionViewData::class.java, SessionListSorter(mAdapter))
+        mAdapter.addViewHolderForType(SessionViewData::class.java, SessionViewHolder::class.java)
 
 //        mAdapter.setEnableEmptyView(true, SuperAdapter.EMPTY)
 //        mAdapter.setEnableEmptyViewOnInit(true)
@@ -60,11 +60,15 @@ class SessionsFragment : BaseFragment() {
         mIMSessionList.setSessionUpdateListener(
             object : SessionUpdateListener {
                 override fun onUpdate(session: IMSession) {
-                    requireActivity().runOnUiThread { mSessionList.add(session) }
+                    requireActivity().runOnUiThread {
+                        mSessionList.add(SessionViewData.create(session))
+                    }
                 }
 
                 override fun onNewSession(session: IMSession) {
-                    requireActivity().runOnUiThread { mSessionList.add(session) }
+                    requireActivity().runOnUiThread {
+                        mSessionList.add(SessionViewData.create(session))
+                    }
                 }
             })
 
@@ -80,7 +84,7 @@ class SessionsFragment : BaseFragment() {
         mIMSessionList.initSessionsList()
             .io2main()
             .request(this) {
-                mSessionList.addAll(mIMSessionList.sessions)
+                mSessionList.addAll(mIMSessionList.sessions.map { s -> SessionViewData.create(s) })
             }
     }
 

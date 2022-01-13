@@ -1,7 +1,5 @@
 package pro.glideim.sdk;
 
-import android.util.Log;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -47,15 +45,14 @@ public class IMAccount implements MessageListener {
     private IMClient im;
     private ProfileBean profileBean = new ProfileBean();
     private boolean wsAuthed = false;
-    private final ConnStateListener reLoginConnStateListener = new ConnStateListener() {
-        @Override
-        public void onStateChange(int state, String msg) {
-            if (state == WsClient.STATE_OPENED && uid > 0) {
-                authIMConnection().compose(RxUtils.silentScheduler())
-                        .subscribe(new SilentObserver<>());
-            } else {
-                wsAuthed = false;
-            }
+
+    private final ConnStateListener reLoginConnStateListener = (state, msg) -> {
+        if (state == WsClient.STATE_OPENED && !wsAuthed && uid != 0) {
+            SLogger.d(TAG, "re-auth due to reconnect...");
+            authIMConnection().compose(RxUtils.silentScheduler())
+                    .subscribe(new SilentObserver<>());
+        } else {
+            wsAuthed = false;
         }
     };
 
@@ -185,6 +182,7 @@ public class IMAccount implements MessageListener {
         im.request(Actions.Cli.ACTION_API_LOGOUT, Object.class, false, "")
                 .compose(RxUtils.silentScheduler())
                 .subscribe(new SilentObserver<>());
+        im.disconnect();
     }
 
     public Observable<String> auth() {

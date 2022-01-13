@@ -5,9 +5,7 @@ import androidx.annotation.NonNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.SortedSet;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
@@ -15,12 +13,15 @@ import io.reactivex.Single;
 import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.msg.GetChatHistoryDto;
+import pro.glideim.sdk.api.msg.GetGroupMsgHistoryDto;
+import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.GroupMessageStateBean;
 import pro.glideim.sdk.api.msg.MessageBean;
 import pro.glideim.sdk.api.msg.MessageIDBean;
 import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.msg.SessionBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
+import pro.glideim.sdk.im.IMClient;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
@@ -30,7 +31,6 @@ public class IMSession {
     public static final String TAG = IMSession.class.getSimpleName();
     private final TreeMap<Long, IMMessage> messageTreeMap = new TreeMap<>();
 
-    private final TreeSet<IMMessage> messages = new TreeSet<>();
     private final IMAccount account;
     public long to;
     public long lastMsgSender;
@@ -42,8 +42,6 @@ public class IMSession {
     public String lastMsg;
     public long lastMsgId;
     IMSessionList.SessionTag tag;
-    private long lastUpdateAt;
-    private IMSessionList sessionList;
     private OnUpdateListener onUpdateListener;
     private MessageChangeListener messageChangeListener;
     private boolean infoInit = false;
@@ -57,7 +55,7 @@ public class IMSession {
     }
 
     public static IMSession fromGroupState(IMAccount account, GroupMessageStateBean stateBean) {
-        IMSession s = new IMSession(account, stateBean.getGid(), 2);
+        IMSession s = new IMSession(account, stateBean.getGid(), Constants.SESSION_TYPE_GROUP);
         s.unread = 0;
         s.updateAt = stateBean.getLastMsgAt();
         s.lastMsgId = stateBean.getLastMID();
@@ -67,21 +65,12 @@ public class IMSession {
     public static IMSession fromSessionBean(IMAccount account, SessionBean sessionBean) {
         IMSession s;
         if (sessionBean.getUid1() == account.uid) {
-            s = new IMSession(account, sessionBean.getUid2(), 1);
+            s = new IMSession(account, sessionBean.getUid2(), Constants.SESSION_TYPE_USER);
         } else {
-            s = new IMSession(account, sessionBean.getUid1(), 1);
+            s = new IMSession(account, sessionBean.getUid1(), Constants.SESSION_TYPE_USER);
         }
         s.updateAt = sessionBean.getUpdateAt();
         s.lastMsgId = sessionBean.getLastMid();
-        return s;
-    }
-
-    public static IMSession fromIMMessage(IMAccount account, IMMessage message) {
-        IMSession s = new IMSession(account, message.getTo(), message.getTargetType());
-        s.updateAt = message.getSendAt();
-        s.lastMsgId = message.getMid();
-        s.lastMsg = message.getContent();
-        s.initTargetInfo();
         return s;
     }
 
@@ -111,7 +100,6 @@ public class IMSession {
     }
 
     private void onSendMessageCreated(IMMessage msg) {
-        updateAt = msg.getSendAt();
         SLogger.d(TAG, "onSendMessageCreated:" + msg);
         messageTreeMap.put(msg.getMid(), msg);
         setLastMessage(msg);
@@ -176,7 +164,6 @@ public class IMSession {
     }
 
     void setIMSessionList(IMSessionList list) {
-        sessionList = list;
     }
 
     public void setOnUpdateListener(OnUpdateListener onUpdateListener) {
@@ -189,7 +176,7 @@ public class IMSession {
 
     public void initTargetInfo() {
         switch (type) {
-            case 1:
+            case Constants.SESSION_TYPE_USER:
                 GlideIM.getUserInfo(to)
                         .compose(RxUtils.silentScheduler())
                         .subscribe(new SilentObserver<UserInfoBean>() {
@@ -199,7 +186,7 @@ public class IMSession {
                             }
                         });
                 break;
-            case 2:
+            case Constants.SESSION_TYPE_GROUP:
                 GlideIM.getGroupInfo(to)
                         .compose(RxUtils.silentScheduler())
                         .subscribe(new SilentObserver<GroupInfoBean>() {
@@ -242,7 +229,7 @@ public class IMSession {
     }
 
     private void onSessionUpdate() {
-        lastUpdateAt = System.currentTimeMillis();
+        long lastUpdateAt = System.currentTimeMillis();
 //        if (latestMessage.size() > 0) {
 //            IMMessage msg = latestMessage.get(latestMessage.size() - 1);
 //            lastMsg = msg.getContent();
@@ -257,13 +244,33 @@ public class IMSession {
     }
 
     public Single<List<IMMessage>> getHistory(long beforeMid) {
-        GetChatHistoryDto getChatHistoryDto = new GetChatHistoryDto(to, beforeMid);
-        return MsgApi.API.getChatMessageHistory(getChatHistoryDto)
-                .map(RxUtils.bodyConverter())
-                .flatMap((Function<List<MessageBean>, ObservableSource<MessageBean>>) Observable::fromIterable)
-                .map(messageBean -> IMMessage.fromMessage(account, messageBean))
-                .toList()
-                .doOnSuccess(this::addMessages);
+        switch (type) {
+            case Constants.SESSION_TYPE_USER:
+                GetChatHistoryDto getChatHistoryDto = new GetChatHistoryDto(to, beforeMid);
+                return MsgApi.API.getChatMessageHistory(getChatHistoryDto)
+                        .map(RxUtils.bodyConverter())
+                        .flatMap((Function<List<MessageBean>, ObservableSource<MessageBean>>) Observable::fromIterable)
+                        .map(messageBean -> IMMessage.fromMessage(account, messageBean))
+                        .toList()
+                        .doOnSuccess(this::addMessages);
+            case Constants.SESSION_TYPE_GROUP:
+                long seq = 0;
+                if (beforeMid != 0) {
+                    IMMessage m = messageTreeMap.get(beforeMid);
+                    if (m != null) {
+                        seq = m.getSeq();
+                    }
+                }
+                GetGroupMsgHistoryDto dto = new GetGroupMsgHistoryDto(to, seq);
+                return MsgApi.API.getGroupMessageHistory(dto)
+                        .map(RxUtils.bodyConverter())
+                        .flatMap((Function<List<GroupMessageBean>, ObservableSource<GroupMessageBean>>) Observable::fromIterable)
+                        .map(messageBean -> IMMessage.fromGroupMessage(account, messageBean))
+                        .toList()
+                        .doOnSuccess(this::addMessages);
+            default:
+                return Single.error(new IllegalStateException("unknown session type " + type));
+        }
     }
 
     public Observable<IMSession> initInfo() {
@@ -271,9 +278,9 @@ public class IMSession {
             return Observable.just(this);
         }
         switch (type) {
-            case 1:
+            case Constants.SESSION_TYPE_USER:
                 return GlideIM.getUserInfo(to).map(this::setInfo);
-            case 2:
+            case Constants.SESSION_TYPE_GROUP:
                 return GlideIM.getGroupInfo(to).map(this::setInfo);
             default:
                 return Observable.just(this);
@@ -374,11 +381,20 @@ public class IMSession {
     }
 
     private Observable<ChatMessage> send(ChatMessage m) {
-        if (account.getIMClient() == null) {
+        IMClient im = account.getIMClient();
+        if (im == null) {
             return Observable.error(new NullPointerException("the im connection is not init"));
         }
-        return account.getIMClient().sendChatMessage(m);
+        switch (type) {
+            case Constants.SESSION_TYPE_USER:
+                return im.sendChatMessage(m);
+            case Constants.SESSION_TYPE_GROUP:
+                return im.sendGroupMessage(m);
+            default:
+                return Observable.error(new IllegalStateException("unknown session type"));
+        }
     }
+
 
     @Override
     public int hashCode() {

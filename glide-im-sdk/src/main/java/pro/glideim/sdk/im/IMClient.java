@@ -19,6 +19,8 @@ public interface IMClient {
 
     Observable<ChatMessage> sendChatMessage(ChatMessage m);
 
+    Observable<ChatMessage> sendGroupMessage(ChatMessage m);
+
     <T> Observable<CommMessage<T>> request(String action, Class<T> clazz, boolean isArray, Object data);
 
     void disconnect();

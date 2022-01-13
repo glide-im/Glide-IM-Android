@@ -50,10 +50,6 @@ public class IMSessionList {
         return getOrCreateSession(sessionTag);
     }
 
-    public boolean contain(int type, long id) {
-        return sessionMap.containsKey(SessionTag.get(type, id));
-    }
-
     public boolean contain(SessionTag t) {
         return sessionMap.containsKey(t);
     }
@@ -222,6 +218,7 @@ public class IMSessionList {
 
     static class SessionTag implements Comparable<SessionTag> {
         private static final Map<String, SessionTag> temp = new ConcurrentHashMap<>();
+        String tag;
         int type;
         long id;
         long updateAt = 0;
@@ -229,6 +226,7 @@ public class IMSessionList {
         private SessionTag(int type, long id) {
             this.type = type;
             this.id = id;
+            this.tag = type + "@" + id;
         }
 
         public static synchronized SessionTag get(int type, long id) {
@@ -255,9 +253,7 @@ public class IMSessionList {
         @NonNull
         @Override
         public String toString() {
-            return "SessionTag{" +
-                    "type=" + type +
-                    ", id=" + id +
+            return "SessionTag{tag=" + tag +
                     ", updateAt=" + updateAt +
                     '}';
         }
