@@ -50,6 +50,7 @@ public class IMSession {
         this.tag = IMSessionList.SessionTag.get(type, to);
         this.to = to;
         this.type = type;
+        this.title = String.valueOf(to);
         this.updateAt = System.currentTimeMillis() / 1000;
         this.account = account;
     }
@@ -130,6 +131,7 @@ public class IMSession {
     }
 
     void onNewMessage(IMMessage msg) {
+        unread++;
         updateAt = msg.getSendAt();
         SLogger.d(TAG, "onNewMessage:" + msg);
         long mid = msg.getMid();
@@ -166,7 +168,7 @@ public class IMSession {
     void setIMSessionList(IMSessionList list) {
     }
 
-    public void setOnUpdateListener(OnUpdateListener onUpdateListener) {
+    void setOnUpdateListener(OnUpdateListener onUpdateListener) {
         this.onUpdateListener = onUpdateListener;
     }
 
@@ -241,6 +243,11 @@ public class IMSession {
             SLogger.d(TAG, "onUpdate");
             onUpdateListener.onUpdate(this);
         }
+    }
+
+    public void clearUnread() {
+        unread = 0;
+        onSessionUpdate();
     }
 
     public Single<List<IMMessage>> getHistory(long beforeMid) {

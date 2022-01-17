@@ -14,6 +14,7 @@ public class IMMessage {
     public String avatar;
     public String title;
     public boolean isMe = false;
+    IMSession session;
 
     IMSessionList.SessionTag tag;
 
@@ -89,6 +90,10 @@ public class IMMessage {
         m.setContent(messageBean.getContent());
         m.setTarget(account, 2, m.to);
         return m;
+    }
+
+    public IMSession getSession(){
+        return session;
     }
 
     public long getSeq() {

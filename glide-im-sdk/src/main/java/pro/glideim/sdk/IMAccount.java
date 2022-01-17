@@ -45,12 +45,20 @@ public class IMAccount implements MessageListener {
     private IMClient im;
     private ProfileBean profileBean = new ProfileBean();
     private boolean wsAuthed = false;
-
+    private IMMessageListener imMessageListener;
     private final ConnStateListener reLoginConnStateListener = (state, msg) -> {
         if (state == WsClient.STATE_OPENED && !wsAuthed && uid != 0) {
             SLogger.d(TAG, "re-auth due to reconnect...");
             authIMConnection().compose(RxUtils.silentScheduler())
-                    .subscribe(new SilentObserver<>());
+                    .subscribe(new SilentObserver<Boolean>() {
+                        @Override
+                        public void onError(Throwable e) {
+                            super.onError(e);
+                            if (imMessageListener != null) {
+                                imMessageListener.onTokenInvalid();
+                            }
+                        }
+                    });
         } else {
             wsAuthed = false;
         }
@@ -58,6 +66,10 @@ public class IMAccount implements MessageListener {
 
     public IMAccount(long uid) {
         this.uid = uid;
+    }
+
+    public void setImMessageListener(IMMessageListener imMessageListener) {
+        this.imMessageListener = imMessageListener;
     }
 
     public void setServers(List<String> servers) {
@@ -223,6 +235,7 @@ public class IMAccount implements MessageListener {
                         client.request(Actions.Cli.ACTION_API_USER_AUTH, AuthBean.class, false, d)
                 ).map(RxUtils.bodyConverterForWsMsg())
                 .doOnError(throwable -> {
+                    wsAuthed = false;
                     if (throwable instanceof GlideException) {
                         GlideIM.getDataStorage().storeToken(uid, "");
                     }
@@ -287,5 +300,33 @@ public class IMAccount implements MessageListener {
     public void onNewMessage(ChatMessage m) {
         IMMessage ms = IMMessage.fromChatMessage(this, m);
         sessionList.onNewMessage(ms);
+        if (imMessageListener != null) {
+            try {
+                imMessageListener.onNewMessage(ms);
+            } catch (Throwable e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @Override
+    public void onControlMessage(CommMessage<Object> m) {
+        switch (m.getAction()) {
+            case Actions.ACTION_NOTIFY:
+                if (imMessageListener != null) {
+                    imMessageListener.onNotify(m.getData().toString());
+                }
+                break;
+            case Actions.Srv.ACTION_KICK_OUT:
+                if (imMessageListener != null) {
+                    imMessageListener.onKickOut();
+                }
+                break;
+            case Actions.Srv.ACTION_NEW_CONTACT:
+                if (imMessageListener != null) {
+                    imMessageListener.onNewContact();
+                }
+                break;
+        }
     }
 }

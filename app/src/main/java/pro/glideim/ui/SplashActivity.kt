@@ -1,6 +1,7 @@
 package pro.glideim.ui
 
 import com.google.android.material.textview.MaterialTextView
+import pro.glideim.MessageListener
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.GlideIM
@@ -22,6 +23,7 @@ class SplashActivity : BaseActivity() {
                     mTvState.text = "Connecting to server"
                 }
                 onSuccess {
+                    GlideIM.getAccount().setImMessageListener(MessageListener.getInstance())
                     MainActivity.start(this@SplashActivity)
                     finish()
                 }

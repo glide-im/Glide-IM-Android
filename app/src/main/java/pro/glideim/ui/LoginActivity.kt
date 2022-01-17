@@ -2,11 +2,10 @@ package pro.glideim.ui
 
 import android.content.Context
 import android.content.Intent
-import android.widget.ProgressBar
 import com.google.android.material.button.MaterialButton
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textview.MaterialTextView
+import pro.glideim.MessageListener
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.GlideIM
@@ -53,6 +52,7 @@ class LoginActivity : BaseActivity() {
         GlideIM.login(account, password, 1)
             .io2main()
             .request2(this) {
+                GlideIM.getAccount().setImMessageListener(MessageListener.getInstance())
                 MainActivity.start(this)
                 finish()
             }

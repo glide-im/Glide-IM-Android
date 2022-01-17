@@ -8,6 +8,7 @@ import android.view.View
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SortedList
+import com.blankj.utilcode.util.NotificationUtils
 import com.dengzii.adapter.SuperAdapter
 import com.dengzii.ktx.android.toggleEnable
 import com.google.android.material.button.MaterialButton
@@ -40,8 +41,10 @@ class ChatActivity : BaseActivity() {
 
     companion object {
 
-        const val EXTRA_ID = "EXTRA_ID"
-        const val EXTRA_TYPE = "EXTRA_TYPE"
+        private const val EXTRA_ID = "EXTRA_ID"
+        private const val EXTRA_TYPE = "EXTRA_TYPE"
+
+        private var current: IMSession? = null
 
         fun start(context: Context, s: IMSession) {
             start(context, s.to, s.type)
@@ -49,14 +52,21 @@ class ChatActivity : BaseActivity() {
 
         @JvmStatic
         fun start(context: Context, id: Long, type: Int) {
-            val starter = Intent(context, ChatActivity::class.java).apply {
-                putExtra(EXTRA_ID, id)
-                putExtra(EXTRA_TYPE, type)
-            }
             if (id == 0L || type == 0) {
                 return
             }
-            context.startActivity(starter)
+            context.startActivity(getIntent(context, id, type))
+        }
+
+        fun getIntent(context: Context, id: Long, type: Int): Intent {
+            return Intent(context, ChatActivity::class.java).apply {
+                putExtra(EXTRA_ID, id)
+                putExtra(EXTRA_TYPE, type)
+            }
+        }
+
+        fun getCurrentSession(): IMSession? {
+            return current
         }
     }
 
@@ -90,6 +100,8 @@ class ChatActivity : BaseActivity() {
 
     private fun setSessionInfo(s: IMSession) {
         mSession = s
+        current = s
+        mSession.clearUnread()
         mEtMessage.toggleEnable()
         mBtSend.toggleEnable()
 
@@ -101,12 +113,17 @@ class ChatActivity : BaseActivity() {
 
         mSession.setMessageListener(object :
             MessageChangeListener {
-            override fun onChange(mid: Long, message: IMMessage) {}
+            override fun onChange(mid: Long, message: IMMessage) {
 
-            override fun onInsertMessage(mid: Long, message: IMMessage) {}
+            }
+
+            override fun onInsertMessage(mid: Long, message: IMMessage) {
+                mSession.clearUnread()
+            }
 
             override fun onNewMessage(message: IMMessage) {
                 runOnUiThread {
+                    mSession.clearUnread()
                     mMessage.add(message)
                     scrollToLastMessage()
                 }
@@ -152,6 +169,17 @@ class ChatActivity : BaseActivity() {
                     }
                 }
             }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        NotificationUtils.cancel(mSession.to.hashCode())
+        current = mSession
+    }
+
+    override fun onPause() {
+        super.onPause()
+        current = null
     }
 
     private fun addMessage() {

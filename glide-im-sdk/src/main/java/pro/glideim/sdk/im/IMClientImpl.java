@@ -12,6 +12,7 @@ import io.reactivex.Observable;
 import io.reactivex.ObservableEmitter;
 import io.reactivex.Single;
 import io.reactivex.internal.operators.observable.ObservableSubscribeOn;
+import pro.glideim.sdk.GlideException;
 import pro.glideim.sdk.Logger;
 import pro.glideim.sdk.ParameterizedTypeImpl;
 import pro.glideim.sdk.http.RetrofitManager;
@@ -41,7 +42,6 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
     private final Heartbeat heartbeat;
     private final KeepAlive keepAlive;
     private MessageListener messageListener;
-    private IMMessageListener imMessageListener;
     private long seq;
 
     private IMClientImpl(String wsUrl) {
@@ -202,23 +202,26 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
             case Actions.ACTION_HEARTBEAT:
                 send(new CommMessage<>(MESSAGE_VER, Actions.ACTION_HEARTBEAT, 0, ""));
                 return;
-            case Actions.ACTION_NOTIFY:
-                return;
-            case Actions.Srv.ACTION_KICK_OUT:
-                disconnect();
-                return;
-            case Actions.Srv.ACTION_NEW_CONTACT:
-                if (imMessageListener != null) {
-                    imMessageListener.onNewContact();
-                }
-                return;
             case Actions.Srv.ACTION_NOTIFY_NEED_AUTH:
                 disconnect();
                 connect();
                 return;
+            default:
+                // not chat message
+                onMessage(m);
         }
+    }
 
-        logger.d(TAG, "UNKNOWN ACTION: " + m.getAction());
+    private void onMessage(CommMessage<Object> m) {
+        switch (m.getAction()) {
+            case Actions.ACTION_NOTIFY:
+            case Actions.Srv.ACTION_KICK_OUT:
+            case Actions.Srv.ACTION_NEW_CONTACT:
+                messageListener.onControlMessage(m);
+                return;
+            default:
+                logger.d(TAG, "UNKNOWN ACTION: " + m.getAction());
+        }
     }
 
     private void onAck(Message msg) {
@@ -290,7 +293,7 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
                     this.emitter.onError(new Exception("json parse error, " + e.getMessage()));
                 }
             } else {
-                emitter.onError(new Exception(m.getData().toString()));
+                emitter.onError(new GlideException(m.getData().toString()));
             }
             emitter.onComplete();
         }

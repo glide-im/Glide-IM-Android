@@ -1,7 +1,6 @@
 package pro.glideim
 
 import android.app.Application
-import android.util.Log
 import com.dengzii.adapter.EmptyViewHolder
 import com.dengzii.adapter.SuperAdapter
 import pro.glideim.sdk.GlideIM
@@ -15,9 +14,10 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        UserPerf.init(this)
+        UserConfig.init(this)
+        MessageListener.init(this)
         GlideIM.init("http://192.168.1.123:8081/api/")
-        GlideIM.getInstance().dataStorage = UserPerf.getInstance()
+        GlideIM.getInstance().dataStorage = UserConfig.getInstance()
         GlideIM.getInstance().setDevice(1)
 
         SuperAdapter.addDefaultViewHolderForType(

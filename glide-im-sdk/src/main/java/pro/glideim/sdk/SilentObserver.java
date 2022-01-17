@@ -28,7 +28,7 @@ public class SilentObserver<T> implements Observer<T>, SingleObserver<T> {
 
     @Override
     public void onError(@NonNull Throwable e) {
-        StackTraceElement stackTraceElement = e.getStackTrace()[1];
+        StackTraceElement stackTraceElement = e.getStackTrace()[0];
         SLogger.d("SilentObserver", e.getMessage() + " : " + stackTraceElement.toString());
     }
 

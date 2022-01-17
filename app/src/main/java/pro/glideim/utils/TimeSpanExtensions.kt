@@ -13,13 +13,13 @@ fun Long.secToTimeSpan(): String {
     instance.time = Date(this * 1000)
     val today = Calendar.getInstance().get(Calendar.DAY_OF_MONTH)
 
-    val m = instance.get(Calendar.MONTH)
+    val m = instance.get(Calendar.MONTH) + 1
     val d = instance.get(Calendar.DAY_OF_MONTH)
     val h = instance.get(Calendar.HOUR_OF_DAY)
     val min = instance.get(Calendar.MINUTE)
 
     return when (today - d) {
-        0 -> "$h:$min"
+        0 -> "$h:${if (min < 10) "0" else ""}$min"
         1 -> "昨天"
         2 -> "前天"
         else -> "$m-$d"

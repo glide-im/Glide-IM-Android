@@ -80,13 +80,20 @@ public class IMSessionList {
         }
     }
 
+    private void onSessionUpdate(IMSession session) {
+        if (sessionUpdateListener != null) {
+            sessionUpdateListener.onUpdate(session);
+        }
+    }
+
     void onNewMessage(IMMessage message) {
         IMSession session = getOrCreateSession(message.tag);
+        message.session = session;
         session.onNewMessage(message);
     }
 
     private void putSession(IMSession session) {
-        session.setOnUpdateListener(this::addOrUpdateSession);
+        session.setOnUpdateListener(this::onSessionUpdate);
         session.setIMSessionList(this);
         GlideIM.getDataStorage().storeSession(account.uid, session);
         sessionMap.put(session.tag, session);

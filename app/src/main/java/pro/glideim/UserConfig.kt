@@ -8,14 +8,14 @@ import pro.glideim.sdk.IMSession
 import pro.glideim.sdk.api.group.GroupInfoBean
 import pro.glideim.sdk.api.user.UserInfoBean
 
-class UserPerf : DataStorage {
+class UserConfig : DataStorage {
 
     private var token = ""
     private var uid = 0L
     private val d = DefaultDataStoreImpl()
 
     companion object {
-        private val instance = UserPerf()
+        private val instance = UserConfig()
         private lateinit var application: Application
 
         fun init(app: Application) {
@@ -29,7 +29,7 @@ class UserPerf : DataStorage {
             instance.storeToken(instance.uid, "")
         }
 
-        fun getInstance(): UserPerf {
+        fun getInstance(): UserConfig {
             return instance
         }
     }

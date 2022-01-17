@@ -63,14 +63,14 @@ class AddContactsActivity : BaseActivity() {
                 .io2main()
                 .request2(this) {
                     toast("Group added")
-                    BusUtils.post(Events.EVENT_UPDATE_CONTACTS)
+                    Events.updateContacts()
                     finish()
                 }
         } else {
             UserApi.API.addContacts(ContactsUidDto(id.toLong(), ""))
                 .request(this) {
                     toast("Contacts added")
-                    BusUtils.post(Events.EVENT_UPDATE_CONTACTS)
+                    Events.updateContacts()
                     finish()
                 }
         }

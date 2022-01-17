@@ -23,7 +23,7 @@ public interface Actions {
     interface Srv {
         String ACTION_API_SUCCESS = "api.success";
         String ACTION_NOTIFY_NEED_AUTH = "notify.auth";
-        String ACTION_NEW_CONTACT = "notify.contact";
+        String ACTION_NEW_CONTACT = "api.contact.new";
         String ACTION_KICK_OUT = "notify.kickout";
     }
 

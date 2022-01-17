@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.view.Gravity
 import android.view.ViewGroup
 import android.widget.ImageView
-import android.widget.ShareActionProvider
 import androidx.appcompat.widget.PopupMenu
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -101,7 +100,11 @@ class ContactsFragment : BaseFragment() {
         mSrfRefresh.finishRefresh()
     }
 
-    @BusUtils.Bus(tag = Events.EVENT_UPDATE_CONTACTS, sticky = false)
+    @BusUtils.Bus(
+        tag = Events.EVENT_UPDATE_CONTACTS,
+        sticky = false,
+        threadMode = BusUtils.ThreadMode.MAIN
+    )
     fun updateContacts() {
         mSrfRefresh.startRefresh()
     }
