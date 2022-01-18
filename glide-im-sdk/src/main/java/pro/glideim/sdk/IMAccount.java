@@ -11,6 +11,7 @@ import io.reactivex.ObservableSource;
 import io.reactivex.Single;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.annotations.Nullable;
+import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.auth.AuthApi;
 import pro.glideim.sdk.api.auth.AuthBean;
@@ -18,6 +19,9 @@ import pro.glideim.sdk.api.auth.AuthDto;
 import pro.glideim.sdk.api.group.GroupApi;
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.group.JoinGroupDto;
+import pro.glideim.sdk.api.msg.AckOfflineMsgDto;
+import pro.glideim.sdk.api.msg.MessageBean;
+import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.user.ProfileBean;
 import pro.glideim.sdk.api.user.UserApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
@@ -50,6 +54,7 @@ public class IMAccount implements MessageListener {
         if (state == WsClient.STATE_OPENED && !wsAuthed && uid != 0) {
             SLogger.d(TAG, "re-auth due to reconnect...");
             authIMConnection().compose(RxUtils.silentScheduler())
+                    .zipWith(sessionList.syncOfflineMsg(), (aBoolean, o) -> true)
                     .subscribe(new SilentObserver<Boolean>() {
                         @Override
                         public void onError(Throwable e) {

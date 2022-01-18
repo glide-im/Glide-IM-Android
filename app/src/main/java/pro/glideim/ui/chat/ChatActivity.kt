@@ -7,7 +7,6 @@ import android.os.Bundle
 import android.view.View
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.SortedList
 import com.blankj.utilcode.util.NotificationUtils
 import com.dengzii.adapter.SuperAdapter
 import com.dengzii.ktx.android.toggleEnable
@@ -95,12 +94,6 @@ class ChatActivity : BaseActivity() {
         mBtSend.setOnClickListener {
             sendMessage()
         }
-        setSessionInfo(mSession)
-    }
-
-    private fun setSessionInfo(s: IMSession) {
-        mSession = s
-        current = s
         mSession.clearUnread()
         mEtMessage.toggleEnable()
         mBtSend.toggleEnable()
@@ -110,25 +103,6 @@ class ChatActivity : BaseActivity() {
         val latest = mSession.getMessages(Long.MAX_VALUE, 20)
         mMessage.addAll(latest)
         scrollToLastMessage()
-
-        mSession.setMessageListener(object :
-            MessageChangeListener {
-            override fun onChange(mid: Long, message: IMMessage) {
-
-            }
-
-            override fun onInsertMessage(mid: Long, message: IMMessage) {
-                mSession.clearUnread()
-            }
-
-            override fun onNewMessage(message: IMMessage) {
-                runOnUiThread {
-                    mSession.clearUnread()
-                    mMessage.add(message)
-                    scrollToLastMessage()
-                }
-            }
-        })
     }
 
     private fun sendMessage() {
@@ -171,15 +145,37 @@ class ChatActivity : BaseActivity() {
             }
     }
 
-    override fun onStart() {
-        super.onStart()
+    override fun onResume() {
+        super.onResume()
         NotificationUtils.cancel(mSession.to.hashCode())
         current = mSession
+        mSession.setMessageListener(object :
+            MessageChangeListener {
+            override fun onChange(mid: Long, message: IMMessage) {
+
+            }
+
+            override fun onInsertMessage(mid: Long, message: IMMessage) {
+                runOnUiThread {
+                    mMessage.add(message)
+                }
+                mSession.clearUnread()
+            }
+
+            override fun onNewMessage(message: IMMessage) {
+                runOnUiThread {
+                    mSession.clearUnread()
+                    mMessage.add(message)
+                    scrollToLastMessage()
+                }
+            }
+        })
     }
 
     override fun onPause() {
         super.onPause()
         current = null
+        mSession.setMessageListener(null)
     }
 
     private fun addMessage() {

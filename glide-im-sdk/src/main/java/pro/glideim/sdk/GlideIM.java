@@ -83,18 +83,6 @@ public class GlideIM {
                 .map(o -> true);
     }
 
-    public static Observable<List<MessageBean>> getOfflineMessage() {
-        return MsgApi.API.getOfflineMsg()
-                .map(RxUtils.bodyConverter())
-                .doOnNext(messageBeans -> {
-                    List<Long> mids = new ArrayList<>();
-                    for (MessageBean b : messageBeans) {
-                        mids.add(b.getMid());
-                    }
-                    MsgApi.API.ackOfflineMsg(new AckOfflineMsgDto(mids)).subscribe(new SilentObserver<>());
-                });
-    }
-
     public static Observable<GroupInfoBean> getGroupInfo(long gid) {
         GroupInfoBean groupInfoBean = getDataStorage().loadTempGroupInfo(gid);
         if (groupInfoBean != null) {

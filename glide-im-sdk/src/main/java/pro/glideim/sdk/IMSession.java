@@ -38,27 +38,31 @@ public class IMSession {
     public String avatar;
     public int unread;
     public long updateAt;
+    public long previousUpdateAt;
     public int type;
     public String lastMsg;
     public long lastMsgId;
+
     IMSessionList.SessionTag tag;
     private OnUpdateListener onUpdateListener;
     private MessageChangeListener messageChangeListener;
     private boolean infoInit = false;
+    private long lastReadMid = 0;
 
     private IMSession(IMAccount account, long to, int type) {
         this.tag = IMSessionList.SessionTag.get(type, to);
         this.to = to;
         this.type = type;
         this.title = String.valueOf(to);
-        this.updateAt = System.currentTimeMillis() / 1000;
+        this.avatar = "";
+        setUpdateAt(System.currentTimeMillis() / 1000);
         this.account = account;
     }
 
     public static IMSession fromGroupState(IMAccount account, GroupMessageStateBean stateBean) {
         IMSession s = new IMSession(account, stateBean.getGid(), Constants.SESSION_TYPE_GROUP);
         s.unread = 0;
-        s.updateAt = stateBean.getLastMsgAt();
+        s.setUpdateAt(stateBean.getLastMsgAt());
         s.lastMsgId = stateBean.getLastMID();
         return s;
     }
@@ -70,7 +74,7 @@ public class IMSession {
         } else {
             s = new IMSession(account, sessionBean.getUid1(), Constants.SESSION_TYPE_USER);
         }
-        s.updateAt = sessionBean.getUpdateAt();
+        s.setUpdateAt(sessionBean.getUpdateAt());
         s.lastMsgId = sessionBean.getLastMid();
         return s;
     }
@@ -90,7 +94,7 @@ public class IMSession {
     }
 
     public IMSession merge(IMSession session) {
-        this.updateAt = session.updateAt;
+        this.setUpdateAt(session.updateAt);
         this.lastMsg = session.lastMsg;
         this.messageTreeMap.putAll(session.messageTreeMap);
         return this;
@@ -130,9 +134,20 @@ public class IMSession {
 
     }
 
+    void onOfflineMessage(List<IMMessage> msg) {
+        for (IMMessage m : msg) {
+            if (m.getMid() > lastReadMid) {
+                onNewMessage(m);
+            } else {
+                messageChangeListener.onInsertMessage(m.getMid(), m);
+                messageTreeMap.put(m.getMid(), m);
+            }
+        }
+    }
+
     void onNewMessage(IMMessage msg) {
         unread++;
-        updateAt = msg.getSendAt();
+        setUpdateAt(msg.getSendAt());
         SLogger.d(TAG, "onNewMessage:" + msg);
         long mid = msg.getMid();
         long last = 0;
@@ -162,7 +177,7 @@ public class IMSession {
         this.lastMsg = msg.getContent();
         this.lastMsgId = msg.getMid();
         this.lastMsgSender = msg.getFrom();
-        this.updateAt = msg.getSendAt();
+        setUpdateAt(msg.getSendAt());
     }
 
     void setIMSessionList(IMSessionList list) {
@@ -246,7 +261,13 @@ public class IMSession {
     }
 
     public void clearUnread() {
+        if (unread == 0) {
+            return;
+        }
         unread = 0;
+        if (messageTreeMap.size() > 0) {
+            lastReadMid = messageTreeMap.lastKey();
+        }
         onSessionUpdate();
     }
 
@@ -406,6 +427,12 @@ public class IMSession {
     @Override
     public int hashCode() {
         return Objects.hash(to, type);
+    }
+
+
+    public void setUpdateAt(long updateAt) {
+        this.previousUpdateAt = this.updateAt;
+        this.updateAt = updateAt;
     }
 
     @Override

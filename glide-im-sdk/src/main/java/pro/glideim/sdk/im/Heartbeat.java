@@ -13,7 +13,7 @@ public class Heartbeat implements ConnStateListener {
 
     private static final String TAG = Heartbeat.class.getSimpleName();
     private final pro.glideim.sdk.im.IMClient client;
-    private Disposable heartbeat;
+    private Disposable disposable;
 
     private Heartbeat(pro.glideim.sdk.im.IMClient client) {
         this.client = client;
@@ -38,8 +38,11 @@ public class Heartbeat implements ConnStateListener {
     public void start() {
         stop();
         SLogger.d(TAG, "start");
-        heartbeat = Observable
-                .interval(3, TimeUnit.SECONDS)
+        Observable.interval(3, TimeUnit.SECONDS)
+                .doOnSubscribe(disposable -> {
+                    stop();
+                    this.disposable = disposable;
+                })
                 .doOnNext(aLong -> {
                     if (client.isConnected()) {
                         client.send(new CommMessage<>(1, Actions.ACTION_HEARTBEAT, 0, ""));
@@ -51,13 +54,13 @@ public class Heartbeat implements ConnStateListener {
     }
 
     public boolean isRunning() {
-        return heartbeat.isDisposed();
+        return disposable.isDisposed();
     }
 
     public void stop() {
-        if (heartbeat != null && !heartbeat.isDisposed()) {
+        if (disposable != null && !disposable.isDisposed()) {
             SLogger.d(TAG, "stop");
-            heartbeat.dispose();
+            disposable.dispose();
         }
     }
 }

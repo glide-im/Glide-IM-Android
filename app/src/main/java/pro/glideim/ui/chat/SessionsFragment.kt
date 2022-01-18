@@ -1,7 +1,6 @@
 import android.annotation.SuppressLint
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.recyclerview.widget.SortedList
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import com.dengzii.adapter.SuperAdapter
 import com.dengzii.ktx.android.content.getColorCompat
@@ -12,10 +11,7 @@ import pro.glideim.base.BaseFragment
 import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.IMSession
 import pro.glideim.sdk.SessionUpdateListener
-import pro.glideim.ui.chat.MySortedList
-import pro.glideim.ui.chat.SessionListSorter
-import pro.glideim.ui.chat.SessionViewData
-import pro.glideim.ui.chat.SessionViewHolder
+import pro.glideim.ui.chat.*
 import pro.glideim.utils.*
 
 class SessionsFragment : BaseFragment() {
@@ -61,7 +57,15 @@ class SessionsFragment : BaseFragment() {
             object : SessionUpdateListener {
                 override fun onUpdate(session: IMSession) {
                     requireActivity().runOnUiThread {
-                        mSessionList.add(SessionViewData.create(session))
+                        val s = SessionViewData.create(session)
+                        val updateAt = s.updateAt
+                        s.updateAt = s.preUpdateAt
+
+                        mSessionList.l.beginBatchedUpdates()
+                        mSessionList.remove(s)
+                        s.updateAt = updateAt
+                        mSessionList.add(s)
+                        mSessionList.l.endBatchedUpdates()
                     }
                 }
 

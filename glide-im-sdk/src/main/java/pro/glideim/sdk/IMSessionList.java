@@ -11,14 +11,17 @@ import java.util.concurrent.ConcurrentHashMap;
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
 import io.reactivex.Single;
+import io.reactivex.SingleSource;
 import io.reactivex.functions.Function;
 import io.reactivex.observables.GroupedObservable;
 import pro.glideim.sdk.api.Response;
 import pro.glideim.sdk.api.group.GroupInfoBean;
+import pro.glideim.sdk.api.msg.AckOfflineMsgDto;
 import pro.glideim.sdk.api.msg.GetGroupMessageStateDto;
 import pro.glideim.sdk.api.msg.GetGroupMsgHistoryDto;
 import pro.glideim.sdk.api.msg.GetSessionDto;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
+import pro.glideim.sdk.api.msg.MessageBean;
 import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.utils.RxUtils;
@@ -74,13 +77,15 @@ public class IMSessionList {
                     }
                 }
                 sessionMap.remove(s.tag);
-                putSession(s.merge(s));
+                putSession(s.merge(se));
                 SLogger.d(TAG, "session update:" + s.toString());
             }
         }
     }
 
     private void onSessionUpdate(IMSession session) {
+        sessionMap.remove(session.tag);
+        sessionMap.put(session.tag, session);
         if (sessionUpdateListener != null) {
             sessionUpdateListener.onUpdate(session);
         }
@@ -150,16 +155,16 @@ public class IMSessionList {
     public Single<Boolean> initSessionsList() {
         return getSessionList()
                 .toList()
-//                .flatMap((Function<List<IMSession>, SingleSource<List<IMSession>>>) sessions ->
-//                        initRecentMessages()
-//                                .toList()
-//                                .map(s -> {
-//                                    sessions.addAll(s);
-//                                    return sessions;
-//                                })
-//                )
+                //                .flatMap((Function<List<IMSession>, SingleSource<List<IMSession>>>) sessions ->
+                //                        initRecentMessages()
+                //                                .toList()
+                //                                .map(s -> {
+                //                                    sessions.addAll(s);
+                //                                    return sessions;
+                //                                })
+                //                )
                 .doOnSuccess(sessions -> addOrUpdateSession(sessions.toArray(new IMSession[]{})))
-                .map(sessions -> true);
+                .zipWith(syncOfflineMsg().toList(), (imSessions, objects) -> true);
     }
 
     private Observable<IMSession> getSessionList() {
@@ -179,6 +184,30 @@ public class IMSessionList {
                 );
         return Observable.merge(groupSession, chatSession)
                 .flatMap((Function<IMSession, ObservableSource<IMSession>>) IMSession::initInfo);
+    }
+
+    Observable<Object> syncOfflineMsg() {
+        return MsgApi.API.getOfflineMsg()
+                .map(RxUtils.bodyConverter())
+                .compose(RxUtils.silentScheduler())
+                .flatMap((Function<List<MessageBean>, ObservableSource<MessageBean>>) Observable::fromIterable)
+                .map(messageBean -> IMMessage.fromMessage(account, messageBean))
+                .groupBy(imMessage -> imMessage.tag)
+                .flatMapSingle((Function<GroupedObservable<SessionTag, IMMessage>, SingleSource<List<IMMessage>>>) g -> {
+                    SessionTag tag = g.getKey();
+                    return g.toList().doOnSuccess(imMessages ->
+                            getOrCreateSession(tag).onOfflineMessage(imMessages)
+                    );
+                })
+                .filter(imMessages -> !imMessages.isEmpty())
+                .flatMap((Function<List<IMMessage>, ObservableSource<IMMessage>>) Observable::fromIterable)
+                .map(IMMessage::getMid)
+                .toList()
+                .flatMapObservable(longs ->
+                        longs.isEmpty()
+                                ? Observable.just(true)
+                                : MsgApi.API.ackOfflineMsg(new AckOfflineMsgDto(longs))
+                );
     }
 
     private Observable<IMSession> initRecentMessages() {

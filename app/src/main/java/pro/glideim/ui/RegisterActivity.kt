@@ -2,9 +2,11 @@ package pro.glideim.ui
 
 import android.content.Context
 import android.content.Intent
+import com.dengzii.ktx.android.content.update
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import pro.glideim.R
+import pro.glideim.UserConfig
 import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.GlideIM
 import pro.glideim.utils.io2main
@@ -45,6 +47,10 @@ class RegisterActivity : BaseActivity() {
             .io2main()
             .request2(this) {
                 toast("Register success!")
+                UserConfig(this).update {
+                    this.account = account
+                    this.password = password
+                }
                 finish()
             }
     }

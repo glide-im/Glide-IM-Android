@@ -39,11 +39,11 @@ class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<IMMessage>(v) {
                     mIvSendFailed.show()
                 }
                 data.isSending -> {
-                    mIvSendFailed.show()
+                    //mIvSendFailed.show()
                     mIvSendFailed.setImageTintColor(R.color.gray)
                 }
                 data.isSendSuccess -> {
-                    mIvSendFailed.show()
+                    //mIvSendFailed.show()
                     mIvSendFailed.setImageTintColor(R.color.primaryLightColor)
                 }
             }

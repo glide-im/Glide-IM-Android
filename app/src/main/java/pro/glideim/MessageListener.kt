@@ -105,7 +105,7 @@ class MessageListener private constructor(private val context: Application) : IM
     }
 
     override fun onTokenInvalid() {
-        ActivityUtils.getTopActivity().let { activity ->
+        ActivityUtils.getTopActivity()?.let { activity ->
             MaterialAlertDialogBuilder(activity).apply {
                 setTitle("登录过期")
                 setMessage("登录身份信息已过期, 请重新登录")

@@ -7,10 +7,11 @@ class SessionViewData private constructor(
     val type: Int,
     val to: Long,
     val title: String,
-    val updateAt: Long,
+    var updateAt: Long,
     val lastMsg: String,
     val avatar: String,
-    val unread: Int
+    val unread: Int,
+    val preUpdateAt:Long
 ) {
     companion object {
         fun create(s: IMSession): SessionViewData {
@@ -22,7 +23,8 @@ class SessionViewData private constructor(
                 s.updateAt,
                 s.lastMsg ?: "",
                 s.avatar,
-                s.unread
+                s.unread,
+                s.previousUpdateAt
             )
         }
     }

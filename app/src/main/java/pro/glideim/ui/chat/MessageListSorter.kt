@@ -1,6 +1,5 @@
 package pro.glideim.ui.chat
 
-import androidx.recyclerview.widget.SortedListAdapterCallback
 import com.dengzii.adapter.SuperAdapter
 import pro.glideim.sdk.IMMessage
 

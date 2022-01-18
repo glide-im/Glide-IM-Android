@@ -1,6 +1,5 @@
 package pro.glideim.ui.chat
 
-import androidx.recyclerview.widget.SortedList
 
 class MySortedList<T> : List<T> {
 

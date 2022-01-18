@@ -1,6 +1,5 @@
 package pro.glideim.ui.chat
 
-import androidx.recyclerview.widget.SortedListAdapterCallback
 import com.dengzii.adapter.SuperAdapter
 
 class SessionListSorter(adapter: SuperAdapter) :

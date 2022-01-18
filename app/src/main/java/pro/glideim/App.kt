@@ -14,10 +14,10 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        UserConfig.init(this)
+        IMDataStorage.init(this)
         MessageListener.init(this)
         GlideIM.init("http://192.168.1.123:8081/api/")
-        GlideIM.getInstance().dataStorage = UserConfig.getInstance()
+        GlideIM.getInstance().dataStorage = IMDataStorage.getInstance()
         GlideIM.getInstance().setDevice(1)
 
         SuperAdapter.addDefaultViewHolderForType(

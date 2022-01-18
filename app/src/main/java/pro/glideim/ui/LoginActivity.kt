@@ -2,11 +2,16 @@ package pro.glideim.ui
 
 import android.content.Context
 import android.content.Intent
+import androidx.core.content.edit
+import com.blankj.utilcode.util.SPUtils
+import com.dengzii.ktx.android.content.update
+import com.dengzii.ktx.android.content.use
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.MessageListener
 import pro.glideim.R
+import pro.glideim.UserConfig
 import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.GlideIM
 import pro.glideim.utils.io2main
@@ -42,6 +47,14 @@ class LoginActivity : BaseActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        UserConfig(this).use {
+            mEtAccount.setText(account)
+            mEtPassword.setText(password)
+        }
+    }
+
     private fun submit() {
         if (!validate()) {
             return
@@ -53,6 +66,10 @@ class LoginActivity : BaseActivity() {
             .io2main()
             .request2(this) {
                 GlideIM.getAccount().setImMessageListener(MessageListener.getInstance())
+                UserConfig(this).update {
+                    this.account = account
+                    this.password = password
+                }
                 MainActivity.start(this)
                 finish()
             }
