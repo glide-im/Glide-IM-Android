@@ -3,8 +3,10 @@ package pro.glideim.sdk;
 import androidx.annotation.NonNull;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -116,18 +118,12 @@ public class IMSessionList {
 
     public Observable<IMSession> loadSessionsList() {
 
-        return loadChatSession()
-                .mergeWith(loadGroupSession())
-                .flatMap((Function<IMSession, ObservableSource<IMSession>>) session ->
-                        session.loadHistory(0)
-                                .toObservable()
-                                .map(imMessages -> session)
+        return Observable.merge(loadChatSession(), loadGroupSession())
+                .flatMapSingle((Function<IMSession, SingleSource<IMSession>>) session ->
+                        session.loadHistory(0).map(imMessages -> session)
                 )
                 .flatMap((Function<IMSession, ObservableSource<IMSession>>) IMSession::initInfo)
-                .doOnNext(session -> {
-                    SLogger.d(TAG, "======" + session.to);
-                    addOrUpdateSession(session);
-                })
+                .doOnNext(this::addOrUpdateSession)
                 .doOnComplete(() ->
                         syncOfflineMsg()
                                 .compose(RxUtils.silentScheduler())
@@ -163,31 +159,31 @@ public class IMSessionList {
         return MsgApi.API.getRecentSession()
                 .map(RxUtils.bodyConverter())
                 .flatMap(Observable::fromIterable)
-//                .filter(stateBean -> {
-//                    long to = stateBean.getUid1() == account.uid ? stateBean.getUid2() : stateBean.getUid1();
-//                    IMSession session = getSession(Constants.SESSION_TYPE_USER, to);
-//                    if (session != null) {
-//                        session.update(stateBean);
-//                        return false;
-//                    }
-//                    return true;
-//                })
-                .map(sessionBean -> IMSession.create(account, sessionBean));
+                .map(stateBean -> {
+                    long to = stateBean.getUid1() == account.uid ? stateBean.getUid2() : stateBean.getUid1();
+                    SessionTag t = SessionTag.get(Constants.SESSION_TYPE_USER, to);
+                    if (contain(t)) {
+                        IMSession session = getSession(t);
+                        session.update(stateBean);
+                        return session;
+                    }
+                    return IMSession.create(account, stateBean);
+                });
     }
 
     private Observable<IMSession> loadGroupSession() {
         return MsgApi.API.getAllGroupMessageState()
                 .map(RxUtils.bodyConverter())
                 .flatMap(Observable::fromIterable)
-//                .filter(stateBean -> {
-//                    SessionTag sessionTag = SessionTag.get(Constants.SESSION_TYPE_GROUP, stateBean.getGid());
-//                    if (contain(sessionTag)) {
-//                        getSession(sessionTag).update(stateBean);
-//                        return false;
-//                    }
-//                    return true;
-//                })
-                .map(stateBean -> IMSession.create(account, stateBean));
+                .map(stateBean -> {
+                    SessionTag t = SessionTag.get(Constants.SESSION_TYPE_GROUP, stateBean.getGid());
+                    if (contain(t)) {
+                        IMSession session = getSession(t);
+                        session.update(stateBean);
+                        return session;
+                    }
+                    return IMSession.create(account, stateBean);
+                });
     }
 
     static class SessionTag implements Comparable<SessionTag> {
@@ -233,11 +229,27 @@ public class IMSessionList {
         }
 
         @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            SessionTag that = (SessionTag) o;
+            return type == that.type && id == that.id;
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(type, id);
+        }
+
+        @Override
         public int compareTo(SessionTag o) {
-            if (this.updateAt == o.updateAt) {
+            if (this.updateAt == o.updateAt && this.hashCode() == o.hashCode()) {
                 return 0;
             }
             long l = this.updateAt - o.updateAt;
+            if (l == 0) {
+                return this.hashCode() - o.hashCode();
+            }
             return (int) l;
         }
 
