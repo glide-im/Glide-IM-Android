@@ -3,8 +3,8 @@ package pro.glideim.ui.profile
 import android.widget.ImageView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textview.MaterialTextView
-import pro.glideim.R
 import pro.glideim.IMDataStorage
+import pro.glideim.R
 import pro.glideim.base.BaseFragment
 import pro.glideim.sdk.GlideIM
 import pro.glideim.ui.LoginActivity
@@ -23,6 +23,7 @@ class ProfileFragment : BaseFragment() {
 
         mBtLogout.setOnClickListener {
             IMDataStorage.logout()
+            GlideIM.getAccount().logout()
             activity?.finish()
             LoginActivity.start(requireContext())
         }

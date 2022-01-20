@@ -6,12 +6,15 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
+import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
 import pro.glideim.sdk.GlideIM;
 import pro.glideim.sdk.IMMessage;
 import pro.glideim.sdk.IMSession;
 import pro.glideim.sdk.IMSessionList;
 import pro.glideim.sdk.SessionUpdateListener;
-import pro.glideim.sdk.TestObserver;
 import pro.glideim.sdk.TestResObserver;
 
 class IMSessionListTest {
@@ -29,7 +32,7 @@ class IMSessionListTest {
 
     @Test
     void sendMessage() {
-        GlideIM.getAccount().getIMSessionList().initSessionsList().blockingGet();
+        GlideIM.getAccount().getIMSessionList().loadSessionsList().blockingFirst();
         IMSession imSession = GlideIM.getAccount().getIMSessionList().getSessions().get(0);
         imSession.sendTextMessage("~~~")
                 .subscribe(new TestResObserver<IMMessage>() {
@@ -75,22 +78,22 @@ class IMSessionListTest {
         imSessionList.setSessionUpdateListener(new SessionUpdateListener() {
             @Override
             public void onUpdate(IMSession session) {
-                System.out.println("SessionUpdateListener.onUpdate:------------------");
-
+                System.out.println("SessionUpdateListener.onUpdate: " + session.to);
             }
 
             @Override
             public void onNewSession(IMSession session) {
-                System.out.println("SessionUpdateListener.onNewSession:++++++++++++++++++");
+                System.out.println("SessionUpdateListener.onNewSession: " + session.to);
 
             }
         });
-        imSessionList.initSessionsList().subscribe(new TestResObserver<Boolean>() {
-            @Override
-            public void onNext(@NonNull Boolean aBoolean) {
-                System.out.println("initSessionList.onNext =====================");
-            }
-        });
+        imSessionList.loadSessionsList()
+                .subscribe(new TestResObserver<IMSession>() {
+                    @Override
+                    public void onNext(@NonNull IMSession session) {
+
+                    }
+                });
         Thread.sleep(3000);
     }
 }

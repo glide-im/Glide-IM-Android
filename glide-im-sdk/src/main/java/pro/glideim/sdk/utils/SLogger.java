@@ -1,8 +1,10 @@
 package pro.glideim.sdk.utils;
 
+import pro.glideim.sdk.Logger;
+
 public class SLogger {
 
-    private static final pro.glideim.sdk.Logger l = new pro.glideim.sdk.Logger() {
+    private static pro.glideim.sdk.Logger l = new pro.glideim.sdk.Logger() {
         @Override
         public void d(String tag, String log) {
             System.out.println("GlideIMSdk:" + tag + ": " + log);
@@ -14,6 +16,10 @@ public class SLogger {
             t.printStackTrace();
         }
     };
+
+    public static void setLogger(Logger logger){
+        l = logger;
+    }
 
     private SLogger() {
     }

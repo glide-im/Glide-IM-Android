@@ -1,17 +1,15 @@
 package pro.glideim.sdk;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.TreeMap;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
 import io.reactivex.Single;
+import io.reactivex.SingleSource;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.annotations.Nullable;
-import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.auth.AuthApi;
 import pro.glideim.sdk.api.auth.AuthBean;
@@ -19,12 +17,8 @@ import pro.glideim.sdk.api.auth.AuthDto;
 import pro.glideim.sdk.api.group.GroupApi;
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.group.JoinGroupDto;
-import pro.glideim.sdk.api.msg.AckOfflineMsgDto;
-import pro.glideim.sdk.api.msg.MessageBean;
-import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.user.ProfileBean;
 import pro.glideim.sdk.api.user.UserApi;
-import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.im.ConnStateListener;
 import pro.glideim.sdk.im.IMClient;
 import pro.glideim.sdk.im.IMClientImpl;
@@ -32,6 +26,7 @@ import pro.glideim.sdk.im.MessageListener;
 import pro.glideim.sdk.protocol.Actions;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
+import pro.glideim.sdk.protocol.GroupMessage;
 import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
 import pro.glideim.sdk.ws.WsClient;
@@ -53,7 +48,9 @@ public class IMAccount implements MessageListener {
     private final ConnStateListener reLoginConnStateListener = (state, msg) -> {
         if (state == WsClient.STATE_OPENED && !wsAuthed && uid != 0) {
             SLogger.d(TAG, "re-auth due to reconnect...");
-            authIMConnection().compose(RxUtils.silentScheduler())
+            authAccount()
+                    .compose(RxUtils.silentScheduler())
+                    .zipWith(authIMConnection(), (aBoolean, o) -> true)
                     .zipWith(sessionList.syncOfflineMsg(), (aBoolean, o) -> true)
                     .subscribe(new SilentObserver<Boolean>() {
                         @Override
@@ -91,22 +88,6 @@ public class IMAccount implements MessageListener {
         return getOrInitConnectedIM().toObservable().map(c -> true);
     }
 
-    public List<IMContacts> updateContacts(@NonNull List<UserInfoBean> userInfoBeans) {
-        List<IMContacts> res = new ArrayList<>();
-        for (UserInfoBean userInfoBean : userInfoBeans) {
-            IMContacts c = contactsMap.get(1 + "_" + userInfoBean.getUid());
-            if (c == null) {
-                continue;
-            }
-            c.title = userInfoBean.getNickname();
-            c.avatar = userInfoBean.getAvatar();
-            c.id = userInfoBean.getUid();
-            c.type = 1;
-            res.add(c);
-        }
-        return res;
-    }
-
     public IMSessionList getIMSessionList() {
         return sessionList;
     }
@@ -125,12 +106,6 @@ public class IMAccount implements MessageListener {
             res.add(c);
         }
         return res;
-    }
-
-    public void addContacts(@NonNull List<IMContacts> contacts) {
-        for (IMContacts c : contacts) {
-            addContacts(c);
-        }
     }
 
     public ProfileBean getProfile() {
@@ -170,16 +145,14 @@ public class IMAccount implements MessageListener {
         return im != null && im.isConnected();
     }
 
-    public Observable<List<IMContacts>> getContacts() {
+    public Single<List<IMContacts>> getContacts() {
         return UserApi.API.getContactsList()
                 .map(RxUtils.bodyConverter())
                 .flatMap(Observable::fromIterable)
                 .map(IMContacts::fromContactsBean)
-                .toList()
-                .doOnSuccess(this::addContacts)
-                .flatMapObservable((Function<List<IMContacts>, ObservableSource<List<IMContacts>>>) contacts ->
-                        updateContactInfo()
-                );
+                .doOnNext(this::addContacts)
+                .flatMapSingle((Function<IMContacts, SingleSource<IMContacts>>) IMContacts::update)
+                .toList();
     }
 
     public Observable<Boolean> joinGroup(long gid) {
@@ -189,16 +162,17 @@ public class IMAccount implements MessageListener {
     }
 
     public void logout() {
+        AuthApi.API.logout()
+                .compose(RxUtils.silentScheduler())
+                .subscribe(new SilentObserver<>());
         GlideIM.getDataStorage().storeToken(uid, "");
         if (!wsAuthed) {
             return;
         }
-        if (im == null) {
+        if (im == null || !im.isConnected()) {
             return;
         }
-        im.request(Actions.Cli.ACTION_API_LOGOUT, Object.class, false, "")
-                .compose(RxUtils.silentScheduler())
-                .subscribe(new SilentObserver<>());
+        im.removeConnStateListener(reLoginConnStateListener);
         im.disconnect();
     }
 
@@ -235,6 +209,7 @@ public class IMAccount implements MessageListener {
         AuthDto d = new AuthDto(token, device);
         SLogger.d(TAG, "auth im connection " + uid);
         return getOrInitConnectedIM()
+                .doOnSuccess(client -> client.removeConnStateListener(reLoginConnStateListener))
                 .toObservable()
                 .flatMap((Function<IMClient, ObservableSource<CommMessage<AuthBean>>>) client ->
                         client.request(Actions.Cli.ACTION_API_USER_AUTH, AuthBean.class, false, d)
@@ -245,39 +220,14 @@ public class IMAccount implements MessageListener {
                         GlideIM.getDataStorage().storeToken(uid, "");
                     }
                 })
+                .doOnNext(authBean -> {
+                    assert im != null;
+                    im.addConnStateListener(reLoginConnStateListener);
+                })
                 .map(authBean -> {
                     wsAuthed = true;
                     return authBean.getUid() != 0;
                 });
-    }
-
-    private Observable<List<IMContacts>> updateContactInfo() {
-        Iterable<IMContacts> idList = getTempContacts();
-        List<Observable<IMContacts>> obs = new ArrayList<>();
-
-        Map<Integer, List<Long>> typeIdsMap = new HashMap<>();
-        for (IMContacts contacts : idList) {
-            if (!typeIdsMap.containsKey(contacts.type)) {
-                typeIdsMap.put(contacts.type, new ArrayList<>());
-            }
-            //noinspection ConstantConditions
-            typeIdsMap.get(contacts.type).add(contacts.id);
-        }
-
-        typeIdsMap.forEach((type, ids) -> {
-            Observable<IMContacts> ob = Observable.empty();
-            switch (type) {
-                case 1:
-                    ob = GlideIM.getUserInfo(ids).map(this::updateContacts).flatMap(Observable::fromIterable);
-                    break;
-                case 2:
-                    ob = GlideIM.getGroupInfo(ids).map(this::updateContactsGroup).flatMap(Observable::fromIterable);
-                    break;
-            }
-            obs.add(ob);
-        });
-
-        return Observable.merge(obs).toList().map(s -> this.getTempContacts()).toObservable();
     }
 
     private Single<IMClient> getOrInitConnectedIM() {
@@ -294,7 +244,6 @@ public class IMAccount implements MessageListener {
             Single<IMClient> create = Single.create(emitter -> {
                 im = IMClientImpl.create(servers.get(0));
                 im.setMessageListener(this);
-                im.addConnStateListener(reLoginConnStateListener);
                 emitter.onSuccess(im);
             });
             return create.flatMap(client -> client.connect().map(s -> client));
@@ -315,9 +264,22 @@ public class IMAccount implements MessageListener {
     }
 
     @Override
+    public void onGroupMessage(GroupMessage m) {
+        IMMessage ms = IMMessage.fromGroupMessage(this, m);
+        sessionList.onNewMessage(ms);
+        if (imMessageListener != null) {
+            try {
+                imMessageListener.onNewMessage(ms);
+            } catch (Throwable e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    @Override
     public void onControlMessage(CommMessage<Object> m) {
         switch (m.getAction()) {
-            case Actions.ACTION_NOTIFY:
+            case Actions.Srv.ACTION_NOTIFY_ERROR:
                 if (imMessageListener != null) {
                     imMessageListener.onNotify(m.getData().toString());
                 }

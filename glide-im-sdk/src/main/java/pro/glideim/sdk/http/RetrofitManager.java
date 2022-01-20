@@ -19,11 +19,8 @@ import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class RetrofitManager {
-    private static final HttpLoggingInterceptor sLoggerInterceptor = new HttpLoggingInterceptor(new HttpLoggingInterceptor.Logger() {
-        @Override
-        public void log(String message) {
-            SLogger.d(RetrofitManager.class.getSimpleName(), message);
-        }
+    private static final HttpLoggingInterceptor sLoggerInterceptor = new HttpLoggingInterceptor(message -> {
+        SLogger.d(RetrofitManager.class.getSimpleName(), message);
     });
     private static RetrofitManager sInstance;
     private Retrofit retrofit;
@@ -53,7 +50,7 @@ public class RetrofitManager {
                 .serializeNulls()
                 .create();
 
-        sLoggerInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+        sLoggerInterceptor.setLevel(HttpLoggingInterceptor.Level.BASIC);
         OkHttpClient.Builder httpClient = new OkHttpClient.Builder()
                 .connectTimeout(30, TimeUnit.SECONDS)
                 .readTimeout(30, TimeUnit.SECONDS)

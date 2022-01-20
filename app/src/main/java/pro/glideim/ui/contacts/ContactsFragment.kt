@@ -114,7 +114,7 @@ class ContactsFragment : BaseFragment() {
             ChatActivity.start(requireContext(), id, type)
             return
         }
-        val session = GlideIM.getAccount().imSessionList.getSession(type, id)
+        val session = GlideIM.getAccount().imSessionList.getOrCreate(type, id)
         ChatActivity.start(requireContext(), session)
     }
 
@@ -140,7 +140,6 @@ class ContactsFragment : BaseFragment() {
             )
             et.hint = "Input Group Name"
             setView(et)
-
             setPositiveButton("Create") { d, _ ->
                 if (createGroup(et.text.toString())) {
                     d.dismiss()

@@ -10,20 +10,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
-import io.reactivex.Single;
 import io.reactivex.SingleSource;
 import io.reactivex.functions.Function;
 import io.reactivex.observables.GroupedObservable;
-import pro.glideim.sdk.api.Response;
-import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.msg.AckOfflineMsgDto;
-import pro.glideim.sdk.api.msg.GetGroupMessageStateDto;
-import pro.glideim.sdk.api.msg.GetGroupMsgHistoryDto;
-import pro.glideim.sdk.api.msg.GetSessionDto;
-import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.MessageBean;
 import pro.glideim.sdk.api.msg.MsgApi;
-import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
 
@@ -44,20 +36,54 @@ public class IMSessionList {
         addOrUpdateSession(imSessions.toArray(new IMSession[]{}));
     }
 
-    public void setSessionUpdateListener(SessionUpdateListener sessionUpdateListener) {
-        this.sessionUpdateListener = sessionUpdateListener;
-    }
-
     public IMSession getSession(int type, long id) {
         SessionTag sessionTag = SessionTag.get(type, id);
+        return getSession(sessionTag);
+    }
+
+    public IMSession getOrCreate(int type, long id) {
+        SessionTag sessionTag = SessionTag.get(type, id);
         return getOrCreateSession(sessionTag);
+    }
+
+    private void putSession(IMSession session) {
+        sessionMap.remove(session.tag);
+        sessionMap.put(session.tag, session);
+        session.setOnUpdateListener(s -> {
+            if (sessionUpdateListener != null) {
+                sessionUpdateListener.onUpdate(session);
+            }
+        });
+        session.setIMSessionList(this);
+        GlideIM.getDataStorage().storeSession(account.uid, session);
+    }
+
+    private IMSession getSession(SessionTag tag) {
+        return sessionMap.get(tag);
+    }
+
+    public IMSession getOrCreateSession(SessionTag tag) {
+        IMSession session = sessionMap.get(tag);
+        if (session == null) {
+            session = IMSession.create(account, tag.id, tag.type, this);
+            addOrUpdateSession(session);
+        }
+        return session;
+    }
+
+    public List<IMSession> getSessions() {
+        return new ArrayList<>(this.sessionMap.values());
     }
 
     public boolean contain(SessionTag t) {
         return sessionMap.containsKey(t);
     }
 
-    private synchronized void addOrUpdateSession(IMSession... ses) {
+    public void setSessionUpdateListener(SessionUpdateListener sessionUpdateListener) {
+        this.sessionUpdateListener = sessionUpdateListener;
+    }
+
+    synchronized void addOrUpdateSession(IMSession... ses) {
 
         for (IMSession se : ses) {
             long oldUpdateAt = se.tag.updateAt;
@@ -76,18 +102,9 @@ public class IMSessionList {
                         sessionUpdateListener.onUpdate(s);
                     }
                 }
-                sessionMap.remove(s.tag);
                 putSession(s.merge(se));
                 SLogger.d(TAG, "session update:" + s.toString());
             }
-        }
-    }
-
-    private void onSessionUpdate(IMSession session) {
-        sessionMap.remove(session.tag);
-        sessionMap.put(session.tag, session);
-        if (sessionUpdateListener != null) {
-            sessionUpdateListener.onUpdate(session);
         }
     }
 
@@ -97,93 +114,25 @@ public class IMSessionList {
         session.onNewMessage(message);
     }
 
-    private void putSession(IMSession session) {
-        session.setOnUpdateListener(this::onSessionUpdate);
-        session.setIMSessionList(this);
-        GlideIM.getDataStorage().storeSession(account.uid, session);
-        sessionMap.put(session.tag, session);
-    }
+    public Observable<IMSession> loadSessionsList() {
 
-    private IMSession getSession(SessionTag tag) {
-        return sessionMap.get(tag);
-    }
-
-    private IMSession getOrCreateSession(SessionTag tag) {
-        IMSession session = sessionMap.get(tag);
-        if (session == null) {
-            session = IMSession.create(account, tag.id, tag.type, this);
-            if (tag.type == 2) {
-                GroupInfoBean tempGroupInfo = GlideIM.getDataStorage().loadTempGroupInfo(tag.id);
-                if (tempGroupInfo != null) {
-                    session.setInfo(tempGroupInfo);
-                } else {
-                    MsgApi.API.getGroupMessageState(new GetGroupMessageStateDto(tag.id))
-                            .map(RxUtils.bodyConverter())
-                            .map(stateBean -> {
-                                IMSession imSession = IMSession.fromGroupState(account, stateBean);
-                                addOrUpdateSession(imSession);
-                                return imSession;
-                            })
-                            .compose(RxUtils.silentScheduler())
-                            .subscribe(new SilentObserver<>());
-                }
-            } else if (tag.type == 1) {
-                UserInfoBean tempUserInfo = GlideIM.getDataStorage().loadTempUserInfo(tag.id);
-                if (tempUserInfo != null) {
-                    session.setInfo(tempUserInfo);
-                } else {
-                    MsgApi.API.getSession(new GetSessionDto(tag.id))
-                            .map(RxUtils.bodyConverter())
-                            .map(sessionBean -> {
-                                IMSession imSession = IMSession.fromSessionBean(account, sessionBean);
-                                addOrUpdateSession(imSession);
-                                return imSession;
-                            })
-                            .compose(RxUtils.silentScheduler())
-                            .subscribe(new SilentObserver<>());
-                }
-            }
-            addOrUpdateSession(session);
-        }
-        return session;
-    }
-
-    public List<IMSession> getSessions() {
-        return new ArrayList<>(this.sessionMap.values());
-    }
-
-    public Single<Boolean> initSessionsList() {
-        return getSessionList()
-                .toList()
-                //                .flatMap((Function<List<IMSession>, SingleSource<List<IMSession>>>) sessions ->
-                //                        initRecentMessages()
-                //                                .toList()
-                //                                .map(s -> {
-                //                                    sessions.addAll(s);
-                //                                    return sessions;
-                //                                })
-                //                )
-                .doOnSuccess(sessions -> addOrUpdateSession(sessions.toArray(new IMSession[]{})))
-                .zipWith(syncOfflineMsg().toList(), (imSessions, objects) -> true);
-    }
-
-    private Observable<IMSession> getSessionList() {
-
-        Observable<IMSession> groupSession = MsgApi.API.getAllGroupMessageState()
-                .map(RxUtils.bodyConverter())
-                .flatMap(Observable::fromIterable)
-                .map(stateBean -> IMSession.fromGroupState(account, stateBean));
-
-        Observable<IMSession> chatSession = MsgApi.API.getRecentSession()
-                .map(RxUtils.bodyConverter())
-                .flatMap(Observable::fromIterable)
-                .map(sessionBean -> IMSession.fromSessionBean(account, sessionBean))
-                .flatMap((Function<IMSession, ObservableSource<IMSession>>) session -> session.getHistory(0)
-                        .toObservable()
-                        .zipWith(Observable.just(session), (messages, session1) -> session1)
+        return loadChatSession()
+                .mergeWith(loadGroupSession())
+                .flatMap((Function<IMSession, ObservableSource<IMSession>>) session ->
+                        session.loadHistory(0)
+                                .toObservable()
+                                .map(imMessages -> session)
+                )
+                .flatMap((Function<IMSession, ObservableSource<IMSession>>) IMSession::initInfo)
+                .doOnNext(session -> {
+                    SLogger.d(TAG, "======" + session.to);
+                    addOrUpdateSession(session);
+                })
+                .doOnComplete(() ->
+                        syncOfflineMsg()
+                                .compose(RxUtils.silentScheduler())
+                                .subscribe(new SilentObserver<>())
                 );
-        return Observable.merge(groupSession, chatSession)
-                .flatMap((Function<IMSession, ObservableSource<IMSession>>) IMSession::initInfo);
     }
 
     Observable<Object> syncOfflineMsg() {
@@ -210,46 +159,35 @@ public class IMSessionList {
                 );
     }
 
-    private Observable<IMSession> initRecentMessages() {
-
-        Observable<IMMessage> chat = MsgApi.API.getRecentChatMessage()
+    private Observable<IMSession> loadChatSession() {
+        return MsgApi.API.getRecentSession()
                 .map(RxUtils.bodyConverter())
                 .flatMap(Observable::fromIterable)
-                .map(messageBean -> IMMessage.fromMessage(account, messageBean));
+//                .filter(stateBean -> {
+//                    long to = stateBean.getUid1() == account.uid ? stateBean.getUid2() : stateBean.getUid1();
+//                    IMSession session = getSession(Constants.SESSION_TYPE_USER, to);
+//                    if (session != null) {
+//                        session.update(stateBean);
+//                        return false;
+//                    }
+//                    return true;
+//                })
+                .map(sessionBean -> IMSession.create(account, sessionBean));
+    }
 
-        List<Observable<Response<List<GroupMessageBean>>>> gob = new ArrayList<>();
-        for (Long gid : GlideIM.getAccount().getContactsGroup()) {
-            GetGroupMsgHistoryDto d = new GetGroupMsgHistoryDto(gid);
-            gob.add(MsgApi.API.getRecentGroupMessage(d));
-        }
-        Observable<IMMessage> group = Observable.merge(gob)
+    private Observable<IMSession> loadGroupSession() {
+        return MsgApi.API.getAllGroupMessageState()
                 .map(RxUtils.bodyConverter())
                 .flatMap(Observable::fromIterable)
-                .map(messageBean -> IMMessage.fromGroupMessage(account, messageBean));
-
-        return Observable.merge(chat, group)
-                .groupBy(message -> message.tag)
-                .flatMap((Function<GroupedObservable<SessionTag, IMMessage>, ObservableSource<IMSession>>) go -> {
-                    SessionTag t = go.getKey();
-                    if (contain(t)) {
-                        IMSession s = getSession(go.getKey());
-                        return go.toList()
-                                .doOnSuccess(s::addMessages)
-                                .toObservable()
-                                .flatMap((Function<List<IMMessage>, ObservableSource<IMSession>>) messages ->
-                                        Observable.empty()
-                                );
-                    } else {
-                        return go.toList()
-                                .toObservable()
-                                .map(messages -> {
-                                    IMSession session = IMSession.create(account, t, this);
-                                    session.addMessages(messages);
-                                    return session;
-                                });
-                    }
-                });
-
+//                .filter(stateBean -> {
+//                    SessionTag sessionTag = SessionTag.get(Constants.SESSION_TYPE_GROUP, stateBean.getGid());
+//                    if (contain(sessionTag)) {
+//                        getSession(sessionTag).update(stateBean);
+//                        return false;
+//                    }
+//                    return true;
+//                })
+                .map(stateBean -> IMSession.create(account, stateBean));
     }
 
     static class SessionTag implements Comparable<SessionTag> {

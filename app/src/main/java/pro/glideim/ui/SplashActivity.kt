@@ -1,6 +1,7 @@
 package pro.glideim.ui
 
 import com.google.android.material.textview.MaterialTextView
+import pro.glideim.IMDataStorage
 import pro.glideim.MessageListener
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
@@ -29,7 +30,6 @@ class SplashActivity : BaseActivity() {
                 }
                 onError {
                     it.printStackTrace()
-                    GlideIM.getAccount()?.logout()
                     LoginActivity.start(this@SplashActivity)
                     finish()
                 }

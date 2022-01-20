@@ -131,14 +131,12 @@ class ChatActivity : BaseActivity() {
                             mMessage.add(it)
                             scrollToLastMessage()
                         }
-                        ChatMessage.STATE_SRV_RECEIVED -> {
+                        ChatMessage.STATE_RCV_FAILED,
+                        ChatMessage.STATE_SRV_FAILED,
+                        ChatMessage.STATE_SRV_RECEIVED,
+                        ChatMessage.STATE_RCV_RECEIVED ->
                             mMessage.add(it)
-                        }
-                        ChatMessage.STATE_RCV_RECEIVED -> {
-                            mMessage.add(it)
-                        }
                         else -> {
-
                         }
                     }
                 }

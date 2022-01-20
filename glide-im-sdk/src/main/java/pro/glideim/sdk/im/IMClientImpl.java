@@ -21,6 +21,7 @@ import pro.glideim.sdk.protocol.AckRequest;
 import pro.glideim.sdk.protocol.Actions;
 import pro.glideim.sdk.protocol.ChatMessage;
 import pro.glideim.sdk.protocol.CommMessage;
+import pro.glideim.sdk.protocol.GroupMessage;
 import pro.glideim.sdk.utils.SLogger;
 import pro.glideim.sdk.ws.RetrofitWsClient;
 import pro.glideim.sdk.ws.WsClient;
@@ -36,7 +37,7 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
     private final Logger logger;
     private final WsClient connection;
     private final Map<Long, RequestEmitter> requests = new ConcurrentHashMap<>();
-    private final Map<Long, MessageEmitter> messages = new ConcurrentHashMap<>();
+    private final Map<Long, MessageEmitter> messageSending = new ConcurrentHashMap<>();
     private final Type typeCommMsg = new TypeToken<CommMessage<Object>>() {
     }.getType();
     private final Heartbeat heartbeat;
@@ -48,7 +49,13 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
         connection = new RetrofitWsClient(wsUrl);
         heartbeat = Heartbeat.start(this);
         keepAlive = KeepAlive.create(connection);
-        connection.setMessageListener(msg -> onMessage(new Message(msg)));
+        connection.setMessageListener(msg -> {
+            try {
+                onMessage(new Message(msg));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
         logger = SLogger.getLogger();
     }
 
@@ -83,10 +90,9 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
     @Override
     public Single<Boolean> connect() {
         return connection.connect()
-                .doOnSubscribe(disposable -> {
+                .doOnSuccess(aBoolean -> {
                     heartbeat.start();
                     keepAlive.start();
-
                 });
     }
 
@@ -112,15 +118,15 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
     }
 
     public Observable<ChatMessage> resendMessage(ChatMessage message) {
-        return sendMessage(Actions.ACTION_MESSAGE_CHAT_RESEND, message);
+        return sendMessage(Actions.Cli.ACTION_MESSAGE_CHAT_RESEND, message);
     }
 
     public Observable<ChatMessage> sendChatMessage(ChatMessage message) {
-        return sendMessage(Actions.ACTION_MESSAGE_CHAT, message);
+        return sendMessage(Actions.Srv.ACTION_MESSAGE_CHAT, message);
     }
 
     public Observable<ChatMessage> sendGroupMessage(ChatMessage message) {
-        return sendMessage(Actions.ACTION_MESSAGE_GROUP, message);
+        return sendMessage(Actions.Srv.ACTION_MESSAGE_GROUP, message);
     }
 
     @Override
@@ -158,7 +164,7 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
         }
 
         MessageEmitter e = new MessageEmitter(null, message);
-        messages.put(message.getMid(), e);
+        messageSending.put(message.getMid(), e);
         Observable<ChatMessage> ob = ObservableSubscribeOn.create(emitter -> {
             e.emitter = emitter;
             e.send(action);
@@ -167,7 +173,7 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
                 .timeout(TIMEOUT_MESSAGE, TimeUnit.SECONDS)
                 .doOnNext(msg -> {
                     if (msg.getState() == ChatMessage.STATE_RCV_RECEIVED) {
-                        messages.remove(msg.getMid());
+                        messageSending.remove(msg.getMid());
                     }
                 })
                 .doOnError(throwable -> keepAlive.check());
@@ -189,15 +195,15 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
         }
         logger.d(TAG, m.toString());
         switch (m.getAction()) {
-            case Actions.ACTION_MESSAGE_CHAT:
+            case Actions.Srv.ACTION_MESSAGE_CHAT:
                 onChatMessage(msg);
                 return;
-            case Actions.ACTION_ACK_MESSAGE:
-            case Actions.ACTION_ACK_NOTIFY:
-                onAck(msg);
-                return;
-            case Actions.ACTION_ACK_GROUP_MSG:
+            case Actions.Srv.ACTION_MESSAGE_GROUP:
                 onGroupMessage(msg);
+                return;
+            case Actions.Srv.ACTION_ACK_MESSAGE:
+            case Actions.Srv.ACTION_ACK_NOTIFY:
+                onAck(msg);
                 return;
             case Actions.ACTION_HEARTBEAT:
                 send(new CommMessage<>(MESSAGE_VER, Actions.ACTION_HEARTBEAT, 0, ""));
@@ -214,7 +220,10 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
 
     private void onMessage(CommMessage<Object> m) {
         switch (m.getAction()) {
-            case Actions.ACTION_NOTIFY:
+            case Actions.Srv.ACTION_NOTIFY_ERROR:
+            case Actions.Srv.ACTION_NOTIFY_LOGIN:
+            case Actions.Srv.ACTION_NOTIFY_LOGOUT:
+            case Actions.Srv.ACTION_NOTIFY_GROUP:
             case Actions.Srv.ACTION_KICK_OUT:
             case Actions.Srv.ACTION_NEW_CONTACT:
                 messageListener.onControlMessage(m);
@@ -232,11 +241,11 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
         if (ack == null) {
             throw new NullPointerException("ack message data is null");
         }
-        if (!messages.containsKey(ack.getMid())) {
+        if (!messageSending.containsKey(ack.getMid())) {
             logger.d(TAG, "ack mid not exist");
             return;
         }
-        MessageEmitter emitter = messages.get(m.getData().getMid());
+        MessageEmitter emitter = messageSending.get(m.getData().getMid());
         if (emitter != null) {
             logger.d(TAG, "ack message mid=" + m.getData().getMid());
             emitter.onAck(m);
@@ -246,7 +255,16 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
     }
 
     private void onGroupMessage(Message msg) {
-
+        Type type = new TypeToken<CommMessage<GroupMessage>>() {
+        }.getType();
+        CommMessage<GroupMessage> c = deserialize(type, msg);
+        GroupMessage cm = c.getData();
+        if (messageListener != null) {
+            messageListener.onGroupMessage(cm);
+        }
+        // ACK
+        AckRequest a = new AckRequest(cm.getMid(), cm.getFrom(), 0);
+        send(new CommMessage<>(MESSAGE_VER, Actions.Cli.ACTION_ACK_REQUEST, 0, a));
     }
 
     private void onChatMessage(Message msg) {
@@ -259,7 +277,6 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
         }
         // ACK
         AckRequest a = new AckRequest(cm.getMid(), cm.getFrom(), 0);
-        logger.d(TAG, "send ack");
         send(new CommMessage<>(MESSAGE_VER, Actions.Cli.ACTION_ACK_REQUEST, 0, a));
     }
 
@@ -311,6 +328,7 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
 
         void send(String action) {
             CommMessage<ChatMessage> c = new CommMessage<>(MESSAGE_VER, action, 0, msg);
+            emitter.onNext(msg.setState(ChatMessage.STATE_SRV_SENDING));
             boolean send = IMClientImpl.this.send(c);
             if (!send) {
                 if (IMClientImpl.this.connection.isConnected()) {
@@ -318,8 +336,6 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
                 } else {
                     emitter.onError(new Exception("send message failed due to socket closed"));
                 }
-            } else {
-                emitter.onNext(msg.setState(ChatMessage.STATE_SRV_SENDING));
             }
         }
 
@@ -328,11 +344,10 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
                 return;
             }
             switch (a.getAction()) {
-                case Actions.ACTION_ACK_MESSAGE:
+                case Actions.Srv.ACTION_ACK_MESSAGE:
                     emitter.onNext(msg.setState(ChatMessage.STATE_SRV_RECEIVED));
                     break;
-                case Actions.ACTION_ACK_GROUP_MSG:
-                case Actions.ACTION_ACK_NOTIFY:
+                case Actions.Srv.ACTION_ACK_NOTIFY:
                     emitter.onNext(msg.setState(ChatMessage.STATE_RCV_RECEIVED));
                     emitter.onComplete();
                     break;

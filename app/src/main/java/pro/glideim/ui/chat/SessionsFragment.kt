@@ -21,6 +21,7 @@ class SessionsFragment : BaseFragment() {
     private val mRvSessions by lazy { findViewById<RecyclerView>(R.id.rv_sessions) }
     private val mSrfRefresh by lazy { findViewById<SwipeRefreshLayout>(R.id.srf_refresh) }
 
+    private val mSessionMap = mutableMapOf<Long, SessionViewData>()
     private val mSessionList = MySortedList<SessionViewData>()
     private val mAdapter = SuperAdapter(mSessionList)
 
@@ -49,6 +50,12 @@ class SessionsFragment : BaseFragment() {
             )
         )
 
+        mIMSessionList.sessions.forEach {
+            val s = SessionViewData.create(it)
+            mSessionMap[s.to] = s
+            mSessionList.add(s)
+        }
+
         mSrfRefresh.onRefresh {
             requestData()
         }
@@ -56,27 +63,40 @@ class SessionsFragment : BaseFragment() {
         mIMSessionList.setSessionUpdateListener(
             object : SessionUpdateListener {
                 override fun onUpdate(session: IMSession) {
-                    requireActivity().runOnUiThread {
-                        val s = SessionViewData.create(session)
-                        val updateAt = s.updateAt
-                        s.updateAt = s.preUpdateAt
+                    val updated = SessionViewData.create(session)
 
+                    val old = mSessionMap[updated.to]
+                    requireActivity().runOnUiThread {
                         mSessionList.l.beginBatchedUpdates()
-                        mSessionList.remove(s)
-                        s.updateAt = updateAt
-                        mSessionList.add(s)
+                        if (old != null) {
+                            mSessionList.remove(old)
+                        } else {
+                            val updateAt = updated.updateAt
+                            updated.updateAt = updated.preUpdateAt
+                            mSessionList.remove(updated)
+                            updated.updateAt = updateAt
+                        }
+                        mSessionMap[updated.to] = updated
+                        mSessionList.add(updated)
                         mSessionList.l.endBatchedUpdates()
                     }
                 }
 
                 override fun onNewSession(session: IMSession) {
                     requireActivity().runOnUiThread {
-                        mSessionList.add(SessionViewData.create(session))
+                        val s = SessionViewData.create(session)
+                        mSessionMap[s.to] = s
+                        mSessionList.add(s)
                     }
                 }
             })
 
         mSrfRefresh.startRefresh()
+    }
+
+    override fun onDestroyView() {
+        mIMSessionList.setSessionUpdateListener(null)
+        super.onDestroyView()
     }
 
     override fun onRequestFinish() {
@@ -85,10 +105,10 @@ class SessionsFragment : BaseFragment() {
     }
 
     private fun requestData() {
-        mIMSessionList.initSessionsList()
+        mIMSessionList.loadSessionsList()
             .io2main()
-            .request(this) {
-                mSessionList.addAll(mIMSessionList.sessions.map { s -> SessionViewData.create(s) })
+            .request2(this) {
+
             }
     }
 

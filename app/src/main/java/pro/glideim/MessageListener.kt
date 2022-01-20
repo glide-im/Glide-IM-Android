@@ -9,7 +9,11 @@ import android.graphics.BitmapFactory
 import com.blankj.utilcode.util.ActivityUtils
 import com.blankj.utilcode.util.NotificationUtils
 import com.blankj.utilcode.util.ToastUtils
+import com.dengzii.ktx.android.showWithLifecycle
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import pro.glideim.base.BaseActivity
+import pro.glideim.sdk.Constants
+import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.IMMessage
 import pro.glideim.sdk.IMMessageListener
 import pro.glideim.ui.Events
@@ -87,7 +91,7 @@ class MessageListener private constructor(private val context: Application) : IM
 
     override fun onKickOut() {
         ActivityUtils.getTopActivity().let { activity ->
-            MaterialAlertDialogBuilder(activity).apply {
+            val apply = MaterialAlertDialogBuilder(activity).apply {
                 setTitle("被迫下线")
                 setMessage("你的账号在另一台设备上登录")
                 setPositiveButton("确定") { d, _ ->
@@ -95,18 +99,15 @@ class MessageListener private constructor(private val context: Application) : IM
                     LoginActivity.start(activity)
                 }
             }
-                .create()
-                .show()
+            activity.runOnUiThread {
+                apply.create().showWithLifecycle(activity as BaseActivity)
+            }
         }
-    }
-
-    override fun onNotifyNeedAuth() {
-
     }
 
     override fun onTokenInvalid() {
         ActivityUtils.getTopActivity()?.let { activity ->
-            MaterialAlertDialogBuilder(activity).apply {
+            val block: MaterialAlertDialogBuilder.() -> Unit = {
                 setTitle("登录过期")
                 setMessage("登录身份信息已过期, 请重新登录")
                 setPositiveButton("确定") { d, _ ->
@@ -114,8 +115,9 @@ class MessageListener private constructor(private val context: Application) : IM
                     LoginActivity.start(activity)
                 }
             }
-                .create()
-                .show()
+            activity.runOnUiThread {
+                MaterialAlertDialogBuilder(activity).apply(block).create().show()
+            }
         }
     }
 }

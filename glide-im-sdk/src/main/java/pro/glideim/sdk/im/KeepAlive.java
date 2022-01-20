@@ -41,7 +41,6 @@ public class KeepAlive implements ConnStateListener {
     void start() {
         stop();
         stopped = false;
-        check();
     }
 
     void stop() {
@@ -62,6 +61,7 @@ public class KeepAlive implements ConnStateListener {
             reconnect.dispose();
         }
         reconnecting = true;
+        retry = 0;
         reconnect = client
                 .connect()
                 .compose(RxUtils.silentSchedulerSingle())

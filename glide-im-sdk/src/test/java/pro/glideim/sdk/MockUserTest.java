@@ -26,9 +26,9 @@ public class MockUserTest {
 
         RetrofitManager.init("http://localhost:8081/api/");
         imClient.connect().blockingGet();
-        imClient.setMessageListener(m -> {
-            System.out.println("On Receive Message ===>>> " + RetrofitManager.toJson(m));
-        });
+//        imClient.setMessageListener(m -> {
+//            System.out.println("On Receive Message ===>>> " + RetrofitManager.toJson(m));
+//        });
 
         Thread.sleep(1000);
     }

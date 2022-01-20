@@ -59,7 +59,6 @@ public class Heartbeat implements ConnStateListener {
 
     public void stop() {
         if (disposable != null && !disposable.isDisposed()) {
-            SLogger.d(TAG, "stop");
             disposable.dispose();
         }
     }

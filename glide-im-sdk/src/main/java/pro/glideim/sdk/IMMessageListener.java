@@ -9,7 +9,5 @@ public interface IMMessageListener {
 
     void onKickOut();
 
-    void onNotifyNeedAuth();
-
     void onTokenInvalid();
 }

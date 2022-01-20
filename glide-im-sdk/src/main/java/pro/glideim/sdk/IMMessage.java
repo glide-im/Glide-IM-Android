@@ -4,10 +4,12 @@ import androidx.annotation.NonNull;
 
 import java.util.Objects;
 
+import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.MessageBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.protocol.ChatMessage;
+import pro.glideim.sdk.protocol.GroupMessage;
 import pro.glideim.sdk.utils.RxUtils;
 
 public class IMMessage {
@@ -52,7 +54,7 @@ public class IMMessage {
         } else {
             id = m.from;
         }
-        m.setTarget(account, 1, id);
+        m.setTarget(account, Constants.SESSION_TYPE_USER, id);
         return m;
     }
 
@@ -73,7 +75,7 @@ public class IMMessage {
         } else {
             id = m.from;
         }
-        m.setTarget(account, 1, id);
+        m.setTarget(account, Constants.SESSION_TYPE_USER, id);
         return m;
     }
 
@@ -83,16 +85,31 @@ public class IMMessage {
         m.setMid(messageBean.getMid());
         m.setCliSeq(0);
         m.setFrom(messageBean.getSender());
-        m.setTo(0);
+        m.setTo(messageBean.getGid());
         m.setSeq(messageBean.getSeq());
         m.setType(messageBean.getType());
         m.setSendAt(messageBean.getSentAt());
         m.setContent(messageBean.getContent());
-        m.setTarget(account, 2, m.to);
+        m.setTarget(account, Constants.SESSION_TYPE_GROUP, m.to);
         return m;
     }
 
-    public IMSession getSession(){
+    public static IMMessage fromGroupMessage(IMAccount account, GroupMessage message) {
+        IMMessage m = new IMMessage();
+        m.isMe = message.getFrom() == account.uid;
+        m.setMid(message.getMid());
+        m.setCliSeq(0);
+        m.setFrom(message.getFrom());
+        m.setTo(message.getTo());
+        m.setSeq(message.getSeq());
+        m.setType(message.getType());
+        m.setSendAt(message.getSendAt());
+        m.setContent(message.getContent());
+        m.setTarget(account, Constants.SESSION_TYPE_GROUP, m.to);
+        return m;
+    }
+
+    public IMSession getSession() {
         return session;
     }
 
@@ -142,7 +159,15 @@ public class IMMessage {
                 }
                 break;
             case 2:
-
+                GlideIM.getGroupInfo(id)
+                        .compose(RxUtils.silentScheduler())
+                        .subscribe(new SilentObserver<GroupInfoBean>() {
+                            @Override
+                            public void onNext(@NonNull GroupInfoBean userInfoBean) {
+                                avatar = userInfoBean.getAvatar();
+                                title = userInfoBean.getName();
+                            }
+                        });
                 break;
             default:
 

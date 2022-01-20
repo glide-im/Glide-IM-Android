@@ -3,6 +3,8 @@ package pro.glideim.ui
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.edit
+import androidx.core.view.ContentInfoCompat
+import com.blankj.utilcode.util.ActivityUtils
 import com.blankj.utilcode.util.SPUtils
 import com.dengzii.ktx.android.content.update
 import com.dengzii.ktx.android.content.use
@@ -31,7 +33,9 @@ class LoginActivity : BaseActivity() {
         @JvmStatic
         fun start(context: Context) {
             val starter = Intent(context, LoginActivity::class.java)
+            starter.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             context.startActivity(starter)
+            ActivityUtils.finishOtherActivities(LoginActivity::class.java)
         }
     }
 

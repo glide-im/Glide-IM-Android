@@ -4,16 +4,20 @@ import androidx.annotation.NonNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
 import io.reactivex.Single;
+import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.msg.GetChatHistoryDto;
+import pro.glideim.sdk.api.msg.GetGroupMessageStateDto;
 import pro.glideim.sdk.api.msg.GetGroupMsgHistoryDto;
+import pro.glideim.sdk.api.msg.GetSessionDto;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.GroupMessageStateBean;
 import pro.glideim.sdk.api.msg.MessageBean;
@@ -59,7 +63,7 @@ public class IMSession {
         this.account = account;
     }
 
-    public static IMSession fromGroupState(IMAccount account, GroupMessageStateBean stateBean) {
+    static IMSession create(IMAccount account, GroupMessageStateBean stateBean) {
         IMSession s = new IMSession(account, stateBean.getGid(), Constants.SESSION_TYPE_GROUP);
         s.unread = 0;
         s.setUpdateAt(stateBean.getLastMsgAt());
@@ -67,7 +71,7 @@ public class IMSession {
         return s;
     }
 
-    public static IMSession fromSessionBean(IMAccount account, SessionBean sessionBean) {
+    static IMSession create(IMAccount account, SessionBean sessionBean) {
         IMSession s;
         if (sessionBean.getUid1() == account.uid) {
             s = new IMSession(account, sessionBean.getUid2(), Constants.SESSION_TYPE_USER);
@@ -79,14 +83,14 @@ public class IMSession {
         return s;
     }
 
-    public static IMSession create(IMAccount account, long to, int type, IMSessionList imSessionList) {
+    static IMSession create(IMAccount account, long to, int type, IMSessionList imSessionList) {
         IMSession s = new IMSession(account, to, type);
         s.setIMSessionList(imSessionList);
         s.initTargetInfo();
         return s;
     }
 
-    public static IMSession create(IMAccount account, IMSessionList.SessionTag t, IMSessionList imSessionList) {
+    static IMSession create(IMAccount account, IMSessionList.SessionTag t, IMSessionList imSessionList) {
         IMSession s = new IMSession(account, t.getId(), t.getType());
         s.setIMSessionList(imSessionList);
         s.initTargetInfo();
@@ -165,11 +169,19 @@ public class IMSession {
     }
 
 
-    public void onMessageSendSuccess(IMMessage message) {
+    private void onMessageSendSuccess(IMMessage message) {
         onSessionUpdate();
     }
 
-    public void onMessageReceived(IMMessage message) {
+    private void onMessageSendFailed(IMMessage message) {
+        onSessionUpdate();
+    }
+
+    private void onMessageReceiveFailed(IMMessage message) {
+
+    }
+
+    private void onMessageReceived(IMMessage message) {
 
     }
 
@@ -191,29 +203,9 @@ public class IMSession {
         this.messageChangeListener = l;
     }
 
-    public void initTargetInfo() {
-        switch (type) {
-            case Constants.SESSION_TYPE_USER:
-                GlideIM.getUserInfo(to)
-                        .compose(RxUtils.silentScheduler())
-                        .subscribe(new SilentObserver<UserInfoBean>() {
-                            @Override
-                            public void onNext(@NonNull UserInfoBean userInfoBean) {
-                                setInfo(userInfoBean);
-                            }
-                        });
-                break;
-            case Constants.SESSION_TYPE_GROUP:
-                GlideIM.getGroupInfo(to)
-                        .compose(RxUtils.silentScheduler())
-                        .subscribe(new SilentObserver<GroupInfoBean>() {
-                            @Override
-                            public void onNext(@NonNull GroupInfoBean groupInfoBean) {
-                                setInfo(groupInfoBean);
-                            }
-                        });
-                break;
-        }
+    private void initTargetInfo() {
+        initInfo().compose(RxUtils.silentScheduler())
+                .subscribe(new SilentObserver<>());
     }
 
     public List<IMMessage> getLatestMessage() {
@@ -271,7 +263,19 @@ public class IMSession {
         onSessionUpdate();
     }
 
-    public Single<List<IMMessage>> getHistory(long beforeMid) {
+    public Single<List<IMMessage>> loadHistory(long beforeMid) {
+
+        // return temp
+        if (beforeMid == 0 && !messageTreeMap.isEmpty()) {
+            Map.Entry<Long, IMMessage> entry = messageTreeMap.lastEntry();
+            List<IMMessage> m = new ArrayList<>();
+            while (entry != null && m.size() < 20) {
+                m.add(entry.getValue());
+                entry = messageTreeMap.lowerEntry(entry.getKey());
+            }
+            return Single.just(m);
+        }
+
         switch (type) {
             case Constants.SESSION_TYPE_USER:
                 GetChatHistoryDto getChatHistoryDto = new GetChatHistoryDto(to, beforeMid);
@@ -307,9 +311,15 @@ public class IMSession {
         }
         switch (type) {
             case Constants.SESSION_TYPE_USER:
-                return GlideIM.getUserInfo(to).map(this::setInfo);
+                return GlideIM.getUserInfo(to)
+                        .map(this::setInfo);
             case Constants.SESSION_TYPE_GROUP:
-                return GlideIM.getGroupInfo(to).map(this::setInfo);
+                return GlideIM.getGroupInfo(to)
+                        .map(this::setInfo)
+                        .doOnError(throwable -> {
+                            SLogger.e(TAG, throwable);
+                        })
+                        .onErrorReturn(throwable -> null);
             default:
                 return Observable.just(this);
         }
@@ -331,6 +341,14 @@ public class IMSession {
         avatar = userInfoBean.getAvatar();
         onSessionUpdate();
         return this;
+    }
+
+    public void update(GroupMessageStateBean stateBean){
+        updateAt = stateBean.getLastMsgAt();
+    }
+
+    public void update(SessionBean stateBean){
+
     }
 
     @Override
@@ -393,6 +411,10 @@ public class IMSession {
 
                     switch (chatMessage.getState()) {
                         case ChatMessage.STATE_INIT:
+                            SLogger.d(TAG, "message initialized");
+                            break;
+                        case ChatMessage.STATE_RCV_SENDING:
+                            SLogger.d(TAG, "resending message to receiver mid=" + r.getMid());
                             break;
                         case ChatMessage.STATE_CREATED:
                             onSendMessageCreated(r);
@@ -402,6 +424,12 @@ public class IMSession {
                             break;
                         case ChatMessage.STATE_RCV_RECEIVED:
                             onMessageReceived(r);
+                            break;
+                        case ChatMessage.STATE_SRV_FAILED:
+                            onMessageSendFailed(r);
+                            break;
+                        case ChatMessage.STATE_RCV_FAILED:
+                            SLogger.d(TAG, "message send to receiver failed mid=" + r.getMid());
                             break;
                     }
                     return r;
