@@ -10,6 +10,7 @@ import io.reactivex.Single;
 import io.reactivex.SingleSource;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.annotations.Nullable;
+import io.reactivex.functions.Action;
 import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.auth.AuthApi;
 import pro.glideim.sdk.api.auth.AuthBean;
@@ -164,8 +165,8 @@ public class IMAccount implements MessageListener {
     public void logout() {
         AuthApi.API.logout()
                 .compose(RxUtils.silentScheduler())
+                .doOnComplete(() -> GlideIM.getDataStorage().storeToken(uid, ""))
                 .subscribe(new SilentObserver<>());
-        GlideIM.getDataStorage().storeToken(uid, "");
         if (!wsAuthed) {
             return;
         }

@@ -25,7 +25,7 @@ public class IMSessionList {
 
     public static final String TAG = IMSessionList.class.getSimpleName();
 
-    private final TreeMap<SessionTag, IMSession> sessionMap = new TreeMap<>();
+    private final LinkedHashMap<SessionTag, IMSession> sessionMap = new LinkedHashMap<>();
     private final IMAccount account;
     private SessionUpdateListener sessionUpdateListener;
 

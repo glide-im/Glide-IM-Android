@@ -88,7 +88,7 @@ public class IMMessage {
         m.setTo(messageBean.getGid());
         m.setSeq(messageBean.getSeq());
         m.setType(messageBean.getType());
-        m.setSendAt(messageBean.getSentAt());
+        m.setSendAt(messageBean.getSendAt());
         m.setContent(messageBean.getContent());
         m.setTarget(account, Constants.SESSION_TYPE_GROUP, m.to);
         return m;

@@ -22,7 +22,6 @@ class ProfileFragment : BaseFragment() {
     override fun initView() {
 
         mBtLogout.setOnClickListener {
-            IMDataStorage.logout()
             GlideIM.getAccount().logout()
             activity?.finish()
             LoginActivity.start(requireContext())

@@ -1,7 +1,5 @@
 package pro.glideim.sdk;
 
-import androidx.annotation.NonNull;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -11,13 +9,10 @@ import java.util.TreeMap;
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
 import io.reactivex.Single;
-import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.msg.GetChatHistoryDto;
-import pro.glideim.sdk.api.msg.GetGroupMessageStateDto;
 import pro.glideim.sdk.api.msg.GetGroupMsgHistoryDto;
-import pro.glideim.sdk.api.msg.GetSessionDto;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.GroupMessageStateBean;
 import pro.glideim.sdk.api.msg.MessageBean;
@@ -66,7 +61,6 @@ public class IMSession {
     static IMSession create(IMAccount account, GroupMessageStateBean stateBean) {
         IMSession s = new IMSession(account, stateBean.getGid(), Constants.SESSION_TYPE_GROUP);
         s.unread = 0;
-        s.setUpdateAt(stateBean.getLastMsgAt());
         s.lastMsgId = stateBean.getLastMID();
         return s;
     }
@@ -122,10 +116,9 @@ public class IMSession {
         }
         for (IMMessage message : messages) {
             messageTreeMap.put(message.getMid(), message);
-            if (message.getMid() > last) {
-                setLastMessage(message);
-                last = message.getMid();
-            }
+        }
+        if (!messageTreeMap.isEmpty() && messageTreeMap.lastKey() != last) {
+            setLastMessage(messageTreeMap.lastEntry().getValue());
         }
         onSessionUpdate();
     }
@@ -343,11 +336,11 @@ public class IMSession {
         return this;
     }
 
-    public void update(GroupMessageStateBean stateBean){
-        updateAt = stateBean.getLastMsgAt();
+    public void update(GroupMessageStateBean stateBean) {
+        setUpdateAt(stateBean.getLastMsgAt());
     }
 
-    public void update(SessionBean stateBean){
+    public void update(SessionBean stateBean) {
 
     }
 

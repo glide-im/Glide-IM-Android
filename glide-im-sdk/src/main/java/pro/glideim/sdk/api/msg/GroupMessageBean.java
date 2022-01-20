@@ -6,6 +6,8 @@ public class GroupMessageBean {
     private long gid;
     private int type;
     private long seq;
+    private long sendAt;
+    private String content;
 
     public long getSeq() {
         return seq;
@@ -14,9 +16,6 @@ public class GroupMessageBean {
     public void setSeq(long seq) {
         this.seq = seq;
     }
-
-    private long sentAt;
-    private String content;
 
     public long getMid() {
         return mid;
@@ -50,12 +49,12 @@ public class GroupMessageBean {
         this.type = type;
     }
 
-    public long getSentAt() {
-        return sentAt;
+    public long getSendAt() {
+        return sendAt;
     }
 
-    public void setSentAt(long sentAt) {
-        this.sentAt = sentAt;
+    public void setSendAt(long sendAt) {
+        this.sendAt = sendAt;
     }
 
     public String getContent() {
