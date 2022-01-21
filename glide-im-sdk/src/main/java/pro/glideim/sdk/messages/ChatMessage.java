@@ -1,4 +1,4 @@
-package pro.glideim.sdk.protocol;
+package pro.glideim.sdk.messages;
 
 public class ChatMessage {
 
@@ -10,6 +10,8 @@ public class ChatMessage {
     public static final int STATE_RCV_RECEIVED = 5;
     public static final int STATE_SRV_FAILED = 6;
     public static final int STATE_RCV_FAILED = 7;
+
+    public static final int STATE_UPDATED = 1000;
 
     private long mid;
     private long cSeq;

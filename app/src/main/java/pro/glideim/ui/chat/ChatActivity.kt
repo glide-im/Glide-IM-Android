@@ -19,7 +19,7 @@ import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.IMMessage
 import pro.glideim.sdk.IMSession
 import pro.glideim.sdk.MessageChangeListener
-import pro.glideim.sdk.protocol.ChatMessage
+import pro.glideim.sdk.messages.ChatMessage
 import pro.glideim.utils.io2main
 import pro.glideim.utils.request
 

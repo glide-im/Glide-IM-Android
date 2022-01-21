@@ -14,8 +14,8 @@ import pro.glideim.sdk.api.auth.LoginDto;
 import pro.glideim.sdk.api.auth.RegisterDto;
 import pro.glideim.sdk.http.RetrofitManager;
 import pro.glideim.sdk.im.IMClientImpl;
-import pro.glideim.sdk.protocol.ChatMessage;
-import pro.glideim.sdk.protocol.CommMessage;
+import pro.glideim.sdk.messages.ChatMessage;
+import pro.glideim.sdk.messages.CommMessage;
 
 public class MockUserTest {
 

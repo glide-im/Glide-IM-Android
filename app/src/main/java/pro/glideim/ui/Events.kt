@@ -1,11 +1,11 @@
 package pro.glideim.ui
 
-import com.blankj.utilcode.util.BusUtils
+import pro.glideim.utils.MyBusUtils
 
 object Events {
     const val EVENT_UPDATE_CONTACTS = "EVENT_UPDATE_CONTACTS"
 
-    fun updateContacts(){
-        BusUtils.post(Events.EVENT_UPDATE_CONTACTS)
+    fun updateContacts() {
+        MyBusUtils.post(EVENT_UPDATE_CONTACTS)
     }
 }

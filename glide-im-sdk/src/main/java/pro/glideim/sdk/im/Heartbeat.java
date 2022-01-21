@@ -4,8 +4,8 @@ import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
 import io.reactivex.disposables.Disposable;
-import pro.glideim.sdk.protocol.Actions;
-import pro.glideim.sdk.protocol.CommMessage;
+import pro.glideim.sdk.messages.Actions;
+import pro.glideim.sdk.messages.CommMessage;
 import pro.glideim.sdk.utils.SLogger;
 import pro.glideim.sdk.ws.WsClient;
 

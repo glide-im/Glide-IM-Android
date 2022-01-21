@@ -27,7 +27,7 @@ import java.util.concurrent.CopyOnWriteArraySet;
  *     desc  : utils about bus
  * </pre>
  */
-public final class BusUtils {
+public final class MyBusUtils {
 
     private static final Object NULL = "nULl";
     private static final String TAG  = "BusUtils";
@@ -37,13 +37,13 @@ public final class BusUtils {
     private final Map<String, List<String>>        mClassName_TagsMap           = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Object>> mClassName_Tag_Arg4StickyMap = new ConcurrentHashMap<>();
 
-    private BusUtils() {
+    private MyBusUtils() {
         init();
     }
 
     /**
      * It'll be injected the bus who have {@link Bus} annotation
-     * by function of {@link BusUtils#registerBus} when execute transform task.
+     * by function of {@link MyBusUtils#registerBus} when execute transform task.
      */
     private void init() {/*inject*/}
 
@@ -101,7 +101,7 @@ public final class BusUtils {
         return "BusUtils: " + mTag_BusInfoListMap;
     }
 
-    private static BusUtils getInstance() {
+    private static MyBusUtils getInstance() {
         return LazyHolder.INSTANCE;
     }
 
@@ -455,6 +455,6 @@ public final class BusUtils {
     }
 
     private static class LazyHolder {
-        private static final BusUtils INSTANCE = new BusUtils();
+        private static final MyBusUtils INSTANCE = new MyBusUtils();
     }
 }

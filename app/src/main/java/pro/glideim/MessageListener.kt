@@ -16,15 +16,28 @@ import pro.glideim.sdk.Constants
 import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.IMMessage
 import pro.glideim.sdk.IMMessageListener
+import pro.glideim.sdk.push.NewContactsMessage
 import pro.glideim.ui.Events
 import pro.glideim.ui.LoginActivity
 import pro.glideim.ui.chat.ChatActivity
+import pro.glideim.utils.io2main
+import pro.glideim.utils.request
 
 class MessageListener private constructor(private val context: Application) : IMMessageListener {
 
     companion object {
 
         private lateinit var instance: MessageListener
+        private val notifyChannelMsg = NotificationUtils.ChannelConfig(
+            "pro.glideim.message",
+            "GlideIM-Message",
+            NotificationUtils.IMPORTANCE_HIGH
+        )
+        private val notifyChannelNotify = NotificationUtils.ChannelConfig(
+            "pro.glideim.notify",
+            "GlideIM-Notify",
+            NotificationUtils.IMPORTANCE_HIGH
+        )
 
         fun init(context: Application) {
             instance = MessageListener(context)
@@ -46,12 +59,6 @@ class MessageListener private constructor(private val context: Application) : IM
             return
         }
 
-        val c = NotificationUtils.ChannelConfig(
-            "pro.glideim.message",
-            "GlideIM-Message",
-            NotificationUtils.IMPORTANCE_HIGH
-        )
-
         val intent = ChatActivity.getIntent(context, message.targetId, message.targetType)
         val onClick =
             PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT)
@@ -69,7 +76,7 @@ class MessageListener private constructor(private val context: Application) : IM
         val onDel =
             PendingIntent.getActivity(context, 0, delIntent, PendingIntent.FLAG_CANCEL_CURRENT)
 
-        val notification = NotificationUtils.getNotification(c) {
+        val notification = NotificationUtils.getNotification(notifyChannelMsg) {
             it.setContentText(message.content)
             it.setContentTitle("来自${message.title}的${unread}条未读消息")
             it.setSmallIcon(R.mipmap.ic_launcher)
@@ -85,7 +92,56 @@ class MessageListener private constructor(private val context: Application) : IM
         systemService.notify(to.hashCode(), notification)
     }
 
-    override fun onNewContact() {
+    override fun onNewContact(c: NewContactsMessage) {
+
+        val infoLoaded = { title: String ->
+            val notification = NotificationUtils.getNotification(notifyChannelMsg) {
+                val content = when (c.type) {
+                    Constants.SESSION_TYPE_GROUP -> "用户 ${c.from} 邀请你到群聊 $title"
+                    Constants.SESSION_TYPE_USER -> "用户 ${c.from} 已和你成为好友"
+                    else -> "-"
+                }
+                it.setContentText(content)
+                it.setContentTitle("新联系人")
+                it.setSmallIcon(R.mipmap.ic_launcher)
+                it.setLargeIcon(
+                    BitmapFactory.decodeResource(
+                        context.resources,
+                        R.mipmap.ic_launcher
+                    )
+                )
+                val intent = ChatActivity.getIntent(context, c.id, c.type)
+                val onClick =
+                    PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT)
+                it.setContentIntent(onClick)
+                it.setOnlyAlertOnce(true)
+                it.setAutoCancel(true)
+            }
+            val systemService =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            systemService.notify(c.id.hashCode(), notification)
+        }
+
+        when (c.type) {
+            Constants.SESSION_TYPE_GROUP -> {
+                GlideIM.getGroupInfo(c.id)
+                    .io2main()
+                    .request {
+                        onSuccess {
+                            infoLoaded(it.name)
+                        }
+                    }
+            }
+            Constants.SESSION_TYPE_USER -> {
+                GlideIM.getUserInfo(c.id)
+                    .io2main()
+                    .request {
+                        onSuccess {
+                            infoLoaded(it.nickname)
+                        }
+                    }
+            }
+        }
         Events.updateContacts()
     }
 
@@ -94,6 +150,7 @@ class MessageListener private constructor(private val context: Application) : IM
             val apply = MaterialAlertDialogBuilder(activity).apply {
                 setTitle("被迫下线")
                 setMessage("你的账号在另一台设备上登录")
+                setCancelable(false)
                 setPositiveButton("确定") { d, _ ->
                     d.dismiss()
                     LoginActivity.start(activity)
@@ -110,6 +167,7 @@ class MessageListener private constructor(private val context: Application) : IM
             val block: MaterialAlertDialogBuilder.() -> Unit = {
                 setTitle("登录过期")
                 setMessage("登录身份信息已过期, 请重新登录")
+                setCancelable(false)
                 setPositiveButton("确定") { d, _ ->
                     d.dismiss()
                     LoginActivity.start(activity)

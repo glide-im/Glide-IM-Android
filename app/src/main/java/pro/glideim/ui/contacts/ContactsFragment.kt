@@ -32,6 +32,7 @@ class ContactsFragment : BaseFragment() {
     private val mTvTitle by lazy { findViewById<MaterialTextView>(R.id.tv_title) }
     private val mRvSessions by lazy { findViewById<RecyclerView>(R.id.rv_contacts) }
     private val mSrfRefresh by lazy { findViewById<SwipeRefreshLayout>(R.id.srf_refresh) }
+    private val mLlNotifications by lazy { findViewById<ViewGroup>(R.id.ll_notify) }
 
     private val mContacts = mutableListOf<Any>()
     private val mAdapter = SuperAdapter(mContacts)
@@ -40,13 +41,13 @@ class ContactsFragment : BaseFragment() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        BusUtils.register(this)
+        MyBusUtils.register(this)
 
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        BusUtils.unregister(this)
+        MyBusUtils.unregister(this)
     }
 
     override fun initView() {
@@ -74,6 +75,9 @@ class ContactsFragment : BaseFragment() {
                 0f
             )
         )
+        mLlNotifications.setOnClickListener {
+            toast("TODO")
+        }
         mSrfRefresh.onRefresh {
             requestData()
         }
@@ -100,10 +104,10 @@ class ContactsFragment : BaseFragment() {
         mSrfRefresh.finishRefresh()
     }
 
-    @BusUtils.Bus(
+    @MyBusUtils.Bus(
         tag = Events.EVENT_UPDATE_CONTACTS,
         sticky = false,
-        threadMode = BusUtils.ThreadMode.MAIN
+        threadMode = MyBusUtils.ThreadMode.MAIN
     )
     fun updateContacts() {
         mSrfRefresh.startRefresh()
@@ -131,7 +135,7 @@ class ContactsFragment : BaseFragment() {
     }
 
     private fun showCreateGroup() {
-        MaterialAlertDialogBuilder(requireContext()).apply {
+        MaterialAlertDialogBuilder(requireContext(), com.google.android.material.R.style.AlertDialog_AppCompat_Light).apply {
             setTitle("Create Group")
             val et = TextInputEditText(requireContext())
             et.layoutParams = ViewGroup.LayoutParams(

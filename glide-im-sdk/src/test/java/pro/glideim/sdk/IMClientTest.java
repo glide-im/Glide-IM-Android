@@ -11,8 +11,8 @@ import org.junit.jupiter.api.Test;
 import pro.glideim.sdk.api.auth.LoginDto;
 import pro.glideim.sdk.api.auth.AuthBean;
 import pro.glideim.sdk.http.RetrofitManager;
-import pro.glideim.sdk.protocol.ChatMessage;
-import pro.glideim.sdk.protocol.CommMessage;
+import pro.glideim.sdk.messages.ChatMessage;
+import pro.glideim.sdk.messages.CommMessage;
 import pro.glideim.sdk.im.IMClientImpl;
 
 class IMClientTest {

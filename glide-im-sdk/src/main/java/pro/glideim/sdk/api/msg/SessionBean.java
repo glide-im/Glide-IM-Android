@@ -5,6 +5,15 @@ public class SessionBean {
     private long uid2;
     private long lastMid;
     private long updateAt;
+    private long createAt;
+
+    public long getCreateAt() {
+        return createAt;
+    }
+
+    public void setCreateAt(long createAt) {
+        this.createAt = createAt;
+    }
 
     public long getUid1() {
         return uid1;

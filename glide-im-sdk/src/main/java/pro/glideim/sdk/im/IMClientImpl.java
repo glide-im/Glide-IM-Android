@@ -16,12 +16,12 @@ import pro.glideim.sdk.GlideException;
 import pro.glideim.sdk.Logger;
 import pro.glideim.sdk.ParameterizedTypeImpl;
 import pro.glideim.sdk.http.RetrofitManager;
-import pro.glideim.sdk.protocol.AckMessage;
-import pro.glideim.sdk.protocol.AckRequest;
-import pro.glideim.sdk.protocol.Actions;
-import pro.glideim.sdk.protocol.ChatMessage;
-import pro.glideim.sdk.protocol.CommMessage;
-import pro.glideim.sdk.protocol.GroupMessage;
+import pro.glideim.sdk.messages.AckMessage;
+import pro.glideim.sdk.messages.AckRequest;
+import pro.glideim.sdk.messages.Actions;
+import pro.glideim.sdk.messages.ChatMessage;
+import pro.glideim.sdk.messages.CommMessage;
+import pro.glideim.sdk.messages.GroupMessage;
 import pro.glideim.sdk.utils.SLogger;
 import pro.glideim.sdk.ws.RetrofitWsClient;
 import pro.glideim.sdk.ws.WsClient;
@@ -184,6 +184,7 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
     private void onMessage(Message msg) {
         logger.d(TAG, "new message:" + msg.message);
         CommMessage<Object> m = deserialize(typeCommMsg, msg);
+        m.setOrigin(msg.message);
         if (m.getAction().startsWith("api")) {
             if (requests.containsKey(m.getSeq())) {
                 requests.get(m.getSeq()).respond(m, msg);

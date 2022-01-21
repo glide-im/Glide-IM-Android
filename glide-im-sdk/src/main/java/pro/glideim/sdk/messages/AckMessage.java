@@ -1,4 +1,4 @@
-package pro.glideim.sdk.protocol;
+package pro.glideim.sdk.messages;
 
 public class AckMessage {
     private long mid;

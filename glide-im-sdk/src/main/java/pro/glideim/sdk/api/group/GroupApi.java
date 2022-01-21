@@ -15,6 +15,12 @@ public interface GroupApi {
     @POST("group/info")
     Observable<Response<List<GroupInfoBean>>> getGroupInfo(@Body GetGroupInfoDto d);
 
+    @POST("group/members")
+    Observable<Response<List<GroupMemberBean>>> getGroupMember(@Body GetGroupMemberDto d);
+
+    @POST("add/members")
+    Observable<Response<Object>> addGroupMember(@Body AddGroupMemberDto d);
+
     @POST("group/create")
     Observable<Response<CreateGroupBean>> createGroup(@Body CreateGroupDto d);
 

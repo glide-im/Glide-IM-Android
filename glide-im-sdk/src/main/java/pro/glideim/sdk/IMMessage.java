@@ -8,8 +8,8 @@ import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.MessageBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
-import pro.glideim.sdk.protocol.ChatMessage;
-import pro.glideim.sdk.protocol.GroupMessage;
+import pro.glideim.sdk.messages.ChatMessage;
+import pro.glideim.sdk.messages.GroupMessage;
 import pro.glideim.sdk.utils.RxUtils;
 
 public class IMMessage {

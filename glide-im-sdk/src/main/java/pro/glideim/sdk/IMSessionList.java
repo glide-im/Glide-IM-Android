@@ -56,7 +56,6 @@ public class IMSessionList {
                 sessionUpdateListener.onUpdate(session);
             }
         });
-        session.setIMSessionList(this);
         GlideIM.getDataStorage().storeSession(account.uid, session);
     }
 
@@ -67,7 +66,10 @@ public class IMSessionList {
     public IMSession getOrCreateSession(SessionTag tag) {
         IMSession session = sessionMap.get(tag);
         if (session == null) {
-            session = IMSession.create(account, tag.id, tag.type, this);
+            session = IMSession.create(account, tag.id, tag.type);
+            if (session.createAt == session.updateAt) {
+                session.syncStatus();
+            }
             addOrUpdateSession(session);
         }
         return session;

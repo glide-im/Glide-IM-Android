@@ -6,7 +6,7 @@ import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import pro.glideim.sdk.GlideException;
 import pro.glideim.sdk.api.Response;
-import pro.glideim.sdk.protocol.CommMessage;
+import pro.glideim.sdk.messages.CommMessage;
 
 public class RxUtils {
     public static <T> ObservableTransformer<T, T> silentScheduler() {

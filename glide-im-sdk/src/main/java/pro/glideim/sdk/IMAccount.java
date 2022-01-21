@@ -1,5 +1,8 @@
 package pro.glideim.sdk;
 
+import com.google.gson.reflect.TypeToken;
+
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeMap;
@@ -10,7 +13,6 @@ import io.reactivex.Single;
 import io.reactivex.SingleSource;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.annotations.Nullable;
-import io.reactivex.functions.Action;
 import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.auth.AuthApi;
 import pro.glideim.sdk.api.auth.AuthBean;
@@ -24,10 +26,11 @@ import pro.glideim.sdk.im.ConnStateListener;
 import pro.glideim.sdk.im.IMClient;
 import pro.glideim.sdk.im.IMClientImpl;
 import pro.glideim.sdk.im.MessageListener;
-import pro.glideim.sdk.protocol.Actions;
-import pro.glideim.sdk.protocol.ChatMessage;
-import pro.glideim.sdk.protocol.CommMessage;
-import pro.glideim.sdk.protocol.GroupMessage;
+import pro.glideim.sdk.messages.Actions;
+import pro.glideim.sdk.messages.ChatMessage;
+import pro.glideim.sdk.messages.CommMessage;
+import pro.glideim.sdk.messages.GroupMessage;
+import pro.glideim.sdk.push.NewContactsMessage;
 import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
 import pro.glideim.sdk.ws.WsClient;
@@ -52,16 +55,16 @@ public class IMAccount implements MessageListener {
             authAccount()
                     .compose(RxUtils.silentScheduler())
                     .zipWith(authIMConnection(), (aBoolean, o) -> true)
-                    .zipWith(sessionList.syncOfflineMsg(), (aBoolean, o) -> true)
-                    .subscribe(new SilentObserver<Boolean>() {
-                        @Override
-                        public void onError(Throwable e) {
-                            super.onError(e);
+                    .doOnError(throwable -> {
+                        if (throwable instanceof GlideException) {
+                            logout();
                             if (imMessageListener != null) {
                                 imMessageListener.onTokenInvalid();
                             }
                         }
-                    });
+                    })
+                    .zipWith(sessionList.syncOfflineMsg(), (aBoolean, o) -> true)
+                    .subscribe(new SilentObserver<>());
         } else {
             wsAuthed = false;
         }
@@ -150,7 +153,7 @@ public class IMAccount implements MessageListener {
         return UserApi.API.getContactsList()
                 .map(RxUtils.bodyConverter())
                 .flatMap(Observable::fromIterable)
-                .map(IMContacts::fromContactsBean)
+                .map(a ->IMContacts.fromContactsBean(a, this))
                 .doOnNext(this::addContacts)
                 .flatMapSingle((Function<IMContacts, SingleSource<IMContacts>>) IMContacts::update)
                 .toList();
@@ -163,10 +166,15 @@ public class IMAccount implements MessageListener {
     }
 
     public void logout() {
-        AuthApi.API.logout()
-                .compose(RxUtils.silentScheduler())
-                .doOnComplete(() -> GlideIM.getDataStorage().storeToken(uid, ""))
-                .subscribe(new SilentObserver<>());
+
+        String token = GlideIM.getDataStorage().loadToken(uid);
+        if (!token.isEmpty()) {
+            AuthApi.API.logout()
+                    .compose(RxUtils.silentScheduler())
+                    .doOnComplete(() -> GlideIM.getDataStorage().storeToken(uid, ""))
+                    .subscribe(new SilentObserver<>());
+        }
+
         if (!wsAuthed) {
             return;
         }
@@ -292,9 +300,30 @@ public class IMAccount implements MessageListener {
                 break;
             case Actions.Srv.ACTION_NEW_CONTACT:
                 if (imMessageListener != null) {
-                    imMessageListener.onNewContact();
+                    Type type = new TypeToken<CommMessage<NewContactsMessage>>() {
+                    }.getType();
+                    CommMessage<NewContactsMessage> s = m.deserialize(type);
+                    onNewContacts(s.getData());
                 }
                 break;
         }
+    }
+
+    private void onNewContacts(NewContactsMessage co) {
+        if (co == null) {
+            SLogger.e(TAG, new IllegalStateException("the new contacts message is empty data"));
+            return;
+        }
+        IMSession session = null;
+        switch (co.getType()) {
+            case Constants.SESSION_TYPE_GROUP:
+            case Constants.SESSION_TYPE_USER:
+                session = IMSession.create(this, co.getId(), co.getType());
+                break;
+        }
+        if (session != null) {
+            sessionList.addOrUpdateSession(session);
+        }
+        imMessageListener.onNewContact(co);
     }
 }

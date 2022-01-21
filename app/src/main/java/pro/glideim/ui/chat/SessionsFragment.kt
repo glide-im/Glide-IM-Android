@@ -37,8 +37,8 @@ class SessionsFragment : BaseFragment() {
         mSessionList.l = SortedList(SessionViewData::class.java, SessionListSorter(mAdapter))
         mAdapter.addViewHolderForType(SessionViewData::class.java, SessionViewHolder::class.java)
 
-//        mAdapter.setEnableEmptyView(true, SuperAdapter.EMPTY)
-//        mAdapter.setEnableEmptyViewOnInit(true)
+        mAdapter.setEnableEmptyView(true, SuperAdapter.EMPTY)
+        mAdapter.setEnableEmptyViewOnInit(false)
         mRvSessions.adapter = mAdapter
         mRvSessions.layoutManager = LinearLayoutManager(requireContext())
         mRvSessions.addItemDecoration(

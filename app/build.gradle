@@ -5,7 +5,7 @@ plugins {
 }
 
 bus {
-    busUtilsClass "pro.glideim.utils.BusUtils"
+    busUtilsClass "pro.glideim.utils.MyBusUtils"
 }
 
 android {
@@ -21,10 +21,28 @@ android {
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        release {
+            keyAlias 'key0'
+            keyPassword 'password'
+            storeFile file('keystore.jks')
+            storePassword 'password'
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig signingConfigs.release
+
+            buildConfigField "String", "BASE_URL", DEV_API_BASE_URL
+        }
+
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.release
+
+            buildConfigField "String", "BASE_URL", RELEASE_API_BASE_URL
         }
     }
     compileOptions {

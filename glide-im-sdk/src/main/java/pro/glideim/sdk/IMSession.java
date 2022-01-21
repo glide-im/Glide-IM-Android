@@ -1,5 +1,7 @@
 package pro.glideim.sdk;
 
+import androidx.annotation.NonNull;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -13,6 +15,7 @@ import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.msg.GetChatHistoryDto;
 import pro.glideim.sdk.api.msg.GetGroupMsgHistoryDto;
+import pro.glideim.sdk.api.msg.GetSessionDto;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.GroupMessageStateBean;
 import pro.glideim.sdk.api.msg.MessageBean;
@@ -21,7 +24,7 @@ import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.msg.SessionBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.im.IMClient;
-import pro.glideim.sdk.protocol.ChatMessage;
+import pro.glideim.sdk.messages.ChatMessage;
 import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
 
@@ -41,10 +44,12 @@ public class IMSession {
     public int type;
     public String lastMsg;
     public long lastMsgId;
+    public long createAt;
 
     IMSessionList.SessionTag tag;
-    private OnUpdateListener onUpdateListener;
+    private SessionUpdateListener sessionUpdateListener;
     private MessageChangeListener messageChangeListener;
+
     private boolean infoInit = false;
     private long lastReadMid = 0;
 
@@ -55,6 +60,7 @@ public class IMSession {
         this.title = String.valueOf(to);
         this.avatar = "";
         setUpdateAt(System.currentTimeMillis() / 1000);
+        this.createAt = updateAt;
         this.account = account;
     }
 
@@ -74,20 +80,15 @@ public class IMSession {
         }
         s.setUpdateAt(sessionBean.getUpdateAt());
         s.lastMsgId = sessionBean.getLastMid();
+        s.createAt = sessionBean.getCreateAt();
         return s;
     }
 
-    static IMSession create(IMAccount account, long to, int type, IMSessionList imSessionList) {
+    static IMSession create(IMAccount account, long to, int type) {
         IMSession s = new IMSession(account, to, type);
-        s.setIMSessionList(imSessionList);
-        s.initTargetInfo();
-        return s;
-    }
-
-    static IMSession create(IMAccount account, IMSessionList.SessionTag t, IMSessionList imSessionList) {
-        IMSession s = new IMSession(account, t.getId(), t.getType());
-        s.setIMSessionList(imSessionList);
-        s.initTargetInfo();
+        s.initInfo()
+                .compose(RxUtils.silentScheduler())
+                .subscribe(new SilentObserver<>());
         return s;
     }
 
@@ -107,6 +108,22 @@ public class IMSession {
         messageTreeMap.put(msg.getMid(), msg);
         setLastMessage(msg);
         onSessionUpdate();
+    }
+
+    public void setSessionUpdateListener(SessionUpdateListener sessionUpdateListener) {
+        this.sessionUpdateListener = sessionUpdateListener;
+    }
+
+    public void syncStatus() {
+        MsgApi.API.getSession(new GetSessionDto(to))
+                .compose(RxUtils.silentScheduler())
+                .map(RxUtils.bodyConverter())
+                .subscribe(new SilentObserver<SessionBean>() {
+                    @Override
+                    public void onNext(@NonNull SessionBean sessionBean) {
+                        loadHistory(0);
+                    }
+                });
     }
 
     public void addMessages(List<IMMessage> messages) {
@@ -185,24 +202,12 @@ public class IMSession {
         setUpdateAt(msg.getSendAt());
     }
 
-    void setIMSessionList(IMSessionList list) {
-    }
-
-    void setOnUpdateListener(OnUpdateListener onUpdateListener) {
-        this.onUpdateListener = onUpdateListener;
+    void setOnUpdateListener(SessionUpdateListener sessionUpdateListener) {
+        this.sessionUpdateListener = sessionUpdateListener;
     }
 
     public void setMessageListener(MessageChangeListener l) {
         this.messageChangeListener = l;
-    }
-
-    private void initTargetInfo() {
-        initInfo().compose(RxUtils.silentScheduler())
-                .subscribe(new SilentObserver<>());
-    }
-
-    public List<IMMessage> getLatestMessage() {
-        return getMessages(0, 20);
     }
 
     public List<IMMessage> getMessages(long beforeMid, int maxLen) {
@@ -226,22 +231,14 @@ public class IMSession {
         return ret;
     }
 
-    public List<IMMessage> getLatest() {
-        return getMessages(0, 20);
+    void onDetailUpdated() {
+
     }
 
     private void onSessionUpdate() {
-        long lastUpdateAt = System.currentTimeMillis();
-//        if (latestMessage.size() > 0) {
-//            IMMessage msg = latestMessage.get(latestMessage.size() - 1);
-//            lastMsg = msg.getContent();
-//            lastMsgId = msg.getMid();
-//            lastMsgSender = msg.getFrom();
-//        }
-
-        if (onUpdateListener != null) {
+        if (sessionUpdateListener != null) {
             SLogger.d(TAG, "onUpdate");
-            onUpdateListener.onUpdate(this);
+            sessionUpdateListener.onUpdate(this);
         }
     }
 
@@ -471,7 +468,11 @@ public class IMSession {
                 '}';
     }
 
-    public interface OnUpdateListener {
+    public interface SessionUpdateListener {
         void onUpdate(IMSession s);
+    }
+
+    public interface SessionDetailUpdateListener {
+        void onUpdateUserInfo();
     }
 }

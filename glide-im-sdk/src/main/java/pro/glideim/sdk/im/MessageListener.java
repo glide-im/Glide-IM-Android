@@ -1,8 +1,8 @@
 package pro.glideim.sdk.im;
 
-import pro.glideim.sdk.protocol.ChatMessage;
-import pro.glideim.sdk.protocol.CommMessage;
-import pro.glideim.sdk.protocol.GroupMessage;
+import pro.glideim.sdk.messages.ChatMessage;
+import pro.glideim.sdk.messages.CommMessage;
+import pro.glideim.sdk.messages.GroupMessage;
 
 public interface MessageListener {
     void onNewMessage(ChatMessage m);

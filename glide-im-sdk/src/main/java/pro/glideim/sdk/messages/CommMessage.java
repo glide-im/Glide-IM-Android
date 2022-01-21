@@ -1,10 +1,15 @@
-package pro.glideim.sdk.protocol;
+package pro.glideim.sdk.messages;
+
+import java.lang.reflect.Type;
+
+import pro.glideim.sdk.http.RetrofitManager;
 
 public class CommMessage<T> {
     private int ver;
     private String action;
     private long seq;
     private T data;
+    private String origin;
 
     public CommMessage(int ver, String action, long seq, T data) {
         this.ver = ver;
@@ -13,8 +18,15 @@ public class CommMessage<T> {
         this.data = data;
     }
 
-    public static <T> CommMessage<T> create(int ver, String action, long seq, T data) {
-        return new CommMessage<>(ver, action, seq, data);
+    public <R> CommMessage<R> deserialize(Type t) {
+        if (origin.isEmpty()) {
+            throw new IllegalStateException("the common message origin data is empty");
+        }
+        return RetrofitManager.fromJson(t, origin);
+    }
+
+    public void setOrigin(String origin) {
+        this.origin = origin;
     }
 
     public boolean success() {

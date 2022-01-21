@@ -2,19 +2,15 @@ package pro.glideim.ui.contacts
 
 import android.content.Context
 import android.content.Intent
-import android.util.SparseArray
-import android.util.SparseLongArray
 import com.dengzii.ktx.android.content.intentExtra
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.GlideIM
-import pro.glideim.sdk.IMSession
 import pro.glideim.sdk.api.user.ContactsUidDto
 import pro.glideim.sdk.api.user.UserApi
 import pro.glideim.ui.Events
-import pro.glideim.utils.BusUtils
 import pro.glideim.utils.io2main
 import pro.glideim.utils.request
 import pro.glideim.utils.request2

@@ -1,12 +1,8 @@
 package pro.glideim
 
 import android.app.Application
-import android.util.Log
-import com.dengzii.adapter.EmptyViewHolder
 import com.dengzii.adapter.SuperAdapter
 import pro.glideim.sdk.GlideIM
-import pro.glideim.sdk.Logger
-import pro.glideim.sdk.utils.SLogger
 
 class App : Application() {
 
@@ -29,13 +25,13 @@ class App : Application() {
 //                Log.e(tag, "e: ", t)
 //            }
 //        })
-        GlideIM.init("http://192.168.1.123:8081/api/")
+        GlideIM.init(BuildConfig.BASE_URL)
         GlideIM.getInstance().dataStorage = IMDataStorage.getInstance()
         GlideIM.getInstance().setDevice(1)
 
         SuperAdapter.addDefaultViewHolderForType(
             SuperAdapter.Empty::class.java,
-            EmptyViewHolder::class.java
+            pro.glideim.viewholder.EmptyViewHolder::class.java
         )
     }
 }
