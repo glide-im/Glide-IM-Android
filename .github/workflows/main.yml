@@ -26,8 +26,8 @@ jobs:
 
       - name: Build With Gradle
         run: |
-        chmod +x gradlew
-        ./gradlew buildCiRelease -PVERSION_NAME=${{ steps.get_tag.outputs.TAG }} -PVERSION_CODE=${{ steps.get_tag.outputs.TAG }} -PAPK_NAME=glide_im_release_${{ steps.get_tag.outputs.TAG }}.apk
+            chmod +x gradlew
+            ./gradlew buildCiRelease -PVERSION_NAME=${{ steps.get_tag.outputs.TAG }} -PVERSION_CODE=${{ steps.get_tag.outputs.TAG }} -PAPK_NAME=glide_im_release_${{ steps.get_tag.outputs.TAG }}.apk
 
       - name: Create Release
         id: create_release
