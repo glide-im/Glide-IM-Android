@@ -1,0 +1,22 @@
+// ./gradlew buildCiRelease -PVERSION_NAME=1.0.0 -PVERSION_CODE=1 -PAPK_NAME=a.apk
+
+task initBuildVersion {
+    doFirst {
+        Config.versionName = VERSION_NAME.toString().replaceAll("v", "")
+        Config.version = Integer.parseInt(VERSION_CODE.toString().replaceAll("[^0-9]", ""))
+    }
+}
+
+task buildCiRelease(dependsOn: ["initBuildVersion", "app:assembleRelease"], type: Copy) {
+    from "${rootProject.projectDir.path}/app/build/outputs/apk/release/"
+    into "./"
+    include('*.apk')
+    exclude('*.json')
+
+    doLast {
+        File f = new File("app-release.apk")
+        f.renameTo(APK_NAME)
+    }
+}
+
+buildCiRelease.mustRunAfter initBuildVersion

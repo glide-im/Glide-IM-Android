@@ -1,0 +1,19 @@
+
+// config repositories
+repositories {
+
+}
+
+// config gradle project type
+// we config groovy and java-gradle-plugin
+// this means
+apply {
+    plugin 'groovy'
+    plugin 'java-gradle-plugin'
+}
+
+// import gradle api and groovy lang
+dependencies {
+    implementation gradleApi()
+    implementation localGroovy()
+}

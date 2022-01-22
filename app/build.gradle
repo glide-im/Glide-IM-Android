@@ -15,8 +15,8 @@ android {
         applicationId "pro.glideim"
         minSdk 26
         targetSdk 30
-        versionCode 1
-        versionName "1.0"
+        versionCode Config.version
+        versionName Config.versionName
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
