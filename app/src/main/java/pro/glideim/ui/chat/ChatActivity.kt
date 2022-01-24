@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import androidx.appcompat.widget.PopupMenu
@@ -11,11 +12,13 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.blankj.utilcode.util.NotificationUtils
 import com.dengzii.adapter.SuperAdapter
+import com.dengzii.ktx.android.content.getDrawableCompat
 import com.dengzii.ktx.android.gone
 import com.dengzii.ktx.android.toggleEnable
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textview.MaterialTextView
+import com.vanniktech.emoji.EmojiPopup
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.*
@@ -32,16 +35,22 @@ class ChatActivity : BaseActivity() {
     private val mRvMessages by lazy { findViewById<RecyclerView>(R.id.rv_messages) }
     private val mTvTitle by lazy { findViewById<MaterialTextView>(R.id.tv_title) }
     private val mBtMore by lazy { findViewById<MaterialButton>(R.id.bt_more) }
+    private val mBtEmoji by lazy { findViewById<MaterialButton>(R.id.bt_emoji) }
+    private val mBtAdd by lazy { findViewById<MaterialButton>(R.id.bt_add) }
 
     private val mMessage = MySortedList<ChatMessageViewData>()
     private val mAdapter = SuperAdapter(mMessage)
 
+    private val mEmojiPopup by lazy {
+        EmojiPopup.Builder.fromRootView(mEtMessage).build(mEtMessage)
+    }
     private lateinit var mSession: IMSession
 
     override val layoutResId = R.layout.activity_chat
 
     companion object {
 
+        private const val TAG = "ChatActivity"
         private const val EXTRA_ID = "EXTRA_ID"
         private const val EXTRA_TYPE = "EXTRA_TYPE"
 
@@ -93,6 +102,14 @@ class ChatActivity : BaseActivity() {
         mRvMessages.layoutManager = GridLayoutManager(this, 1, RecyclerView.VERTICAL, true)
         mRvMessages.adapter = mAdapter
 
+        mBtEmoji.setOnClickListener {
+            mEmojiPopup.toggle()
+            mBtEmoji.setIconResource(if (mEmojiPopup.isShowing) R.drawable.ic_keyboard else R.drawable.ic_emoji)
+            mBtEmoji.invalidate()
+        }
+        mEtMessage.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
+            Log.d(TAG, "initView: $hasFocus")
+        }
         mBtMore.setOnClickListener {
             onMoreClicked()
         }

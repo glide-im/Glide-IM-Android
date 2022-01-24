@@ -18,7 +18,7 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
 
     private var inited = false
 
-    open val account: IMAccount? = GlideIM.getAccount()
+    open val account: IMAccount? get() = GlideIM.getAccount()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

@@ -2,6 +2,9 @@ package pro.glideim
 
 import android.app.Application
 import com.dengzii.adapter.SuperAdapter
+import com.vanniktech.emoji.EmojiManager
+import com.vanniktech.emoji.twitter.TwitterEmoji
+import com.vanniktech.emoji.twitter.TwitterEmojiProvider
 import pro.glideim.sdk.GlideIM
 
 class App : Application() {
@@ -13,6 +16,8 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
 
+
+        EmojiManager.install(TwitterEmojiProvider())
         IMDataStorage.init(this)
         MessageListener.init(this)
 
