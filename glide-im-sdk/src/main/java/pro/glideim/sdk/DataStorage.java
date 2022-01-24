@@ -25,4 +25,7 @@ public interface DataStorage {
 
     List<IMSession> loadSessions(long uid);
 
+    List<IMMessage> loadMessage(long uid, int type, long to);
+
+    void storeMessage(IMMessage message);
 }

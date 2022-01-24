@@ -69,4 +69,14 @@ public class DefaultDataStoreImpl implements DataStorage {
         }
         return new ArrayList<>(sTempSession.get(uid).values());
     }
+
+    @Override
+    public List<IMMessage> loadMessage(long uid, int type, long to) {
+        return new ArrayList<>();
+    }
+
+    @Override
+    public void storeMessage(IMMessage message) {
+
+    }
 }
