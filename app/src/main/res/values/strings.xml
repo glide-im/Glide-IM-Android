@@ -28,4 +28,8 @@
     <string name="create_group">Create Group</string>
     <string name="search_user">Search User</string>
     <string name="join_group">Join Group</string>
+    <string name="members">Members</string>
+    <string name="invite">Invite</string>
+    <string name="exit_and_delete">Exit And Delete</string>
+    <string name="group_members">Group Members</string>
 </resources>

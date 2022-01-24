@@ -29,6 +29,7 @@
             android:name=".ui.chat.ChatActivity"
             android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity android:name=".ui.contacts.AddContactsActivity" />
+        <activity android:name=".ui.group.GroupDetailActivity" />
 
         <receiver
             android:name=".MessageNotifyActionReceiver"

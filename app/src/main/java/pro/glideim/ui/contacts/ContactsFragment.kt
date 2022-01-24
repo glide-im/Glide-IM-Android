@@ -56,7 +56,7 @@ class ContactsFragment : BaseFragment() {
             val ivAvatar = findView<ImageView>(R.id.iv_avatar)
             val tvNickname = findView<MaterialTextView>(R.id.tv_nickname)
             onBindData { data, _ ->
-                ivAvatar.loadImage(data.avatar)
+                ivAvatar.loadImageRoundCorners(data.avatar, 6f)
                 tvNickname.text = "${data.title} (${data.id})"
                 itemView.setOnClickListener {
                     startChat(data.id, data.type)

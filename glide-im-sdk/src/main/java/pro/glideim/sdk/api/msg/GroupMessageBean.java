@@ -1,6 +1,7 @@
 package pro.glideim.sdk.api.msg;
 
 public class GroupMessageBean {
+
     private long mid;
     private long sender;
     private long gid;

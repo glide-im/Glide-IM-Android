@@ -13,6 +13,7 @@ import io.reactivex.Single;
 import io.reactivex.SingleSource;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.annotations.Nullable;
+import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.auth.AuthApi;
 import pro.glideim.sdk.api.auth.AuthBean;
@@ -88,8 +89,9 @@ public class IMAccount implements MessageListener {
         if (token.isEmpty()) {
             return Observable.error(new Exception("invalid token"));
         }
-        sessionList.init();
-        return getOrInitConnectedIM().toObservable().map(c -> true);
+        Observable<Boolean> initConn = getOrInitConnectedIM().toObservable().map(c -> true);
+        Observable<Boolean> initSession = sessionList.init();
+        return Observable.zip(initConn, initSession, (c, a) -> true);
     }
 
     public IMSessionList getIMSessionList() {
@@ -149,11 +151,15 @@ public class IMAccount implements MessageListener {
         return im != null && im.isConnected();
     }
 
+    public IMContacts getContact(int type, long id) {
+        return contactsMap.get(type + "_" + id);
+    }
+
     public Single<List<IMContacts>> getContacts() {
         return UserApi.API.getContactsList()
                 .map(RxUtils.bodyConverter())
                 .flatMap(Observable::fromIterable)
-                .map(a ->IMContacts.fromContactsBean(a, this))
+                .map(a -> IMContacts.fromContactsBean(a, this))
                 .doOnNext(this::addContacts)
                 .flatMapSingle((Function<IMContacts, SingleSource<IMContacts>>) IMContacts::update)
                 .toList();
@@ -239,6 +245,12 @@ public class IMAccount implements MessageListener {
                 });
     }
 
+    public Single<Boolean> deleteContacts(int type, long id) {
+        return Single.create(emitter -> {
+            emitter.onSuccess(true);
+        });
+    }
+
     private Single<IMClient> getOrInitConnectedIM() {
         if (im != null) {
             if (im.isConnected()) {
@@ -262,6 +274,7 @@ public class IMAccount implements MessageListener {
     @Override
     public void onNewMessage(ChatMessage m) {
         IMMessage ms = IMMessage.fromChatMessage(this, m);
+        storeMessage(ms);
         sessionList.onNewMessage(ms);
         if (imMessageListener != null) {
             try {
@@ -275,6 +288,7 @@ public class IMAccount implements MessageListener {
     @Override
     public void onGroupMessage(GroupMessage m) {
         IMMessage ms = IMMessage.fromGroupMessage(this, m);
+        storeMessage(ms);
         sessionList.onNewMessage(ms);
         if (imMessageListener != null) {
             try {
@@ -283,6 +297,10 @@ public class IMAccount implements MessageListener {
                 e.printStackTrace();
             }
         }
+    }
+
+    public void storeMessage(IMMessage ms){
+        GlideIM.getDataStorage().storeMessage(ms);
     }
 
     @Override

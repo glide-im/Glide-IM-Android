@@ -59,21 +59,21 @@ public class IMContacts {
     }
 
     private void initGroupMember(List<GroupMemberBean> groupMemberBeans) {
-        List<Long> uids = new ArrayList<>();
-        for (GroupMemberBean m : groupMemberBeans) {
-            uids.add(m.getUid());
-        }
-        GlideIM.getUserInfo(uids)
-                .compose(RxUtils.silentScheduler())
-                .subscribe(new SilentObserver<List<UserInfoBean>>() {
-                    @Override
-                    public void onNext(@NonNull List<UserInfoBean> userInfoBeans) {
-                        IMSession session = account.getIMSessionList().getSession(Constants.SESSION_TYPE_GROUP, id);
-                        if (session != null) {
-                            session.onDetailUpdated();
-                        }
-                    }
-                });
+//        List<Long> uids = new ArrayList<>();
+//        for (GroupMemberBean m : groupMemberBeans) {
+//            uids.add(m.getUid());
+//        }
+//        GlideIM.getUserInfo(uids)
+//                .compose(RxUtils.silentScheduler())
+//                .subscribe(new SilentObserver<List<UserInfoBean>>() {
+//                    @Override
+//                    public void onNext(@NonNull List<UserInfoBean> userInfoBeans) {
+//                        IMSession session = account.getIMSessionList().getSession(Constants.SESSION_TYPE_GROUP, id);
+//                        if (session != null) {
+//                            session.onDetailUpdated();
+//                        }
+//                    }
+//                });
         members = groupMemberBeans;
     }
 

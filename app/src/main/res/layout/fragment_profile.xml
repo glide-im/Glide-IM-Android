@@ -26,16 +26,19 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
-            android:text="Nickname"
+            android:text="-"
             android:textSize="16sp"
             android:textStyle="bold" />
 
-        <com.google.android.material.textview.MaterialTextView
-            android:id="@+id/tv_uid"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/bt_uid"
+            style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="30dp"
             android:layout_gravity="center_horizontal"
-            android:text="uid:1234567"
+            android:padding="0dp"
+            android:text="uid: -"
+            android:textAlignment="center"
             android:textSize="12sp" />
 
         <androidx.appcompat.widget.LinearLayoutCompat

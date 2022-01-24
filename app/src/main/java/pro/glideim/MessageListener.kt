@@ -63,16 +63,16 @@ class MessageListener private constructor(private val context: Application) : IM
         val onClick =
             PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT)
 
-
-        val to = message.session.to
-        var unread = message.session.unread
+        val se = GlideIM.getAccount().imSessionList.getOrCreate(message.targetType, message.targetId)
+        val to = se.to
+        var unread = se.unread
         if (unread == 0) {
             unread = 1
         }
 
         val delIntent = Intent("pro.glideim.notify.message.delete")
         delIntent.putExtra("session", to)
-        delIntent.putExtra("type", message.session.type)
+        delIntent.putExtra("type", se.type)
         val onDel =
             PendingIntent.getActivity(context, 0, delIntent, PendingIntent.FLAG_CANCEL_CURRENT)
 

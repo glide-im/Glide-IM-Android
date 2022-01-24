@@ -11,6 +11,8 @@ import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.sdk.IMSession
 import pro.glideim.utils.loadImage
+import pro.glideim.utils.loadImageClipCircle
+import pro.glideim.utils.loadImageRoundCorners
 import pro.glideim.utils.secToTimeSpan
 
 class SessionViewHolder(v: ViewGroup) : AbsViewHolder<SessionViewData>(v) {
@@ -26,7 +28,7 @@ class SessionViewHolder(v: ViewGroup) : AbsViewHolder<SessionViewData>(v) {
     }
 
     override fun onBindData(data: SessionViewData, position: Int) {
-        mIvAvatar.loadImage(data.avatar)
+        mIvAvatar.loadImageRoundCorners(data.avatar, 6f)
         mTvTitle.text = data.title + "${data.to}"
         mTvContent.text = data.lastMsg
         if (data.unread > 0) {

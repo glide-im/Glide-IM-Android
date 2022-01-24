@@ -7,7 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 import io.reactivex.Observable;
@@ -33,9 +32,18 @@ public class IMSessionList {
         this.account = account;
     }
 
-    void init() {
-        List<IMSession> imSessions = GlideIM.getDataStorage().loadSessions(account.uid);
-        addOrUpdateSession(imSessions.toArray(new IMSession[]{}));
+    Observable<Boolean> init() {
+        return Observable.create(emitter -> {
+            List<IMSession> imSessions = GlideIM.getDataStorage().loadSessions(account.uid);
+            addOrUpdateSession(imSessions.toArray(new IMSession[]{}));
+
+            for (IMSession ses : imSessions) {
+                List<IMMessage> messages = GlideIM.getDataStorage().loadMessage(account.uid, ses.type, ses.to);
+                ses.addHistoryMessage(messages);
+            }
+            emitter.onNext(true);
+            emitter.onComplete();
+        });
     }
 
     public IMSession getSession(int type, long id) {
@@ -114,7 +122,6 @@ public class IMSessionList {
 
     void onNewMessage(IMMessage message) {
         IMSession session = getOrCreateSession(message.tag);
-        message.session = session;
         session.onNewMessage(message);
     }
 

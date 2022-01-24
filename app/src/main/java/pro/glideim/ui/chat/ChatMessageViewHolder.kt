@@ -12,11 +12,10 @@ import com.dengzii.ktx.android.setImageTintColor
 import com.dengzii.ktx.android.show
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
-import pro.glideim.sdk.IMMessage
-import pro.glideim.utils.loadImage
+import pro.glideim.utils.loadImageClipCircle
 import pro.glideim.utils.secToTimeSpan
 
-class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<IMMessage>(v) {
+class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<ChatMessageViewData>(v) {
 
     private val mIvAvatarRight by lazy { findViewById<ImageView>(R.id.iv_avatar_right) }
     private val mTvTime by lazy { findViewById<MaterialTextView>(R.id.tv_time) }
@@ -30,35 +29,46 @@ class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<IMMessage>(v) {
         setContentView(R.layout.item_chat_message)
     }
 
-    override fun onBindData(data: IMMessage, position: Int) {
+    override fun onBindData(data: ChatMessageViewData, position: Int) {
         mIvSendFailed.gone()
 
-        if (data.isMe) {
+        val msg = data.message
+        if (msg.isMe) {
             when {
-                data.isSendFailed -> {
+                msg.isSendFailed -> {
                     mIvSendFailed.show()
                 }
-                data.isSending -> {
+                msg.isSending -> {
                     //mIvSendFailed.show()
                     mIvSendFailed.setImageTintColor(R.color.gray)
                 }
-                data.isSendSuccess -> {
+                msg.isSendSuccess -> {
                     //mIvSendFailed.show()
                     mIvSendFailed.setImageTintColor(R.color.primaryLightColor)
                 }
             }
-            mIvAvatarRight.loadImage(data.avatar)
+            mIvAvatarRight.loadImageClipCircle(msg.avatar)
             mIvAvatarRight.show()
             mIvAvatarLeft.hide()
             (mLlMessage.layoutParams as FrameLayout.LayoutParams).gravity = Gravity.END
+            if (!data.showTitle) {
+                mIvAvatarRight.hide()
+            } else {
+                mIvAvatarRight.show()
+            }
         } else {
-            mIvAvatarLeft.loadImage(data.avatar)
+            mIvAvatarLeft.loadImageClipCircle(msg.avatar)
             mIvAvatarLeft.show()
             mIvAvatarRight.hide()
             (mLlMessage.layoutParams as FrameLayout.LayoutParams).gravity = Gravity.START
+            if (!data.showTitle) {
+                mIvAvatarLeft.hide()
+            } else {
+                mIvAvatarLeft.show()
+            }
         }
-        mTvTime.text = data.sendAt.secToTimeSpan()
-        mTvMsg.text = data.content
+        mTvTime.text = msg.sendAt.secToTimeSpan()
+        mTvMsg.text = msg.content
         mLlMessageContainer.orientation =
             if (mTvMsg.width > (mLlMessageContainer.parent as ViewGroup).measuredWidth - 60) {
                 LinearLayoutCompat.VERTICAL
@@ -66,7 +76,7 @@ class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<IMMessage>(v) {
                 LinearLayoutCompat.HORIZONTAL
             }
         mLlMessageContainer.setOnLongClickListener {
-            onLongClick(it, data)
+            onLongClick(it, msg)
             return@setOnLongClickListener true
         }
     }

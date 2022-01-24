@@ -24,6 +24,15 @@
             android:textSize="18sp"
             android:textStyle="bold" />
 
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/bt_more"
+            style="@style/Widget.Material3.Button.IconButton"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_gravity="end|center_vertical"
+            app:icon="@drawable/ic_more_menu" />
+
         <com.google.android.material.divider.MaterialDivider
             android:layout_width="match_parent"
             android:layout_height="1px"

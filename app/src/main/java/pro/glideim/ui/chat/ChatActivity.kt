@@ -4,24 +4,26 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.view.Gravity
 import android.view.View
+import androidx.appcompat.widget.PopupMenu
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.blankj.utilcode.util.NotificationUtils
 import com.dengzii.adapter.SuperAdapter
+import com.dengzii.ktx.android.gone
 import com.dengzii.ktx.android.toggleEnable
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
-import pro.glideim.sdk.GlideIM
-import pro.glideim.sdk.IMMessage
-import pro.glideim.sdk.IMSession
-import pro.glideim.sdk.MessageChangeListener
+import pro.glideim.sdk.*
 import pro.glideim.sdk.messages.ChatMessage
+import pro.glideim.ui.group.GroupDetailActivity
 import pro.glideim.utils.io2main
 import pro.glideim.utils.request
+import pro.glideim.utils.request2
 
 class ChatActivity : BaseActivity() {
 
@@ -29,10 +31,10 @@ class ChatActivity : BaseActivity() {
     private val mEtMessage by lazy { findViewById<TextInputEditText>(R.id.et_message) }
     private val mRvMessages by lazy { findViewById<RecyclerView>(R.id.rv_messages) }
     private val mTvTitle by lazy { findViewById<MaterialTextView>(R.id.tv_title) }
+    private val mBtMore by lazy { findViewById<MaterialButton>(R.id.bt_more) }
 
-    private val mMessage = MySortedList<IMMessage>()
+    private val mMessage = MySortedList<ChatMessageViewData>()
     private val mAdapter = SuperAdapter(mMessage)
-    private val mLayoutManger = GridLayoutManager(this, 1, RecyclerView.VERTICAL, true)
 
     private lateinit var mSession: IMSession
 
@@ -77,22 +79,28 @@ class ChatActivity : BaseActivity() {
     }
 
     override fun initView() {
-        mMessage.l = SortedList(IMMessage::class.java, MessageListSorter(mAdapter))
+        mMessage.l = SortedList(ChatMessageViewData::class.java, MessageListSorter(mAdapter))
         mEtMessage.toggleEnable()
         mBtSend.toggleEnable()
 
         mAdapter.addViewHolderForType(
-            IMMessage::class.java,
+            ChatMessageViewData::class.java,
             ChatMessageViewHolder::class.java
         )
 
         mRvMessages.scrollBarStyle = View.SCROLLBARS_OUTSIDE_OVERLAY
         mRvMessages.isNestedScrollingEnabled = false
-        mRvMessages.layoutManager = mLayoutManger
+        mRvMessages.layoutManager = GridLayoutManager(this, 1, RecyclerView.VERTICAL, true)
         mRvMessages.adapter = mAdapter
 
+        mBtMore.setOnClickListener {
+            onMoreClicked()
+        }
         mBtSend.setOnClickListener {
             sendMessage()
+        }
+        if (mSession.type != Constants.SESSION_TYPE_GROUP) {
+            mBtMore.gone()
         }
         mSession.clearUnread()
         mEtMessage.toggleEnable()
@@ -101,7 +109,10 @@ class ChatActivity : BaseActivity() {
         mMessage.clear()
 
         val latest = mSession.getMessages(Long.MAX_VALUE, 20)
-        mMessage.addAll(latest)
+
+        latest.forEach {
+            addMessage(it)
+        }
         scrollToLastMessage()
     }
 
@@ -128,14 +139,14 @@ class ChatActivity : BaseActivity() {
                         ChatMessage.STATE_INIT -> {
                         }
                         ChatMessage.STATE_CREATED -> {
-                            mMessage.add(it)
+                            addMessage(it)
                             scrollToLastMessage()
                         }
                         ChatMessage.STATE_RCV_FAILED,
                         ChatMessage.STATE_SRV_FAILED,
                         ChatMessage.STATE_SRV_RECEIVED,
                         ChatMessage.STATE_RCV_RECEIVED ->
-                            mMessage.add(it)
+                            addMessage(it)
                         else -> {
                         }
                     }
@@ -155,7 +166,7 @@ class ChatActivity : BaseActivity() {
 
             override fun onInsertMessage(mid: Long, message: IMMessage) {
                 runOnUiThread {
-                    mMessage.add(message)
+                    addMessage(message)
                 }
                 mSession.clearUnread()
             }
@@ -163,7 +174,7 @@ class ChatActivity : BaseActivity() {
             override fun onNewMessage(message: IMMessage) {
                 runOnUiThread {
                     mSession.clearUnread()
-                    mMessage.add(message)
+                    addMessage(message)
                     scrollToLastMessage()
                 }
             }
@@ -176,8 +187,9 @@ class ChatActivity : BaseActivity() {
         mSession.setMessageListener(null)
     }
 
-    private fun addMessage() {
-
+    private fun addMessage(m: IMMessage) {
+        val c = ChatMessageViewData(true, m)
+        mMessage.add(c)
     }
 
     private fun requestData() {
@@ -192,6 +204,30 @@ class ChatActivity : BaseActivity() {
 //                    }
 //                })
 //            }
+    }
+
+    private fun onMoreClicked() {
+        val popupMenu = PopupMenu(this, mBtMore)
+        popupMenu.gravity = Gravity.BOTTOM
+        popupMenu.menuInflater.inflate(R.menu.menu_chat_group, popupMenu.menu)
+        popupMenu.setOnMenuItemClickListener {
+            when (it.itemId) {
+                R.id.item_members -> GroupDetailActivity.start(this, mSession.to)
+                R.id.item_invite -> {
+                }
+                R.id.item_exit -> deleteContact()
+            }
+            return@setOnMenuItemClickListener true
+        }
+        popupMenu.show()
+    }
+
+    private fun deleteContact() {
+        GlideIM.getAccount().deleteContacts(mSession.type, mSession.to)
+            .io2main()
+            .request2(this) {
+                finish()
+            }
     }
 
     private fun scrollToLastMessage() {

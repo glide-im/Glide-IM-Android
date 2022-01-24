@@ -53,7 +53,7 @@ public class IMSession {
     private boolean infoInit = false;
     private long lastReadMid = 0;
 
-    private IMSession(IMAccount account, long to, int type) {
+    public IMSession(IMAccount account, long to, int type) {
         this.tag = IMSessionList.SessionTag.get(type, to);
         this.to = to;
         this.type = type;
@@ -105,6 +105,7 @@ public class IMSession {
 
     private void onSendMessageCreated(IMMessage msg) {
         SLogger.d(TAG, "onSendMessageCreated:" + msg);
+        GlideIM.getDataStorage().storeMessage(msg);
         messageTreeMap.put(msg.getMid(), msg);
         setLastMessage(msg);
         onSessionUpdate();
@@ -126,12 +127,13 @@ public class IMSession {
                 });
     }
 
-    public void addMessages(List<IMMessage> messages) {
+    public void addHistoryMessage(List<IMMessage> messages) {
         long last = 0;
         if (!messageTreeMap.isEmpty()) {
             last = messageTreeMap.lastKey();
         }
         for (IMMessage message : messages) {
+            GlideIM.getDataStorage().storeMessage(message);
             messageTreeMap.put(message.getMid(), message);
         }
         if (!messageTreeMap.isEmpty() && messageTreeMap.lastKey() != last) {
@@ -150,6 +152,7 @@ public class IMSession {
 
     void onOfflineMessage(List<IMMessage> msg) {
         for (IMMessage m : msg) {
+            GlideIM.getDataStorage().storeMessage(m);
             if (m.getMid() > lastReadMid) {
                 onNewMessage(m);
             } else {
@@ -180,18 +183,22 @@ public class IMSession {
 
 
     private void onMessageSendSuccess(IMMessage message) {
+        GlideIM.getDataStorage().storeMessage(message);
         onSessionUpdate();
     }
 
     private void onMessageSendFailed(IMMessage message) {
+        GlideIM.getDataStorage().storeMessage(message);
         onSessionUpdate();
     }
 
     private void onMessageReceiveFailed(IMMessage message) {
+        GlideIM.getDataStorage().storeMessage(message);
 
     }
 
     private void onMessageReceived(IMMessage message) {
+        GlideIM.getDataStorage().storeMessage(message);
 
     }
 
@@ -274,7 +281,7 @@ public class IMSession {
                         .flatMap((Function<List<MessageBean>, ObservableSource<MessageBean>>) Observable::fromIterable)
                         .map(messageBean -> IMMessage.fromMessage(account, messageBean))
                         .toList()
-                        .doOnSuccess(this::addMessages);
+                        .doOnSuccess(this::addHistoryMessage);
             case Constants.SESSION_TYPE_GROUP:
                 long seq = 0;
                 if (beforeMid != 0) {
@@ -289,7 +296,7 @@ public class IMSession {
                         .flatMap((Function<List<GroupMessageBean>, ObservableSource<GroupMessageBean>>) Observable::fromIterable)
                         .map(messageBean -> IMMessage.fromGroupMessage(account, messageBean))
                         .toList()
-                        .doOnSuccess(this::addMessages);
+                        .doOnSuccess(this::addHistoryMessage);
             default:
                 return Single.error(new IllegalStateException("unknown session type " + type));
         }
