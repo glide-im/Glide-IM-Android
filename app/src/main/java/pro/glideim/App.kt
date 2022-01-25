@@ -3,8 +3,7 @@ package pro.glideim
 import android.app.Application
 import com.dengzii.adapter.SuperAdapter
 import com.vanniktech.emoji.EmojiManager
-import com.vanniktech.emoji.twitter.TwitterEmoji
-import com.vanniktech.emoji.twitter.TwitterEmojiProvider
+import com.vanniktech.emoji.google.GoogleEmojiProvider
 import pro.glideim.sdk.GlideIM
 
 class App : Application() {
@@ -17,7 +16,7 @@ class App : Application() {
         super.onCreate()
 
 
-        EmojiManager.install(TwitterEmojiProvider())
+        EmojiManager.install(GoogleEmojiProvider())
         IMDataStorage.init(this)
         MessageListener.init(this)
 

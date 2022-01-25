@@ -8,6 +8,7 @@ import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.IMAccount
 import pro.glideim.sdk.im.ConnStateListener
 import pro.glideim.sdk.ws.WsClient
+import pro.glideim.ui.LoginActivity
 import pro.glideim.utils.RequestStateCallback
 
 abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnStateListener {
@@ -35,6 +36,14 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
             onStateChange(webSocketClient.state, "")
         }
         account?.imClient?.addConnStateListener(this)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (account == null || account?.uid == 0L) {
+            LoginActivity.start(this)
+            finish()
+        }
     }
 
     abstract fun initView()

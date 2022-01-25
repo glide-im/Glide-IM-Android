@@ -30,13 +30,6 @@ class MainActivity : BaseActivity() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-        if (account == null) {
-            LoginActivity.start(this)
-        }
-    }
-
     override fun initView() {
         initLayout()
     }

@@ -4,16 +4,19 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.view.isVisible
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.blankj.utilcode.util.KeyboardUtils
 import com.blankj.utilcode.util.NotificationUtils
 import com.dengzii.adapter.SuperAdapter
-import com.dengzii.ktx.android.content.getDrawableCompat
 import com.dengzii.ktx.android.gone
+import com.dengzii.ktx.android.show
 import com.dengzii.ktx.android.toggleEnable
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textfield.TextInputEditText
@@ -34,12 +37,22 @@ class ChatActivity : BaseActivity() {
     private val mEtMessage by lazy { findViewById<TextInputEditText>(R.id.et_message) }
     private val mRvMessages by lazy { findViewById<RecyclerView>(R.id.rv_messages) }
     private val mTvTitle by lazy { findViewById<MaterialTextView>(R.id.tv_title) }
-    private val mBtMore by lazy { findViewById<MaterialButton>(R.id.bt_more) }
+    private val mBtMenu by lazy { findViewById<MaterialButton>(R.id.bt_more) }
     private val mBtEmoji by lazy { findViewById<MaterialButton>(R.id.bt_emoji) }
     private val mBtAdd by lazy { findViewById<MaterialButton>(R.id.bt_add) }
+    private val mFlMultiMsg by lazy { findViewById<ViewGroup>(R.id.fl_multi_message) }
+
+
+    private val mBtLocation by lazy { findViewById<MaterialButton>(R.id.bt_location) }
+    private val mBtVote by lazy { findViewById<MaterialButton>(R.id.bt_vote) }
+    private val mBtFile by lazy { findViewById<MaterialButton>(R.id.bt_file) }
+    private val mBtVoice by lazy { findViewById<MaterialButton>(R.id.bt_voice) }
+    private val mBtCamera by lazy { findViewById<MaterialButton>(R.id.bt_camera) }
+    private val mBtImage by lazy { findViewById<MaterialButton>(R.id.bt_image) }
 
     private val mMessage = MySortedList<ChatMessageViewData>()
     private val mAdapter = SuperAdapter(mMessage)
+    private var mShowEmoji = false
 
     private val mEmojiPopup by lazy {
         EmojiPopup.Builder.fromRootView(mEtMessage).build(mEtMessage)
@@ -91,6 +104,8 @@ class ChatActivity : BaseActivity() {
         mMessage.l = SortedList(ChatMessageViewData::class.java, MessageListSorter(mAdapter))
         mEtMessage.toggleEnable()
         mBtSend.toggleEnable()
+        mEtMessage.clearFocus()
+        initMultiMessageClickListener()
 
         mAdapter.addViewHolderForType(
             ChatMessageViewData::class.java,
@@ -103,21 +118,32 @@ class ChatActivity : BaseActivity() {
         mRvMessages.adapter = mAdapter
 
         mBtEmoji.setOnClickListener {
-            mEmojiPopup.toggle()
-            mBtEmoji.setIconResource(if (mEmojiPopup.isShowing) R.drawable.ic_keyboard else R.drawable.ic_emoji)
-            mBtEmoji.invalidate()
+            showEmojiPopup()
         }
-        mEtMessage.onFocusChangeListener = View.OnFocusChangeListener { _, hasFocus ->
-            Log.d(TAG, "initView: $hasFocus")
+        mEtMessage.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && mFlMultiMsg.isVisible) {
+                mFlMultiMsg.gone()
+            }
         }
-        mBtMore.setOnClickListener {
-            onMoreClicked()
+        mBtMenu.setOnClickListener {
+            onMenuClicked()
+        }
+        mBtAdd.setOnClickListener {
+            showMultiMessage()
         }
         mBtSend.setOnClickListener {
             sendMessage()
         }
+        KeyboardUtils.registerSoftInputChangedListener(this.window) {
+            KeyboardUtils.unregisterSoftInputChangedListener(this.window)
+            if (it == 0) {
+                return@registerSoftInputChangedListener
+            }
+            mEmojiPopup.setPopupWindowHeight(it)
+        }
+
         if (mSession.type != Constants.SESSION_TYPE_GROUP) {
-            mBtMore.gone()
+            mBtMenu.gone()
         }
         mSession.clearUnread()
         mEtMessage.toggleEnable()
@@ -223,8 +249,8 @@ class ChatActivity : BaseActivity() {
 //            }
     }
 
-    private fun onMoreClicked() {
-        val popupMenu = PopupMenu(this, mBtMore)
+    private fun onMenuClicked() {
+        val popupMenu = PopupMenu(this, mBtMenu)
         popupMenu.gravity = Gravity.BOTTOM
         popupMenu.menuInflater.inflate(R.menu.menu_chat_group, popupMenu.menu)
         popupMenu.setOnMenuItemClickListener {
@@ -247,6 +273,27 @@ class ChatActivity : BaseActivity() {
             }
     }
 
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.action == MotionEvent.ACTION_DOWN) {
+            if (event.y < mRvMessages.y + mRvMessages.measuredHeight) {
+                onNonEditAreaClicked()
+            }
+        }
+        return super.dispatchTouchEvent(event)
+    }
+
+    private fun onNonEditAreaClicked() {
+        KeyboardUtils.hideSoftInput(this)
+        if (mShowEmoji) {
+            mEmojiPopup.dismiss()
+            mShowEmoji = false
+            mBtEmoji.setIconResource(R.drawable.ic_emoji)
+        }
+        if (mFlMultiMsg.isVisible) {
+            mFlMultiMsg.gone()
+        }
+    }
+
     private fun scrollToLastMessage() {
         if (mAdapter.itemCount > 0) {
             mRvMessages.scrollToPosition(0)
@@ -257,5 +304,39 @@ class ChatActivity : BaseActivity() {
     override fun updateConnState(state: String) {
         super.updateConnState(state)
         mTvTitle.text = mSession.title + " " + state
+    }
+
+    private fun showEmojiPopup() {
+        if (mFlMultiMsg.isVisible) {
+            mFlMultiMsg.gone()
+        }
+        mEmojiPopup.toggle()
+        mBtEmoji.setIconResource(if (mShowEmoji) R.drawable.ic_emoji else R.drawable.ic_keyboard)
+        mShowEmoji = !mShowEmoji
+    }
+
+    private fun showMultiMessage() {
+        mEtMessage.clearFocus()
+        KeyboardUtils.hideSoftInput(this)
+        if (mShowEmoji) {
+            mEmojiPopup.dismiss()
+            mShowEmoji = false
+        }
+        if (mFlMultiMsg.isVisible) {
+            return
+        }
+        mFlMultiMsg.show()
+    }
+
+    private fun initMultiMessageClickListener() {
+        val onClick = { _: View ->
+            toast("TODO")
+        }
+        mBtImage.setOnClickListener(onClick)
+        mBtCamera.setOnClickListener(onClick)
+        mBtVoice.setOnClickListener(onClick)
+        mBtFile.setOnClickListener(onClick)
+        mBtVote.setOnClickListener(onClick)
+        mBtLocation.setOnClickListener(onClick)
     }
 }
