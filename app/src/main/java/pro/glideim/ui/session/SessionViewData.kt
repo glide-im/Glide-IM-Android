@@ -1,4 +1,4 @@
-package pro.glideim.ui.chat
+package pro.glideim.ui.session
 
 import pro.glideim.sdk.IMSession
 

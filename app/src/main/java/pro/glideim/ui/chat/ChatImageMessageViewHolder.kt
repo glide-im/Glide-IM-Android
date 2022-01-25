@@ -13,23 +13,24 @@ import com.dengzii.ktx.android.show
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.utils.loadImageClipCircle
+import pro.glideim.utils.loadImageRoundCorners
 import pro.glideim.utils.secToTimeSpan
 
-class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<ChatMessageViewData>(v) {
+class ChatImageMessageViewHolder(v: ViewGroup) : AbsViewHolder<ChatImageMessageViewData>(v) {
 
     private val mIvAvatarRight by lazy { findViewById<ImageView>(R.id.iv_avatar_right) }
     private val mTvTime by lazy { findViewById<MaterialTextView>(R.id.tv_time) }
-    private val mTvMsg by lazy { findViewById<MaterialTextView>(R.id.tv_msg) }
-    private val mLlMessageContainer by lazy { findViewById<LinearLayoutCompat>(R.id.ll_message_container) }
+    private val mIvMessage by lazy { findViewById<ImageView>(R.id.iv_image) }
+    private val mMessageContainer by lazy { findViewById<ViewGroup>(R.id.ll_message_container) }
     private val mLlMessage by lazy { findViewById<LinearLayoutCompat>(R.id.fl_message) }
     private val mIvAvatarLeft by lazy { findViewById<ImageView>(R.id.iv_avatar_left) }
     private val mIvSendFailed by lazy { findViewById<ImageView>(R.id.iv_send_failed) }
 
     override fun onCreate(parent: ViewGroup) {
-        setContentView(R.layout.item_chat_message)
+        setContentView(R.layout.item_chat_image_message)
     }
 
-    override fun onBindData(data: ChatMessageViewData, position: Int) {
+    override fun onBindData(data: ChatImageMessageViewData, position: Int) {
         mIvSendFailed.gone()
 
         val msg = data.message
@@ -68,18 +69,8 @@ class ChatMessageViewHolder(v: ViewGroup) : AbsViewHolder<ChatMessageViewData>(v
             }
         }
         mTvTime.text = msg.sendAt.secToTimeSpan()
-        mTvMsg.text = msg.content
-        mLlMessageContainer.orientation =
-            if (mTvMsg.width > (mLlMessageContainer.parent as ViewGroup).measuredWidth - 60) {
-                LinearLayoutCompat.VERTICAL
-            } else {
-                LinearLayoutCompat.HORIZONTAL
-            }
-
-        if (data.unknown) {
-            mTvMsg.text = "你收到了一条不支持的消息, 请更新客户端"
-        }
-        mLlMessageContainer.setOnLongClickListener {
+        mIvMessage.loadImageRoundCorners(data.message.content, 4f)
+        mMessageContainer.setOnLongClickListener {
             onLongClick(it, msg)
             return@setOnLongClickListener true
         }

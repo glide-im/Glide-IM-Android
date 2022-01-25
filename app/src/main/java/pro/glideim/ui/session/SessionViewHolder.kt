@@ -1,4 +1,4 @@
-package pro.glideim.ui.chat
+package pro.glideim.ui.session
 
 import android.view.ViewGroup
 import android.widget.TextView
@@ -9,9 +9,7 @@ import com.dengzii.ktx.android.hide
 import com.dengzii.ktx.android.show
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
-import pro.glideim.sdk.IMSession
-import pro.glideim.utils.loadImage
-import pro.glideim.utils.loadImageClipCircle
+import pro.glideim.ui.chat.ChatActivity
 import pro.glideim.utils.loadImageRoundCorners
 import pro.glideim.utils.secToTimeSpan
 

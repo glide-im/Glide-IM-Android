@@ -1,3 +1,5 @@
+package pro.glideim.ui.session
+
 import android.annotation.SuppressLint
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -11,6 +13,7 @@ import pro.glideim.base.BaseFragment
 import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.IMSession
 import pro.glideim.sdk.SessionUpdateListener
+import pro.glideim.ui.SortedList
 import pro.glideim.ui.chat.*
 import pro.glideim.utils.*
 
@@ -34,7 +37,10 @@ class SessionsFragment : BaseFragment() {
     override val layoutRes = R.layout.fragment_session
 
     override fun initView() {
-        mSessionList.l = SortedList(SessionViewData::class.java, SessionListSorter(mAdapter))
+        mSessionList.l = SortedList(
+            SessionViewData::class.java,
+            SessionListSorter(mAdapter)
+        )
         mAdapter.addViewHolderForType(SessionViewData::class.java, SessionViewHolder::class.java)
 
         mAdapter.setEnableEmptyView(true, SuperAdapter.EMPTY)

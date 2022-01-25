@@ -1,6 +1,6 @@
 package pro.glideim.ui
 
-import SessionsFragment
+import pro.glideim.ui.session.SessionsFragment
 import android.content.Context
 import android.content.Intent
 import androidx.core.view.get

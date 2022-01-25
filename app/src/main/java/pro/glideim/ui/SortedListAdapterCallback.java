@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package pro.glideim.ui.chat;
+package pro.glideim.ui;
 
 import androidx.recyclerview.widget.RecyclerView;
 

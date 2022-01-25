@@ -26,6 +26,7 @@ import pro.glideim.R
 import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.*
 import pro.glideim.sdk.messages.ChatMessage
+import pro.glideim.ui.SortedList
 import pro.glideim.ui.group.GroupDetailActivity
 import pro.glideim.utils.io2main
 import pro.glideim.utils.request
@@ -101,7 +102,10 @@ class ChatActivity : BaseActivity() {
     }
 
     override fun initView() {
-        mMessage.l = SortedList(ChatMessageViewData::class.java, MessageListSorter(mAdapter))
+        mMessage.l = SortedList(
+            ChatMessageViewData::class.java,
+            MessageListSorter(mAdapter)
+        )
         mEtMessage.toggleEnable()
         mBtSend.toggleEnable()
         mEtMessage.clearFocus()
@@ -110,6 +114,10 @@ class ChatActivity : BaseActivity() {
         mAdapter.addViewHolderForType(
             ChatMessageViewData::class.java,
             ChatMessageViewHolder::class.java
+        )
+        mAdapter.addViewHolderForType(
+            ChatImageMessageViewData::class.java,
+            ChatImageMessageViewHolder::class.java
         )
 
         mRvMessages.scrollBarStyle = View.SCROLLBARS_OUTSIDE_OVERLAY
@@ -132,7 +140,11 @@ class ChatActivity : BaseActivity() {
             showMultiMessage()
         }
         mBtSend.setOnClickListener {
-            sendMessage()
+            val msg = mEtMessage.text.toString()
+            if (msg.isBlank()) {
+                return@setOnClickListener
+            }
+            sendMessage(Constants.MESSAGE_TYPE_TEXT, msg)
         }
         KeyboardUtils.registerSoftInputChangedListener(this.window) {
             KeyboardUtils.unregisterSoftInputChangedListener(this.window)
@@ -159,18 +171,15 @@ class ChatActivity : BaseActivity() {
         scrollToLastMessage()
     }
 
-    private fun sendMessage() {
-        val msg = mEtMessage.text.toString()
-        if (msg.isBlank()) {
-            return
-        }
+    private fun sendMessage(type: Int, content: String) {
         if (!GlideIM.getAccount().isIMAvailable) {
             toast("IM server is disconnected")
             return
         }
-
-        mEtMessage.setText("")
-        mSession.sendTextMessage(msg)
+        if (type == Constants.MESSAGE_TYPE_TEXT) {
+            mEtMessage.setText("")
+        }
+        mSession.sendMessage(type, content)
             .io2main()
             .request {
                 onError {
@@ -231,7 +240,13 @@ class ChatActivity : BaseActivity() {
     }
 
     private fun addMessage(m: IMMessage) {
-        val c = ChatMessageViewData(true, m)
+        val c = when (m.type) {
+            Constants.MESSAGE_TYPE_TEXT -> ChatMessageViewData(true, m)
+            Constants.MESSAGE_TYPE_IMAGE -> ChatImageMessageViewData(true, m)
+            else -> {
+                ChatMessageViewData(true, m, true)
+            }
+        }
         mMessage.add(c)
     }
 
@@ -328,11 +343,24 @@ class ChatActivity : BaseActivity() {
         mFlMultiMsg.show()
     }
 
+    private fun hideMultiMessage() {
+        if (mFlMultiMsg.isVisible) {
+            mFlMultiMsg.gone()
+        }
+    }
+
     private fun initMultiMessageClickListener() {
         val onClick = { _: View ->
             toast("TODO")
+            hideMultiMessage()
         }
-        mBtImage.setOnClickListener(onClick)
+        mBtImage.setOnClickListener {
+            hideMultiMessage()
+            sendMessage(
+                Constants.MESSAGE_TYPE_IMAGE,
+                "https://s2.loli.net/2022/01/25/YCJQ5k4mi9Sth8x.png"
+            )
+        }
         mBtCamera.setOnClickListener(onClick)
         mBtVoice.setOnClickListener(onClick)
         mBtFile.setOnClickListener(onClick)

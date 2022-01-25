@@ -203,7 +203,17 @@ public class IMSession {
     }
 
     private void setLastMessage(IMMessage msg) {
-        this.lastMsg = msg.getContent();
+        switch (msg.getType()) {
+            case Constants.MESSAGE_TYPE_IMAGE:
+                lastMsg = "[图片]";
+                break;
+            case Constants.MESSAGE_TYPE_VOICE:
+                lastMsg = "[语音]";
+                break;
+            default:
+                this.lastMsg = msg.getContent();
+                break;
+        }
         this.lastMsgId = msg.getMid();
         this.lastMsgSender = msg.getFrom();
         setUpdateAt(msg.getSendAt());
@@ -371,12 +381,17 @@ public class IMSession {
         });
     }
 
-    public Observable<IMMessage> sendTextMessage(String msg) {
+    public Observable<IMMessage> sendTextMessage(String content) {
+        return sendMessage(Constants.SESSION_TYPE_GROUP, content);
+    }
+
+    public Observable<IMMessage> sendMessage(int type, String content) {
+
         if (account.getIMClient() == null) {
             return Observable.error(new NullPointerException("the connection is not init"));
         }
 
-        Observable<ChatMessage> creator = createMessage(1, msg);
+        Observable<ChatMessage> creator = createMessage(type, content);
         Observable<MessageIDBean> midRequest = MsgApi.API.getMessageID()
                 .map(RxUtils.bodyConverter());
 

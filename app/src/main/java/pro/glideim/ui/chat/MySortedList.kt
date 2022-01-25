@@ -1,5 +1,7 @@
 package pro.glideim.ui.chat
 
+import pro.glideim.ui.SortedList
+
 
 class MySortedList<T> : List<T> {
 

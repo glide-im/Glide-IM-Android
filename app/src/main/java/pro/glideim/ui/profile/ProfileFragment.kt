@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.ImageView
+import androidx.appcompat.widget.LinearLayoutCompat
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
@@ -14,6 +15,10 @@ import pro.glideim.utils.loadImage
 
 
 class ProfileFragment : BaseFragment() {
+
+    private val mLlCleanCache by lazy { findViewById<LinearLayoutCompat>(R.id.ll_clean_cache) }
+    private val mLlEditProfile by lazy { findViewById<LinearLayoutCompat>(R.id.ll_edit_profile) }
+    private val mLlSettings by lazy { findViewById<LinearLayoutCompat>(R.id.ll_settings) }
 
     private val mBtLogout by lazy { findViewById<MaterialButton>(R.id.bt_logout) }
     private val mBtUid by lazy { findViewById<MaterialButton>(R.id.bt_uid) }
@@ -28,6 +33,16 @@ class ProfileFragment : BaseFragment() {
             GlideIM.getAccount().logout()
             activity?.finish()
             LoginActivity.start(requireContext())
+        }
+
+        mLlCleanCache.setOnClickListener {
+            toast("TODO")
+        }
+        mLlEditProfile.setOnClickListener {
+            toast("TODO")
+        }
+        mLlSettings.setOnClickListener {
+            toast("TODO")
         }
     }
 

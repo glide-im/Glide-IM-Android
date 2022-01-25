@@ -39,7 +39,7 @@ public class IMMessage {
         m.setCliSeq(message.getcSeq());
         m.setFrom(message.getFrom());
         m.setTo(message.getTo());
-        m.setType(m.getType());
+        m.setType(message.getType());
         m.setSendAt(message.getcTime());
         m.setCreateAt(message.getcTime());
         m.setContent(message.getContent());

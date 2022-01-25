@@ -2,7 +2,8 @@ package pro.glideim.ui.chat
 
 import pro.glideim.sdk.IMMessage
 
-class ChatMessageViewData(
+open class ChatMessageViewData(
     var showTitle: Boolean,
-    val message: IMMessage
+    val message: IMMessage,
+    var unknown: Boolean = false
 )

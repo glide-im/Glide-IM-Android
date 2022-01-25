@@ -1,6 +1,7 @@
-package pro.glideim.ui.chat
+package pro.glideim.ui.session
 
 import com.dengzii.adapter.SuperAdapter
+import pro.glideim.ui.SortedListAdapterCallback
 
 class SessionListSorter(adapter: SuperAdapter) :
     SortedListAdapterCallback<SessionViewData>(adapter) {

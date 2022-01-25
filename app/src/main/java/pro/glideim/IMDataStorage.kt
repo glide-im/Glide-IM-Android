@@ -2,6 +2,7 @@ package pro.glideim
 
 import android.app.Application
 import android.content.Context
+import com.dengzii.ktx.justTry
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import pro.glideim.db.GlideIMDatabase
@@ -11,6 +12,7 @@ import pro.glideim.db.UserInfo
 import pro.glideim.sdk.*
 import pro.glideim.sdk.api.group.GroupInfoBean
 import pro.glideim.sdk.api.user.UserInfoBean
+import java.lang.Exception
 
 class IMDataStorage : DataStorage {
 
@@ -108,7 +110,7 @@ class IMDataStorage : DataStorage {
                 val sessionDao = sessionDao()
                 val exist = sessionDao.exist("$uid@${session.to}")
                 val s = Session.fromIMSession(uid, session)
-                if (exist == 1) {
+                if (exist > 0) {
                     sessionDao.update(s)
                 } else {
                     sessionDao.add(s)
@@ -143,10 +145,14 @@ class IMDataStorage : DataStorage {
                 val messageDao = messageDao()
                 val exist = messageDao.exist(message.mid)
                 val s = Message.fromIMMessage(uid, message)
-                if (exist == 1) {
+                if (exist > 0) {
                     messageDao.update(s)
                 } else {
-                    messageDao.add(s)
+                    try {
+                        messageDao.add(s)
+                    }catch (e:Throwable){
+                        e.printStackTrace()
+                    }
                 }
                 close()
             }
