@@ -7,6 +7,7 @@
     android:paddingTop="60dp">
 
     <androidx.appcompat.widget.LinearLayoutCompat
+        android:id="@+id/ll_header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
@@ -15,8 +16,8 @@
 
         <ImageView
             android:id="@+id/iv_avatar"
-            android:layout_width="60dp"
-            android:layout_height="60dp"
+            android:layout_width="80dp"
+            android:layout_height="80dp"
             android:layout_gravity="center_horizontal"
             android:src="@drawable/ic_face" />
 
@@ -25,6 +26,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center_horizontal"
+            android:layout_marginTop="10dp"
             android:text="-"
             android:textSize="16sp"
             android:textStyle="bold" />
@@ -39,83 +41,67 @@
             android:text="uid: -"
             android:textAlignment="center"
             android:textSize="12sp" />
+    </androidx.appcompat.widget.LinearLayoutCompat>
 
-        <androidx.appcompat.widget.LinearLayoutCompat
-            android:id="@+id/ll_settings"
+    <androidx.appcompat.widget.LinearLayoutCompat
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="20dp"
+        android:background="@drawable/shape_option_menu"
+        android:elevation="4dp"
+        android:orientation="vertical"
+        android:paddingTop="10dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/ll_header">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/bt_setting"
+            style="@style/OptionMenuButton"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:layout_marginTop="26dp"
-            android:background="@drawable/ripple_option"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingHorizontal="16dp">
+            android:layout_height="wrap_content"
+            android:text="@string/settings"
+            android:theme="@style/OptionMenuButton"
+            app:icon="@drawable/ic_settings" />
 
-            <ImageView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/ic_settings" />
-
-            <com.google.android.material.textview.MaterialTextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="Settings" />
-
-        </androidx.appcompat.widget.LinearLayoutCompat>
-
-        <androidx.appcompat.widget.LinearLayoutCompat
-            android:id="@+id/ll_edit_profile"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/bt_update_profile"
+            style="@style/OptionMenuButton"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:background="@drawable/ripple_option"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingHorizontal="16dp">
+            android:layout_height="wrap_content"
+            android:text="@string/update_profile"
+            android:theme="@style/OptionMenuButton"
+            app:icon="@drawable/ic_account" />
 
-            <ImageView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/ic_account" />
-
-            <com.google.android.material.textview.MaterialTextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="Update Profile" />
-
-        </androidx.appcompat.widget.LinearLayoutCompat>
-
-        <androidx.appcompat.widget.LinearLayoutCompat
-            android:id="@+id/ll_clean_cache"
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/bt_clean_cache"
+            style="@style/OptionMenuButton"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:background="@drawable/ripple_option"
-            android:gravity="center_vertical"
-            android:orientation="horizontal"
-            android:paddingHorizontal="16dp">
+            android:layout_height="wrap_content"
+            android:text="@string/clean_cache"
+            android:theme="@style/OptionMenuButton"
+            app:icon="@drawable/ic_delete_cache" />
 
-            <ImageView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@drawable/ic_delete_cache" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/bt_update"
+            style="@style/OptionMenuButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Check for Update (v1.0.0)"
+            android:theme="@style/OptionMenuButton"
+            app:icon="@drawable/ic_update" />
 
-            <com.google.android.material.textview.MaterialTextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                android:text="Clean Cache" />
-
-        </androidx.appcompat.widget.LinearLayoutCompat>
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/bt_logout"
+            style="@style/OptionMenuButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/sign_out"
+            android:textColor="@color/secondaryColor"
+            android:theme="@style/OptionMenuButton"
+            app:icon="@drawable/ic_logout"
+            app:iconTint="@color/secondaryColor" />
 
     </androidx.appcompat.widget.LinearLayoutCompat>
 
-
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/bt_logout"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom"
-        android:text="@string/sign_out"
-        app:layout_constraintBottom_toBottomOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

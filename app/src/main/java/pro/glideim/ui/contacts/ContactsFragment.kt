@@ -135,7 +135,7 @@ class ContactsFragment : BaseFragment() {
     }
 
     private fun showCreateGroup() {
-        MaterialAlertDialogBuilder(requireContext(), com.google.android.material.R.style.AlertDialog_AppCompat_Light).apply {
+        MaterialAlertDialogBuilder(requireContext(), R.style.AppAlertDialog).apply {
             setTitle("Create Group")
             val et = TextInputEditText(requireContext())
             et.layoutParams = ViewGroup.LayoutParams(

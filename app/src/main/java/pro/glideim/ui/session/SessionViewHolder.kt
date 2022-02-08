@@ -5,6 +5,7 @@ import android.widget.TextView
 import androidx.appcompat.widget.AppCompatImageView
 import com.dengzii.adapter.AbsViewHolder
 import com.dengzii.ktx.android.antiShakeClick
+import com.dengzii.ktx.android.content.getDrawableCompat
 import com.dengzii.ktx.android.hide
 import com.dengzii.ktx.android.show
 import com.google.android.material.textview.MaterialTextView
@@ -12,6 +13,7 @@ import pro.glideim.R
 import pro.glideim.ui.chat.ChatActivity
 import pro.glideim.utils.loadImageRoundCorners
 import pro.glideim.utils.secToTimeSpan
+import java.io.File
 
 class SessionViewHolder(v: ViewGroup) : AbsViewHolder<SessionViewData>(v) {
 
@@ -20,6 +22,7 @@ class SessionViewHolder(v: ViewGroup) : AbsViewHolder<SessionViewData>(v) {
     private val mTvContent by lazy { findViewById<MaterialTextView>(R.id.tv_content) }
     private val mTvTitle by lazy { findViewById<MaterialTextView>(R.id.tv_title) }
     private val mIvAvatar by lazy { findViewById<AppCompatImageView>(R.id.iv_avatar) }
+    private val mVgContainer by lazy { findViewById<ViewGroup>(R.id.vg_container) }
 
     override fun onCreate(parent: ViewGroup) {
         setContentView(R.layout.item_session)
@@ -37,7 +40,7 @@ class SessionViewHolder(v: ViewGroup) : AbsViewHolder<SessionViewData>(v) {
         }
         mTvTime.text = data.updateAt.secToTimeSpan()
 
-        itemView.antiShakeClick {
+        mVgContainer.antiShakeClick {
             ChatActivity.start(context, data.to, data.type)
         }
     }

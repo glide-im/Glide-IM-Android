@@ -4,21 +4,21 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.ImageView
-import androidx.appcompat.widget.LinearLayoutCompat
+import com.dengzii.ktx.android.antiShakeClick
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.base.BaseFragment
 import pro.glideim.sdk.GlideIM
 import pro.glideim.ui.LoginActivity
-import pro.glideim.utils.loadImage
+import pro.glideim.utils.loadImageRoundCorners
 
 
 class ProfileFragment : BaseFragment() {
 
-    private val mLlCleanCache by lazy { findViewById<LinearLayoutCompat>(R.id.ll_clean_cache) }
-    private val mLlEditProfile by lazy { findViewById<LinearLayoutCompat>(R.id.ll_edit_profile) }
-    private val mLlSettings by lazy { findViewById<LinearLayoutCompat>(R.id.ll_settings) }
+    private val mBtCleanCache by lazy { findViewById<MaterialButton>(R.id.bt_clean_cache) }
+    private val mBtEditProfile by lazy { findViewById<MaterialButton>(R.id.bt_update_profile) }
+    private val mBtSettings by lazy { findViewById<MaterialButton>(R.id.bt_setting) }
 
     private val mBtLogout by lazy { findViewById<MaterialButton>(R.id.bt_logout) }
     private val mBtUid by lazy { findViewById<MaterialButton>(R.id.bt_uid) }
@@ -29,19 +29,25 @@ class ProfileFragment : BaseFragment() {
 
     override fun initView() {
 
-        mBtLogout.setOnClickListener {
+        mBtLogout.antiShakeClick {
             GlideIM.getAccount().logout()
             activity?.finish()
             LoginActivity.start(requireContext())
         }
 
-        mLlCleanCache.setOnClickListener {
+        mBtCleanCache.antiShakeClick {
             toast("TODO")
         }
-        mLlEditProfile.setOnClickListener {
+        mBtEditProfile.antiShakeClick {
             toast("TODO")
         }
-        mLlSettings.setOnClickListener {
+        mBtSettings.antiShakeClick {
+            toast("TODO")
+        }
+        mIvAvatar.antiShakeClick {
+            toast("TODO")
+        }
+        mTvNickname.antiShakeClick {
             toast("TODO")
         }
     }
@@ -49,7 +55,7 @@ class ProfileFragment : BaseFragment() {
     override fun onResume() {
         super.onResume()
         GlideIM.getAccount().profile?.apply {
-            mIvAvatar.loadImage(avatar)
+            mIvAvatar.loadImageRoundCorners(avatar, 14f)
             mBtUid.text = "uid: $uid"
             mBtUid.setOnClickListener {
                 val cm: ClipboardManager =
