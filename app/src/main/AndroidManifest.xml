@@ -23,13 +23,14 @@
         <activity android:name=".ui.MainActivity" />
         <activity
             android:name=".ui.LoginActivity"
-            android:launchMode="singleTop" />
+            android:launchMode="singleInstance" />
         <activity android:name=".ui.RegisterActivity" />
         <activity
             android:name=".ui.chat.ChatActivity"
             android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity android:name=".ui.contacts.AddContactsActivity" />
         <activity android:name=".ui.group.GroupDetailActivity" />
+        <activity android:name=".ui.contacts.SelectContactsActivity" />
 
         <receiver
             android:name=".MessageNotifyActionReceiver"

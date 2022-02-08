@@ -96,10 +96,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/sign_out"
-            android:textColor="@color/secondaryColor"
             android:theme="@style/OptionMenuButton"
-            app:icon="@drawable/ic_logout"
-            app:iconTint="@color/secondaryColor" />
+            app:icon="@drawable/ic_logout"/>
 
     </androidx.appcompat.widget.LinearLayoutCompat>
 

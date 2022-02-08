@@ -40,6 +40,7 @@ class LoginActivity : BaseActivity() {
     }
 
     override fun initView() {
+        needAuth = false
         mBtSubmit.setOnClickListener {
             submit()
         }

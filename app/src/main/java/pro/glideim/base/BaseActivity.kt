@@ -19,6 +19,8 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
 
     private var inited = false
 
+    protected var needAuth = true
+
     open val account: IMAccount? get() = GlideIM.getAccount()
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,7 +42,7 @@ abstract class BaseActivity : AppCompatActivity(), RequestStateCallback, ConnSta
 
     override fun onResume() {
         super.onResume()
-        if (account == null || account?.uid == 0L) {
+        if (needAuth && (account == null || account?.uid == 0L)) {
             LoginActivity.start(this)
             finish()
         }

@@ -12,7 +12,6 @@ import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import pro.glideim.sdk.api.Response
 
-
 interface RequestStateCallback {
     fun onRequestStart()
     fun onRequestFinish()
@@ -107,7 +106,7 @@ fun <T> Single<T>.request(activity: RequestStateCallback, callback: (r: T?) -> U
         }
     }
     b.invoke(ObserverBuilder(proxy))
-    this.subscribe(proxy)
+    this.io2main().subscribe(proxy)
 }
 
 fun <T> Observable<T>.request2(activity: RequestStateCallback, callback: (r: T) -> Unit) {
@@ -128,7 +127,8 @@ fun <T> Observable<T>.request2(activity: RequestStateCallback, callback: (r: T) 
         }
     }
     b.invoke(ObserverBuilder(proxy))
-    this.subscribe(proxy)
+    this.io2main()
+        .subscribe(proxy)
 }
 
 fun <T> Single<T>.request2(activity: RequestStateCallback, callback: (r: T?) -> Unit) {
@@ -152,7 +152,7 @@ fun <T> Single<T>.request2(activity: RequestStateCallback, callback: (r: T?) -> 
         }
     }
     b.invoke(ObserverBuilder(proxy))
-    this.subscribe(proxy)
+    this.io2main().subscribe(proxy)
 }
 
 
@@ -177,7 +177,8 @@ fun <T> Observable<Response<T>>.request(activity: RequestStateCallback, callback
         }
     }
     b.invoke(ObserverBuilder(proxy))
-    this.convert()
+    this.io2main()
+        .convert()
         .subscribe(proxy)
 }
 

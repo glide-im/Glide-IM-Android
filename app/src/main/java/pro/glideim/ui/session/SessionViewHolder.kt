@@ -5,15 +5,16 @@ import android.widget.TextView
 import androidx.appcompat.widget.AppCompatImageView
 import com.dengzii.adapter.AbsViewHolder
 import com.dengzii.ktx.android.antiShakeClick
-import com.dengzii.ktx.android.content.getDrawableCompat
 import com.dengzii.ktx.android.hide
 import com.dengzii.ktx.android.show
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
+import pro.glideim.base.BaseActivity
+import pro.glideim.sdk.Constants
 import pro.glideim.ui.chat.ChatActivity
+import pro.glideim.utils.GroupAvatarUtils
 import pro.glideim.utils.loadImageRoundCorners
 import pro.glideim.utils.secToTimeSpan
-import java.io.File
 
 class SessionViewHolder(v: ViewGroup) : AbsViewHolder<SessionViewData>(v) {
 
@@ -29,7 +30,13 @@ class SessionViewHolder(v: ViewGroup) : AbsViewHolder<SessionViewData>(v) {
     }
 
     override fun onBindData(data: SessionViewData, position: Int) {
-        mIvAvatar.loadImageRoundCorners(data.avatar, 6f)
+
+        if (data.type == Constants.SESSION_TYPE_GROUP) {
+            GroupAvatarUtils.loadAvatar((context as BaseActivity).account, data.to, 4f, mIvAvatar)
+        } else {
+            mIvAvatar.loadImageRoundCorners(data.avatar, 4f)
+        }
+
         mTvTitle.text = data.title + "${data.to}"
         mTvContent.text = data.lastMsg
         if (data.unread > 0) {
@@ -50,7 +57,4 @@ class SessionViewHolder(v: ViewGroup) : AbsViewHolder<SessionViewData>(v) {
 
     }
 
-    override fun getChangePayloads(old: Any, new_: Any): Any? {
-        return super.getChangePayloads(old, new_)
-    }
 }

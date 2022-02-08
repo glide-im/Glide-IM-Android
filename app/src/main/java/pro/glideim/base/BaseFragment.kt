@@ -23,7 +23,7 @@ abstract class BaseFragment : Fragment(), RequestStateCallback, ConnStateListene
 
     private var inited = false
 
-    private val account: IMAccount? = GlideIM.getAccount()
+    protected val account: IMAccount? = GlideIM.getAccount()
 
     override fun onCreateView(
         inflater: LayoutInflater,

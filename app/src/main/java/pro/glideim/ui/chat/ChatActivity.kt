@@ -19,20 +19,25 @@ import com.dengzii.ktx.android.gone
 import com.dengzii.ktx.android.show
 import com.dengzii.ktx.android.toggleEnable
 import com.google.android.material.button.MaterialButton
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textview.MaterialTextView
 import com.vanniktech.emoji.EmojiPopup
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.*
+import pro.glideim.sdk.api.group.AddGroupMemberDto
+import pro.glideim.sdk.api.group.GroupApi
 import pro.glideim.sdk.messages.ChatMessage
 import pro.glideim.ui.SortedList
+import pro.glideim.ui.contacts.SelectContactsActivity
 import pro.glideim.ui.group.GroupDetailActivity
+import pro.glideim.utils.convert
 import pro.glideim.utils.io2main
 import pro.glideim.utils.request
 import pro.glideim.utils.request2
 
-class ChatActivity : BaseActivity() {
+open class ChatActivity : BaseActivity() {
 
     private val mBtSend by lazy { findViewById<MaterialButton>(R.id.bt_send) }
     private val mEtMessage by lazy { findViewById<TextInputEditText>(R.id.et_message) }
@@ -97,7 +102,7 @@ class ChatActivity : BaseActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val id = intent.getLongExtra(EXTRA_ID, 0)
         val type = intent.getIntExtra(EXTRA_TYPE, 0)
-        mSession = GlideIM.getAccount().imSessionList.getSession(type, id)
+        mSession = GlideIM.getAccount().imSessionList.getOrCreate(type, id)
         super.onCreate(savedInstanceState)
     }
 
@@ -271,8 +276,7 @@ class ChatActivity : BaseActivity() {
         popupMenu.setOnMenuItemClickListener {
             when (it.itemId) {
                 R.id.item_members -> GroupDetailActivity.start(this, mSession.to)
-                R.id.item_invite -> {
-                }
+                R.id.item_invite -> inviteMember()
                 R.id.item_exit -> deleteContact()
             }
             return@setOnMenuItemClickListener true
@@ -281,6 +285,16 @@ class ChatActivity : BaseActivity() {
     }
 
     private fun deleteContact() {
+        MaterialAlertDialogBuilder(this).apply {
+            setTitle("Exist Group")
+            setMessage("Exist?")
+            setPositiveButton("Confirm") { d, w ->
+
+            }
+            setNegativeButton("Cancel") { d, w ->
+
+            }
+        }
         GlideIM.getAccount().deleteContacts(mSession.type, mSession.to)
             .io2main()
             .request2(this) {
@@ -366,5 +380,20 @@ class ChatActivity : BaseActivity() {
         mBtFile.setOnClickListener(onClick)
         mBtVote.setOnClickListener(onClick)
         mBtLocation.setOnClickListener(onClick)
+    }
+
+    private fun inviteMember() {
+        SelectContactsActivity.startForResult(
+            this,
+            "Invite Member",
+            SelectContactsActivity.TYPE_USER,
+            emptyList()
+        ) {
+            GroupApi.API.inviteMember(AddGroupMemberDto(mSession.to, it.toList()))
+                .convert()
+                .request2(this) {
+                    toast("invite success!")
+                }
+        }
     }
 }

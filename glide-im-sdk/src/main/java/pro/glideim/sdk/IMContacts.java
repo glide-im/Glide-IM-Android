@@ -1,8 +1,5 @@
 package pro.glideim.sdk;
 
-import androidx.annotation.NonNull;
-
-import java.util.ArrayList;
 import java.util.List;
 
 import io.reactivex.Observable;
@@ -17,6 +14,10 @@ import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
 
 public class IMContacts {
+
+    public static final int TYPE_GROUP = 2;
+    public static final int TYPE_USER = 1;
+
     public String title;
     public String avatar;
     public long id;
@@ -75,6 +76,16 @@ public class IMContacts {
 //                    }
 //                });
         members = groupMemberBeans;
+        members.sort((o1, o2) -> {
+            if (o1.getType() < o2.getType()) {
+                return 1;
+            }
+            if (o1.getUid() == o2.getUid()) {
+                return 0;
+            }
+            long i = o1.getUid() - o2.getUid();
+            return (int) i;
+        });
     }
 
     public List<GroupMemberBean> getMembers() {

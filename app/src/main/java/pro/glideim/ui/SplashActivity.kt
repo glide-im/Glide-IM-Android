@@ -16,6 +16,7 @@ class SplashActivity : BaseActivity() {
     override val layoutResId = R.layout.activity_splash
 
     override fun initView() {
+        needAuth = false
 
         GlideIM.authDefaultAccount()
             .io2main()

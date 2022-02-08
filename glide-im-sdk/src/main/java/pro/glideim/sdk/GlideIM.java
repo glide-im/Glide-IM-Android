@@ -57,7 +57,7 @@ public class GlideIM {
     public static Observable<String> authLoggedAccount(Long uid) {
         String token = getDataStorage().loadToken(uid);
         if (token.isEmpty()) {
-            return Observable.error(new Exception("invalid token"));
+            return Observable.error(new GlideException("invalid token"));
         }
         IMAccount account = new IMAccount(uid);
         getInstance().account = account;
