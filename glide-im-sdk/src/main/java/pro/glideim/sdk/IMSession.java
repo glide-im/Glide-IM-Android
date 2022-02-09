@@ -25,6 +25,8 @@ import pro.glideim.sdk.api.msg.SessionBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.im.IMClient;
 import pro.glideim.sdk.messages.ChatMessage;
+import pro.glideim.sdk.messages.GroupNotify;
+import pro.glideim.sdk.messages.GroupNotifyMemberChanges;
 import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
 
@@ -34,6 +36,7 @@ public class IMSession {
     private final TreeMap<Long, IMMessage> messageTreeMap = new TreeMap<>();
 
     private final IMAccount account;
+    private final List<SessionUpdateListener> sessionUpdateListeners = new ArrayList<>();
     public long to;
     public long lastMsgSender;
     public String title;
@@ -45,9 +48,8 @@ public class IMSession {
     public String lastMsg;
     public long lastMsgId;
     public long createAt;
-
+    public boolean existed = false;
     IMSessionList.SessionTag tag;
-    private SessionUpdateListener sessionUpdateListener;
     private MessageChangeListener messageChangeListener;
 
     private boolean infoInit = false;
@@ -68,6 +70,7 @@ public class IMSession {
         IMSession s = new IMSession(account, stateBean.getGid(), Constants.SESSION_TYPE_GROUP);
         s.unread = 0;
         s.lastMsgId = stateBean.getLastMID();
+        s.setUpdateAt(stateBean.getLastMsgAt());
         return s;
     }
 
@@ -111,11 +114,23 @@ public class IMSession {
         onSessionUpdate();
     }
 
-    public void setSessionUpdateListener(SessionUpdateListener sessionUpdateListener) {
-        this.sessionUpdateListener = sessionUpdateListener;
+    public void addSessionUpdateListener(SessionUpdateListener sessionUpdateListener) {
+        this.sessionUpdateListeners.add(sessionUpdateListener);
+    }
+
+    public void removeSessionUpdateListener(SessionUpdateListener sessionUpdateListener) {
+        this.sessionUpdateListeners.remove(sessionUpdateListener);
     }
 
     public void syncStatus() {
+        if (type == IMContact.TYPE_GROUP) {
+            return;
+        }
+        IMContact group = account.getContactsList().getGroup(to);
+        if (group != null) {
+            type = IMContact.TYPE_GROUP;
+            return;
+        }
         MsgApi.API.getSession(new GetSessionDto(to))
                 .compose(RxUtils.silentScheduler())
                 .map(RxUtils.bodyConverter())
@@ -128,6 +143,9 @@ public class IMSession {
     }
 
     public void addHistoryMessage(List<IMMessage> messages) {
+        if (messages.isEmpty() || disabled()) {
+            return;
+        }
         long last = 0;
         if (!messageTreeMap.isEmpty()) {
             last = messageTreeMap.lastKey();
@@ -162,7 +180,24 @@ public class IMSession {
         }
     }
 
-    void onNewMessage(IMMessage msg) {
+    void onNotifyMessage(GroupNotify<GroupNotifyMemberChanges> m) {
+        if (disabled()) {
+            return;
+        }
+        if (m.getType() == GroupNotify.TYPE_MEMBER_REMOVED) {
+            if (m.getData().getUid().get(0) == account.uid) {
+                onNewMessage(new IMGroupNotifyMessage(account, m));
+                existed = true;
+                return;
+            }
+        }
+        onNewMessage(new IMGroupNotifyMessage(account, m));
+    }
+
+    boolean onNewMessage(IMMessage msg) {
+        if (type == Constants.SESSION_TYPE_GROUP && disabled()) {
+            return false;
+        }
         unread++;
         setUpdateAt(msg.getSendAt());
         SLogger.d(TAG, "onNewMessage:" + msg);
@@ -179,6 +214,7 @@ public class IMSession {
         if (messageChangeListener != null) {
             messageChangeListener.onNewMessage(msg);
         }
+        return true;
     }
 
 
@@ -210,6 +246,17 @@ public class IMSession {
             case Constants.MESSAGE_TYPE_VOICE:
                 lastMsg = "[语音]";
                 break;
+            case Constants.MESSAGE_TYPE_GROUP_NOTIFY:
+                GroupNotify<GroupNotifyMemberChanges> notify = ((IMGroupNotifyMessage) msg).notify;
+                GroupNotifyMemberChanges data = notify.getData();
+                Long uid = data.getUid().get(0);
+
+                if (notify.getType() == GroupNotify.TYPE_MEMBER_REMOVED && uid == account.uid) {
+                    lastMsg = "你已被移除群聊";
+                } else {
+                    lastMsg = data.getUid().get(0) + "已加入群聊";
+                }
+                break;
             default:
                 this.lastMsg = msg.getContent();
                 break;
@@ -217,10 +264,6 @@ public class IMSession {
         this.lastMsgId = msg.getMid();
         this.lastMsgSender = msg.getFrom();
         setUpdateAt(msg.getSendAt());
-    }
-
-    void setOnUpdateListener(SessionUpdateListener sessionUpdateListener) {
-        this.sessionUpdateListener = sessionUpdateListener;
     }
 
     public void setMessageListener(MessageChangeListener l) {
@@ -253,9 +296,8 @@ public class IMSession {
     }
 
     private void onSessionUpdate() {
-        if (sessionUpdateListener != null) {
-            SLogger.d(TAG, "onUpdate");
-            sessionUpdateListener.onUpdate(this);
+        for (SessionUpdateListener l : sessionUpdateListeners) {
+            l.onUpdate(this);
         }
     }
 
@@ -386,7 +428,9 @@ public class IMSession {
     }
 
     public Observable<IMMessage> sendMessage(int type, String content) {
-
+        if (disabled()) {
+            return Observable.error(new GlideException("message send fail, chat is disabled"));
+        }
         if (account.getIMClient() == null) {
             return Observable.error(new NullPointerException("the connection is not init"));
         }
@@ -463,6 +507,10 @@ public class IMSession {
         }
     }
 
+
+    public boolean disabled() {
+        return existed;
+    }
 
     @Override
     public int hashCode() {

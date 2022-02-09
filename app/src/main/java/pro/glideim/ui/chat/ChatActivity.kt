@@ -9,6 +9,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.PopupMenu
+import androidx.core.view.children
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -30,6 +31,7 @@ import pro.glideim.sdk.api.group.AddGroupMemberDto
 import pro.glideim.sdk.api.group.GroupApi
 import pro.glideim.sdk.messages.ChatMessage
 import pro.glideim.ui.SortedList
+import pro.glideim.ui.chat.viewholder.*
 import pro.glideim.ui.contacts.SelectContactsActivity
 import pro.glideim.ui.group.GroupDetailActivity
 import pro.glideim.utils.convert
@@ -37,7 +39,7 @@ import pro.glideim.utils.io2main
 import pro.glideim.utils.request
 import pro.glideim.utils.request2
 
-open class ChatActivity : BaseActivity() {
+open class ChatActivity : BaseActivity(), IMSession.SessionUpdateListener {
 
     private val mBtSend by lazy { findViewById<MaterialButton>(R.id.bt_send) }
     private val mEtMessage by lazy { findViewById<TextInputEditText>(R.id.et_message) }
@@ -47,7 +49,7 @@ open class ChatActivity : BaseActivity() {
     private val mBtEmoji by lazy { findViewById<MaterialButton>(R.id.bt_emoji) }
     private val mBtAdd by lazy { findViewById<MaterialButton>(R.id.bt_add) }
     private val mFlMultiMsg by lazy { findViewById<ViewGroup>(R.id.fl_multi_message) }
-
+    private val mVgMessage by lazy { findViewById<ViewGroup>(R.id.cl_msg) }
 
     private val mBtLocation by lazy { findViewById<MaterialButton>(R.id.bt_location) }
     private val mBtVote by lazy { findViewById<MaterialButton>(R.id.bt_vote) }
@@ -123,6 +125,10 @@ open class ChatActivity : BaseActivity() {
         mAdapter.addViewHolderForType(
             ChatImageMessageViewData::class.java,
             ChatImageMessageViewHolder::class.java
+        )
+        mAdapter.addViewHolderForType(
+            GroupNotifyViewData::class.java,
+            GroupNotifyViewHolder::class.java
         )
 
         mRvMessages.scrollBarStyle = View.SCROLLBARS_OUTSIDE_OVERLAY
@@ -215,6 +221,7 @@ open class ChatActivity : BaseActivity() {
         super.onResume()
         NotificationUtils.cancel(mSession.to.hashCode())
         current = mSession
+        mSession.addSessionUpdateListener(this)
         mSession.setMessageListener(object :
             MessageChangeListener {
             override fun onChange(mid: Long, message: IMMessage) {
@@ -241,6 +248,7 @@ open class ChatActivity : BaseActivity() {
     override fun onPause() {
         super.onPause()
         current = null
+        mSession.removeSessionUpdateListener(this)
         mSession.setMessageListener(null)
     }
 
@@ -248,6 +256,7 @@ open class ChatActivity : BaseActivity() {
         val c = when (m.type) {
             Constants.MESSAGE_TYPE_TEXT -> ChatMessageViewData(true, m)
             Constants.MESSAGE_TYPE_IMAGE -> ChatImageMessageViewData(true, m)
+            Constants.MESSAGE_TYPE_GROUP_NOTIFY -> GroupNotifyViewData(m as IMGroupNotifyMessage)
             else -> {
                 ChatMessageViewData(true, m, true)
             }
@@ -383,17 +392,32 @@ open class ChatActivity : BaseActivity() {
     }
 
     private fun inviteMember() {
+        val group = account?.contactsList?.getGroup(mSession.to) ?: return
+        val mb = group.members.map { it.uid }
         SelectContactsActivity.startForResult(
-            this,
-            "Invite Member",
-            SelectContactsActivity.TYPE_USER,
-            emptyList()
+            this, "Invite Member",
+            SelectContactsActivity.TYPE_USER, mb
         ) {
+            if (it.isEmpty()) {
+                return@startForResult
+            }
             GroupApi.API.inviteMember(AddGroupMemberDto(mSession.to, it.toList()))
                 .convert()
                 .request2(this) {
                     toast("invite success!")
                 }
+        }
+    }
+
+    override fun onUpdate(s: IMSession) {
+        if (s.existed) {
+            mVgMessage.isClickable = false
+            mVgMessage.isLongClickable = false
+            mVgMessage.focusable = View.NOT_FOCUSABLE
+            mVgMessage.isEnabled = false
+            mVgMessage.children.forEach {
+                it.isEnabled = false
+            }
         }
     }
 }

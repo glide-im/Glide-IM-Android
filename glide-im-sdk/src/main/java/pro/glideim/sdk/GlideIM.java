@@ -6,6 +6,7 @@ import java.util.List;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
+import io.reactivex.Single;
 import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.Response;
 import pro.glideim.sdk.api.auth.AuthApi;
@@ -17,9 +18,6 @@ import pro.glideim.sdk.api.group.CreateGroupDto;
 import pro.glideim.sdk.api.group.GetGroupInfoDto;
 import pro.glideim.sdk.api.group.GroupApi;
 import pro.glideim.sdk.api.group.GroupInfoBean;
-import pro.glideim.sdk.api.msg.AckOfflineMsgDto;
-import pro.glideim.sdk.api.msg.MessageBean;
-import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.user.GetUserInfoDto;
 import pro.glideim.sdk.api.user.UserApi;
 import pro.glideim.sdk.api.user.UserInfoBean;
@@ -136,28 +134,31 @@ public class GlideIM {
                 });
     }
 
-    public static Observable<List<UserInfoBean>> getUserInfo(List<Long> uid) {
-        final List<UserInfoBean> temped = new ArrayList<>();
-        List<Long> filtered = new ArrayList<>();
-        for (Long id : uid) {
-            UserInfoBean temp = getDataStorage().loadTempUserInfo(id);
-            if (temp != null) {
-                temped.add(temp);
-            } else {
-                filtered.add(id);
-            }
-        }
-        if (filtered.isEmpty()) {
-            return Observable.just(temped);
-        }
-        Observable<Response<List<UserInfoBean>>> s = UserApi.API.getUserInfo(new GetUserInfoDto(filtered));
-        return s.map(RxUtils.bodyConverter()).map(r -> {
-            for (UserInfoBean u : r) {
-                getDataStorage().storeTempUserInfo(u);
-            }
-            temped.addAll(r);
-            return r;
-        });
+    public static Single<List<UserInfoBean>> getUserInfo(List<Long> uid) {
+
+        return Observable.fromIterable(uid)
+                .flatMap((Function<Long, ObservableSource<Pair<Long, UserInfoBean>>>) l -> {
+                    UserInfoBean tempUserInfo = getDataStorage().loadTempUserInfo(l);
+                    return Observable.just(new Pair<>(l, tempUserInfo));
+                })
+                .groupBy(p -> p.v != null)
+                .flatMap(group -> {
+                    if (group.getKey()) {
+                        return group.map(p -> p.v);
+                    } else {
+                        return group.map(p -> p.k)
+                                .toList()
+                                .flatMapObservable((Function<List<Long>, ObservableSource<Response<List<UserInfoBean>>>>) uids ->
+                                        UserApi.API.getUserInfo(new GetUserInfoDto(uids))
+                                )
+                                .map(RxUtils.bodyConverter())
+                                .flatMap((Function<List<UserInfoBean>, ObservableSource<UserInfoBean>>) Observable::fromIterable)
+                                .doOnNext(userInfoBeans -> {
+                                    getDataStorage().storeTempUserInfo(userInfoBeans);
+                                });
+                    }
+                })
+                .toList();
     }
 
     public static Observable<CreateGroupBean> createGroup(String name) {

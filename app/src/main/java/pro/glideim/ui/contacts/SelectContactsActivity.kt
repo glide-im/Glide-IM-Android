@@ -18,7 +18,7 @@ import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.Constants
-import pro.glideim.sdk.IMContacts
+import pro.glideim.sdk.IMContact
 import pro.glideim.utils.loadImageRoundCorners
 
 class SelectContactsActivity : BaseActivity() {
@@ -31,9 +31,9 @@ class SelectContactsActivity : BaseActivity() {
     private val mTitle by intentExtra("title", "Select Contacts")
     private val mType by intentExtra("type", TYPE_ALL)
 
-    private val mContacts = mutableListOf<IMContacts>()
+    private val mContacts = mutableListOf<IMContact>()
     private val mAdapter = SuperAdapter(mContacts)
-    private val mSelected = mutableListOf<IMContacts>()
+    private val mSelected = mutableListOf<IMContact>()
 
     override val layoutResId = R.layout.activity_select_contacts
 
@@ -65,12 +65,14 @@ class SelectContactsActivity : BaseActivity() {
     override fun initView() {
         mTvTitle.text = mTitle
 
-        val filter = account?.tempContacts.orEmpty().filter {
+        val filter = account?.contactsList?.all.orEmpty().filter {
             if (mType == TYPE_ALL) true else it.type == mType && !mExcludes.contains(it.id)
         }
 
         mContacts.addAll(filter)
-        mAdapter.addViewHolderForType<IMContacts>(R.layout.item_select_contacts) {
+        mAdapter.setEnableEmptyView(true, SuperAdapter.EMPTY)
+        mAdapter.setEnableEmptyViewOnInit(true)
+        mAdapter.addViewHolderForType<IMContact>(R.layout.item_select_contacts) {
             val ivAvatar = findView<ImageView>(R.id.iv_avatar)
             val ivCheck = findView<ImageView>(R.id.iv_check)
             val tvNickname = findView<MaterialTextView>(R.id.tv_nickname)

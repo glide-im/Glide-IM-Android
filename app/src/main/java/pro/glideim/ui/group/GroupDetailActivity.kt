@@ -20,7 +20,10 @@ import pro.glideim.sdk.api.group.RemoveMemberDto
 import pro.glideim.sdk.api.user.ContactsUidDto
 import pro.glideim.sdk.api.user.UserApi
 import pro.glideim.ui.Events
-import pro.glideim.utils.*
+import pro.glideim.utils.io2main
+import pro.glideim.utils.loadImageClipCircle
+import pro.glideim.utils.request
+import pro.glideim.utils.request2
 
 class GroupDetailActivity : BaseActivity() {
 
@@ -57,11 +60,12 @@ class GroupDetailActivity : BaseActivity() {
                 }
                 ivAvatar.loadImageClipCircle(data.userInfo.avatar)
                 val type = when (data.memberInfo.type) {
-                    1 -> "Owner"
-                    2 -> "Admin"
+                    Constants.GROUP_MEMBER_OWNER -> "Owner"
+                    Constants.GROUP_MEMBER_ADMIN -> "Admin"
                     else -> ""
                 }
-                tvNickname.text = "${data.userInfo.nickname} (${data.userInfo.uid})"
+                val a = if (data.userInfo.uid == account?.uid) "Me" else data.userInfo.uid
+                tvNickname.text = "${data.userInfo.nickname} ($a)"
                 tvType.text = type
             }
         }
@@ -74,7 +78,7 @@ class GroupDetailActivity : BaseActivity() {
 
     private fun loadMembers() {
 
-        val group = GlideIM.getAccount().getContact(Constants.SESSION_TYPE_GROUP, mGid)
+        val group = GlideIM.getAccount().contactsList.getGroup(mGid)
         if (group == null) {
             finish()
         }
@@ -82,7 +86,7 @@ class GroupDetailActivity : BaseActivity() {
         GlideIM.getUserInfo(mbs.keys.toList())
             .io2main()
             .request2(this) {
-                it.forEach { uf ->
+                it?.forEach { uf ->
                     val mb = mbs[uf.uid]!!
                     val index = when (mb.type) {
                         1 -> 0
@@ -107,7 +111,7 @@ class GroupDetailActivity : BaseActivity() {
         if (account?.uid == mOwnerUID) {
             item.add("Remove")
         }
-        if (account?.getContact(Constants.SESSION_TYPE_USER, uid) == null) {
+        if (account?.contactsList?.getUser(uid) == null) {
             item.add("Add Contacts")
         }
 
@@ -118,7 +122,7 @@ class GroupDetailActivity : BaseActivity() {
             setItems(item.toTypedArray()) { _, i ->
                 when (item[i]) {
                     "Remove" -> {
-                        GroupApi.API.removeMember(RemoveMemberDto(listOf(uid)))
+                        GroupApi.API.removeMember(RemoveMemberDto(mGid, listOf(uid)))
                             .io2main()
                             .request(this@GroupDetailActivity) {
                                 mMembers.removeAt(index)

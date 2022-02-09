@@ -1,4 +1,4 @@
-package pro.glideim.ui.chat
+package pro.glideim.ui.chat.viewholder
 
 import android.view.Gravity
 import android.view.ViewGroup

@@ -2,8 +2,7 @@ package pro.glideim
 
 import android.app.Application
 import android.content.Context
-import com.dengzii.ktx.justTry
-import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import pro.glideim.db.GlideIMDatabase
 import pro.glideim.db.Message
@@ -12,7 +11,7 @@ import pro.glideim.db.UserInfo
 import pro.glideim.sdk.*
 import pro.glideim.sdk.api.group.GroupInfoBean
 import pro.glideim.sdk.api.user.UserInfoBean
-import java.lang.Exception
+import kotlin.coroutines.EmptyCoroutineContext
 
 class IMDataStorage : DataStorage {
 
@@ -60,15 +59,19 @@ class IMDataStorage : DataStorage {
 
     override fun storeTempUserInfo(userInfoBean: UserInfoBean) {
         mUserInfo[userInfoBean.uid] = userInfoBean
-        GlobalScope.launch {
+        CoroutineScope(EmptyCoroutineContext).launch {
             GlideIMDatabase.getDb(application).apply {
                 val userInfoDao = userInfoDao()
                 val s = UserInfo.fromUserInfoBean(userInfoBean)
                 val exist = userInfoDao.exist(userInfoBean.uid)
-                if (exist != 0) {
-                    userInfoDao.update(s)
-                } else {
-                    userInfoDao.add(s)
+                try {
+                    if (exist != 0) {
+                        userInfoDao.update(s)
+                    } else {
+                        userInfoDao.add(s)
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
                 }
                 close()
             }
@@ -104,7 +107,7 @@ class IMDataStorage : DataStorage {
 
     override fun storeSession(uid: Long, session: IMSession) {
 
-        GlobalScope.launch {
+        CoroutineScope(EmptyCoroutineContext).launch {
 
             GlideIMDatabase.getDb(application).apply {
                 val sessionDao = sessionDao()
@@ -140,7 +143,7 @@ class IMDataStorage : DataStorage {
     }
 
     override fun storeMessage(message: IMMessage) {
-        GlobalScope.launch {
+        CoroutineScope(EmptyCoroutineContext).launch {
             GlideIMDatabase.getDb(application).apply {
                 val messageDao = messageDao()
                 val exist = messageDao.exist(message.mid)
@@ -150,7 +153,7 @@ class IMDataStorage : DataStorage {
                 } else {
                     try {
                         messageDao.add(s)
-                    }catch (e:Throwable){
+                    } catch (e: Throwable) {
                         e.printStackTrace()
                     }
                 }

@@ -20,13 +20,14 @@ import com.google.android.material.textfield.TextInputEditText
 import com.google.android.material.textview.MaterialTextView
 import pro.glideim.R
 import pro.glideim.base.BaseFragment
+import pro.glideim.sdk.ContactChangeListener
 import pro.glideim.sdk.GlideIM
-import pro.glideim.sdk.IMContacts
+import pro.glideim.sdk.IMContact
 import pro.glideim.ui.Events
 import pro.glideim.ui.chat.ChatActivity
 import pro.glideim.utils.*
 
-class ContactsFragment : BaseFragment() {
+class ContactsFragment : BaseFragment(), ContactChangeListener {
     private val mBtAdd by lazy { findViewById<MaterialButton>(R.id.bt_add) }
 
     private val mTvTitle by lazy { findViewById<MaterialTextView>(R.id.tv_title) }
@@ -34,10 +35,15 @@ class ContactsFragment : BaseFragment() {
     private val mSrfRefresh by lazy { findViewById<SwipeRefreshLayout>(R.id.srf_refresh) }
     private val mLlNotifications by lazy { findViewById<ViewGroup>(R.id.ll_notify) }
 
-    private val mContacts = mutableListOf<Any>()
+    private val mContactList get() = account?.contactsList
+    private val mContacts = mutableListOf<Contact>()
+    private val mContactsMap = mutableMapOf<Long, Contact>()
     private val mAdapter = SuperAdapter(mContacts)
 
+    private var mInit = false
     override val layoutRes = R.layout.fragment_contacts
+
+    private data class Contact(var c: IMContact)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,11 +58,12 @@ class ContactsFragment : BaseFragment() {
 
     override fun initView() {
 
-        mAdapter.addViewHolderForType<IMContacts>(R.layout.item_contacts) {
+        mAdapter.addViewHolderForType<Contact>(R.layout.item_contacts) {
             val ivAvatar = findView<ImageView>(R.id.iv_avatar)
             val tvNickname = findView<MaterialTextView>(R.id.tv_nickname)
-            onBindData { data, _ ->
-                if (data.type == IMContacts.TYPE_GROUP) {
+            onBindData { d, _ ->
+                val data = d.c
+                if (data.type == IMContact.TYPE_GROUP) {
                     GroupAvatarUtils.loadAvatar(account, data.id, 4f, ivAvatar)
                 } else {
                     ivAvatar.loadImageRoundCorners(data.avatar, 4f)
@@ -103,6 +110,16 @@ class ContactsFragment : BaseFragment() {
         mSrfRefresh.startRefresh()
     }
 
+    override fun onStart() {
+        super.onStart()
+        mContactList?.addContactChangeListener(this)
+    }
+
+    override fun onStop() {
+        super.onStop()
+        mContactList?.removeContactChangeListener(this)
+    }
+
     override fun onRequestFinish() {
         super.onRequestFinish()
         mSrfRefresh.finishRefresh()
@@ -132,9 +149,15 @@ class ContactsFragment : BaseFragment() {
             .io2main()
             .request2(this) {
                 mContacts.clear()
-                mContacts.addAll(it!!)
+                mContactsMap.clear()
+                it!!.map { ic -> Contact(ic) }
+                    .forEach { c ->
+                        mContactsMap[c.c.id] = c
+                        mContacts.add(c)
+                    }
                 mAdapter.notifyDataSetChanged()
                 mSrfRefresh.finishRefresh()
+                mInit = true
             }
     }
 
@@ -181,6 +204,43 @@ class ContactsFragment : BaseFragment() {
             mTvTitle.text = "Contacts"
         } else {
             mTvTitle.text = state
+        }
+    }
+
+    override fun onNewContact(c: IMContact) {
+        if (!mInit) {
+            return
+        }
+        if (mContactsMap.containsKey(c.id)) {
+            return
+        }
+        val contact = Contact(c)
+        mContactsMap[c.id] = contact
+        mContacts.add(contact)
+        mAdapter.notifyItemInserted(mContacts.size)
+    }
+
+    override fun onContactUpdate(contact: IMContact) {
+        val c = mContactsMap[contact.id]
+        if (c != null) {
+            c.c = contact
+            val indexOf = mContacts.indexOf(c)
+            if (indexOf == -1) {
+                return
+            }
+            mAdapter.notifyItemChanged(indexOf)
+        }
+    }
+
+    override fun onContactRemove(contact: IMContact) {
+        val c = mContactsMap[contact.id]
+        if (c != null) {
+            val indexOf = mContacts.indexOf(c)
+            if (indexOf == -1) {
+                return
+            }
+            mContacts.removeAt(indexOf)
+            mAdapter.notifyItemRemoved(indexOf)
         }
     }
 }

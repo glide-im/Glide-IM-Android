@@ -2,6 +2,7 @@ package pro.glideim.ui.chat
 
 import com.dengzii.adapter.SuperAdapter
 import pro.glideim.ui.SortedListAdapterCallback
+import pro.glideim.ui.chat.viewholder.ChatMessageViewData
 
 class MessageListSorter(adapter: SuperAdapter) : SortedListAdapterCallback<ChatMessageViewData>(adapter) {
 

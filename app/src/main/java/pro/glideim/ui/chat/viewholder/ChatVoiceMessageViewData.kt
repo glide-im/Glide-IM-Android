@@ -1,8 +1,8 @@
-package pro.glideim.ui.chat
+package pro.glideim.ui.chat.viewholder
 
 import pro.glideim.sdk.IMMessage
 
-class ChatVoteMessageViewData(
+class ChatVoiceMessageViewData(
     showTitle: Boolean,
     message: IMMessage
 ) : ChatMessageViewData(showTitle, message)

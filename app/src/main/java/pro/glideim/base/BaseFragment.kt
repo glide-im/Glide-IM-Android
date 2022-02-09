@@ -48,7 +48,7 @@ abstract class BaseFragment : Fragment(), RequestStateCallback, ConnStateListene
     }
 
     fun toast(msg: String) {
-        Toast.makeText(requireContext(), msg, Toast.LENGTH_SHORT).show()
+        Toast.makeText(requireActivity(), msg, Toast.LENGTH_SHORT).show()
     }
 
     override fun onRequestStart() {

@@ -11,15 +11,12 @@ import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
 import io.reactivex.Single;
 import io.reactivex.SingleSource;
-import io.reactivex.annotations.NonNull;
 import io.reactivex.annotations.Nullable;
-import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.auth.AuthApi;
 import pro.glideim.sdk.api.auth.AuthBean;
 import pro.glideim.sdk.api.auth.AuthDto;
 import pro.glideim.sdk.api.group.GroupApi;
-import pro.glideim.sdk.api.group.GroupInfoBean;
 import pro.glideim.sdk.api.group.JoinGroupDto;
 import pro.glideim.sdk.api.user.ProfileBean;
 import pro.glideim.sdk.api.user.UserApi;
@@ -31,6 +28,8 @@ import pro.glideim.sdk.messages.Actions;
 import pro.glideim.sdk.messages.ChatMessage;
 import pro.glideim.sdk.messages.CommMessage;
 import pro.glideim.sdk.messages.GroupMessage;
+import pro.glideim.sdk.messages.GroupNotify;
+import pro.glideim.sdk.messages.GroupNotifyMemberChanges;
 import pro.glideim.sdk.push.NewContactsMessage;
 import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
@@ -41,7 +40,7 @@ public class IMAccount implements MessageListener {
     private static final String TAG = "IMAccount";
 
     private final IMSessionList sessionList = new IMSessionList(this);
-    private final TreeMap<String, IMContacts> contactsMap = new TreeMap<>();
+    private final IMContactList contactsList = new IMContactList(this);
     private final int device = 1;
     private final List<String> servers = new ArrayList<>();
     public long uid;
@@ -98,22 +97,6 @@ public class IMAccount implements MessageListener {
         return sessionList;
     }
 
-    public List<IMContacts> updateContactsGroup(@NonNull List<GroupInfoBean> groupInfoBeans) {
-        List<IMContacts> res = new ArrayList<>();
-        for (GroupInfoBean groupInfoBean : groupInfoBeans) {
-            IMContacts c = contactsMap.get(2 + "_" + groupInfoBean.getGid());
-            if (c == null) {
-                continue;
-            }
-            c.title = groupInfoBean.getName();
-            c.avatar = groupInfoBean.getAvatar();
-            c.id = groupInfoBean.getGid();
-            c.type = 2;
-            res.add(c);
-        }
-        return res;
-    }
-
     public ProfileBean getProfile() {
         return profileBean;
     }
@@ -124,17 +107,13 @@ public class IMAccount implements MessageListener {
                 .doOnNext(profileBean -> IMAccount.this.profileBean = profileBean);
     }
 
-    public void addContacts(IMContacts c) {
-        contactsMap.put(c.type + "_" + c.id, c);
-    }
-
-    public List<IMContacts> getTempContacts() {
-        return new ArrayList<>(contactsMap.values());
+    public IMContactList getContactsList(){
+        return contactsList;
     }
 
     public List<Long> getContactsGroup() {
         List<Long> g = new ArrayList<>();
-        for (IMContacts contact : getTempContacts()) {
+        for (IMContact contact : contactsList.getAll()) {
             if (contact.type == 2) {
                 g.add(contact.id);
             }
@@ -151,17 +130,13 @@ public class IMAccount implements MessageListener {
         return im != null && im.isConnected();
     }
 
-    public IMContacts getContact(int type, long id) {
-        return contactsMap.get(type + "_" + id);
-    }
-
-    public Single<List<IMContacts>> getContacts() {
+    public Single<List<IMContact>> getContacts() {
         return UserApi.API.getContactsList()
                 .map(RxUtils.bodyConverter())
                 .flatMap(Observable::fromIterable)
-                .map(a -> IMContacts.fromContactsBean(a, this))
-                .doOnNext(this::addContacts)
-                .flatMapSingle((Function<IMContacts, SingleSource<IMContacts>>) IMContacts::update)
+                .map(a -> IMContact.fromContactsBean(a, this))
+                .doOnNext(contactsList::addContacts)
+                .flatMapSingle((Function<IMContact, SingleSource<? extends IMContact>>) IMContact::update)
                 .toList();
     }
 
@@ -288,8 +263,11 @@ public class IMAccount implements MessageListener {
     @Override
     public void onGroupMessage(GroupMessage m) {
         IMMessage ms = IMMessage.fromGroupMessage(this, m);
+        if (!sessionList.onNewMessage(ms)) {
+            // existed
+            return;
+        }
         storeMessage(ms);
-        sessionList.onNewMessage(ms);
         if (imMessageListener != null) {
             try {
                 imMessageListener.onNewMessage(ms);
@@ -299,7 +277,7 @@ public class IMAccount implements MessageListener {
         }
     }
 
-    public void storeMessage(IMMessage ms){
+    public void storeMessage(IMMessage ms) {
         GlideIM.getDataStorage().storeMessage(ms);
     }
 
@@ -323,6 +301,47 @@ public class IMAccount implements MessageListener {
                     CommMessage<NewContactsMessage> s = m.deserialize(type);
                     onNewContacts(s.getData());
                 }
+                break;
+            case Actions.Srv.ACTION_NOTIFY_GROUP:
+                Type type = new TypeToken<CommMessage<GroupNotify<GroupNotifyMemberChanges>>>() {
+                }.getType();
+                CommMessage<GroupNotify<GroupNotifyMemberChanges>> s = m.deserialize(type);
+                if (s == null) {
+                    SLogger.e(TAG, new NullPointerException("the group notify is null"));
+                    return;
+                }
+                GroupNotify<GroupNotifyMemberChanges> notify = s.getData();
+                if (notify == null) {
+                    SLogger.e(TAG, new NullPointerException("the group notify is null"));
+                    return;
+                }
+                IMGroupContact group = contactsList.getGroup(notify.getGid());
+                if (group == null) {
+                    SLogger.d(TAG, "group does not exist");
+                    return;
+                }
+                switch (((int) notify.getType())) {
+                    case GroupNotify.TYPE_MEMBER_ADDED:
+                        notify.getData().getUid().forEach(group::addMember);
+                        break;
+                    case GroupNotify.TYPE_MEMBER_REMOVED:
+                        notify.getData().getUid().forEach(uid -> {
+                            if (uid == this.uid) {
+                                contactsList.removeGroup(notify.getGid());
+                                getIMSessionList().existGroupChat(notify.getGid(), notify);
+                            }
+                            group.removeMember(uid);
+                        });
+                        break;
+                    default:
+                        SLogger.d(TAG, "unknown group notify:" + notify.getType());
+                        break;
+                }
+                IMSession groupSes = getIMSessionList().getOrCreate(Constants.SESSION_TYPE_GROUP, notify.getGid());
+                groupSes.onNotifyMessage(notify);
+                break;
+            default:
+                SLogger.d(TAG, "unknown action:" + m.getAction());
                 break;
         }
     }

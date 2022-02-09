@@ -18,7 +18,6 @@ import io.reactivex.disposables.Disposable
 import pro.glideim.R
 import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.IMAccount
-import pro.glideim.sdk.IMContacts
 import pro.glideim.sdk.api.user.UserInfoBean
 
 object GroupAvatarUtils {
@@ -28,14 +27,14 @@ object GroupAvatarUtils {
     fun loadAvatar(account: IMAccount?, gid: Long, radius: Float, imageView: ImageView) {
 
         val context = imageView.context
-        val c = account?.getContact(IMContacts.TYPE_GROUP, gid) ?: return
+        val c = account?.contactsList?.getGroup(gid) ?: return
 
         val len = c.members.size
         val sub = c.members.subList(0, if (len > 9) 9 else len)
 
         // TODO 2022-2-8 18:55:22 temp bitmap
         val bitmaps = GlideIM.getUserInfo(sub.map { it.uid })
-            .flatMap { Observable.fromIterable(it) }
+            .flatMapObservable { Observable.fromIterable(it) }
             .flatMap { getUserAvatar(context, it) }
             .toList()
             .flatMap { Single.just(combineAvatar(it, Color.valueOf(Color.LTGRAY))) }
@@ -69,11 +68,15 @@ object GroupAvatarUtils {
         }
     }
 
-    private fun combineAvatar(avatars: List<Bitmap>, bgColor:Color): Bitmap {
+    private fun combineAvatar(avatars: List<Bitmap>, bgColor: Color): Bitmap {
 
         val config = Bitmap.Config.RGB_565
         val combine = Bitmap.createBitmap(100, 100, config, true)
         val canvas = Canvas(combine)
+        if (avatars.isEmpty()) {
+            return combine
+        }
+
         val h = 28f
         val paint: Paint? = null
 
@@ -94,9 +97,10 @@ object GroupAvatarUtils {
 
         val lines = mutableListOf<Bitmap>()
         val tempLines = mutableListOf<Bitmap>()
+        val lineAvatars = if (avatars.size <= 4) 2 else 3
         avatars.forEach {
-            if (tempLines.size == 3) {
-                val line = combineLine(3, tempLines)
+            if (tempLines.size >= lineAvatars) {
+                val line = combineLine(lineAvatars, tempLines)
                 lines.add(line)
                 tempLines.clear()
             }

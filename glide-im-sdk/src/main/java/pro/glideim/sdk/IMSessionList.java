@@ -17,6 +17,8 @@ import io.reactivex.observables.GroupedObservable;
 import pro.glideim.sdk.api.msg.AckOfflineMsgDto;
 import pro.glideim.sdk.api.msg.MessageBean;
 import pro.glideim.sdk.api.msg.MsgApi;
+import pro.glideim.sdk.messages.GroupNotify;
+import pro.glideim.sdk.messages.GroupNotifyMemberChanges;
 import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
 
@@ -46,6 +48,14 @@ public class IMSessionList {
         });
     }
 
+    public void existGroupChat(long id, GroupNotify<GroupNotifyMemberChanges> n) {
+        IMSession session = getSession(Constants.SESSION_TYPE_GROUP, id);
+        if (session != null) {
+            session.onNotifyMessage(n);
+            addOrUpdateSession(session);
+        }
+    }
+
     public IMSession getSession(int type, long id) {
         SessionTag sessionTag = SessionTag.get(type, id);
         return getSession(sessionTag);
@@ -59,7 +69,7 @@ public class IMSessionList {
     private void putSession(IMSession session) {
         sessionMap.remove(session.tag);
         sessionMap.put(session.tag, session);
-        session.setOnUpdateListener(s -> {
+        session.addSessionUpdateListener(s -> {
             if (sessionUpdateListener != null) {
                 sessionUpdateListener.onUpdate(session);
             }
@@ -107,7 +117,7 @@ public class IMSessionList {
                 if (sessionUpdateListener != null) {
                     sessionUpdateListener.onNewSession(s);
                 }
-                SLogger.d(TAG, "session add:" + s.toString());
+                SLogger.d(TAG, "session add:" + s);
             } else {
                 if (oldUpdateAt != s.tag.updateAt) {
                     if (sessionUpdateListener != null) {
@@ -115,14 +125,17 @@ public class IMSessionList {
                     }
                 }
                 putSession(s.merge(se));
-                SLogger.d(TAG, "session update:" + s.toString());
+                SLogger.d(TAG, "session update:" + s);
             }
         }
     }
 
-    void onNewMessage(IMMessage message) {
+    boolean onNewMessage(IMMessage message) {
         IMSession session = getOrCreateSession(message.tag);
-        session.onNewMessage(message);
+        if (session.disabled()) {
+            return false;
+        }
+        return session.onNewMessage(message);
     }
 
     public Observable<IMSession> loadSessionsList() {

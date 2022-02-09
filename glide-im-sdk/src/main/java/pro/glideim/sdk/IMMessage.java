@@ -102,7 +102,7 @@ public class IMMessage {
         return m;
     }
 
-    private void setTarget(int type, long id) {
+    protected void setTarget(int type, long id) {
         this.targetType = type;
         this.targetId = id;
         this.tag = IMSessionList.SessionTag.get(type, id);
