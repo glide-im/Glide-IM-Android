@@ -134,7 +134,7 @@ public class IMAccount implements MessageListener {
         return UserApi.API.getContactsList()
                 .map(RxUtils.bodyConverter())
                 .flatMap(Observable::fromIterable)
-                .map(a -> IMContact.fromContactsBean(a, this))
+                .map(a -> IMContact.fromContactsBean(a, contactsList, this))
                 .doOnNext(contactsList::addContacts)
                 .flatMapSingle((Function<IMContact, SingleSource<? extends IMContact>>) IMContact::update)
                 .toList();
@@ -317,7 +317,7 @@ public class IMAccount implements MessageListener {
                 }
                 IMGroupContact group = contactsList.getGroup(notify.getGid());
                 if (group == null) {
-                    SLogger.d(TAG, "group does not exist");
+                    SLogger.e(TAG, "group does not exist");
                     return;
                 }
                 switch (((int) notify.getType())) {
@@ -325,12 +325,17 @@ public class IMAccount implements MessageListener {
                         notify.getData().getUid().forEach(group::addMember);
                         break;
                     case GroupNotify.TYPE_MEMBER_REMOVED:
+                        IMGroupContact g = contactsList.getGroup(notify.getGid());
+                        if (g == null) {
+                            SLogger.e(TAG, "the group contact is null");
+                            return;
+                        }
                         notify.getData().getUid().forEach(uid -> {
+                            group.removeMember(uid);
                             if (uid == this.uid) {
                                 contactsList.removeGroup(notify.getGid());
                                 getIMSessionList().existGroupChat(notify.getGid(), notify);
                             }
-                            group.removeMember(uid);
                         });
                         break;
                     default:

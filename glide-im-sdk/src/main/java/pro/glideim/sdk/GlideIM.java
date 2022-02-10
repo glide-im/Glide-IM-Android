@@ -121,6 +121,10 @@ public class GlideIM {
     }
 
     public static Observable<UserInfoBean> getUserInfo(long uid) {
+        if (uid <= 0) {
+            return Observable.error(new IllegalArgumentException("illegal uid"));
+        }
+
         UserInfoBean temp = getDataStorage().loadTempUserInfo(uid);
         if (temp != null) {
             return Observable.just(temp);
@@ -137,6 +141,7 @@ public class GlideIM {
     public static Single<List<UserInfoBean>> getUserInfo(List<Long> uid) {
 
         return Observable.fromIterable(uid)
+                .filter(u -> u > 0)
                 .flatMap((Function<Long, ObservableSource<Pair<Long, UserInfoBean>>>) l -> {
                     UserInfoBean tempUserInfo = getDataStorage().loadTempUserInfo(l);
                     return Observable.just(new Pair<>(l, tempUserInfo));

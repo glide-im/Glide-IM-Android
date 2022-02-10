@@ -110,13 +110,13 @@ class ContactsFragment : BaseFragment(), ContactChangeListener {
         mSrfRefresh.startRefresh()
     }
 
-    override fun onStart() {
-        super.onStart()
+    override fun onResume() {
+        super.onResume()
         mContactList?.addContactChangeListener(this)
     }
 
-    override fun onStop() {
-        super.onStop()
+    override fun onPause() {
+        super.onPause()
         mContactList?.removeContactChangeListener(this)
     }
 
@@ -126,11 +126,11 @@ class ContactsFragment : BaseFragment(), ContactChangeListener {
     }
 
     @MyBusUtils.Bus(
-        tag = Events.EVENT_UPDATE_CONTACTS,
+        tag = Events.EVENT_UPDATE_ALL_CONTACTS,
         sticky = false,
         threadMode = MyBusUtils.ThreadMode.MAIN
     )
-    fun updateContacts() {
+    fun updateAllContacts() {
         mSrfRefresh.startRefresh()
     }
 
@@ -192,7 +192,7 @@ class ContactsFragment : BaseFragment(), ContactChangeListener {
         GlideIM.createGroup(name.trim())
             .io2main()
             .request2(this) {
-                updateContacts()
+                updateAllContacts()
             }
         return true
     }

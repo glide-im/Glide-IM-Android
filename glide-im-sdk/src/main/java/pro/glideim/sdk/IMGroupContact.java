@@ -17,9 +17,11 @@ public class IMGroupContact extends IMContact {
 
     private final IMAccount account;
     private final LinkedHashMap<Long, GroupMemberBean> members = new LinkedHashMap<>();
+    private final IMContactList contactList;
 
-    public IMGroupContact(IMAccount account, ContactsBean contactsBean) {
+    public IMGroupContact(IMAccount account, IMContactList list, ContactsBean contactsBean) {
         this.account = account;
+        this.contactList = list;
         this.type = contactsBean.getType();
         this.id = contactsBean.getId();
         this.title = contactsBean.getRemark();
@@ -45,6 +47,7 @@ public class IMGroupContact extends IMContact {
 
     void removeMember(long uid) {
         members.remove(uid);
+        contactList.onUpdate(this);
     }
 
     void addMember(long uid) {
@@ -52,6 +55,7 @@ public class IMGroupContact extends IMContact {
         m.setUid(uid);
         m.setType(Constants.GROUP_MEMBER);
         members.put(uid, m);
+        contactList.onUpdate(this);
     }
 
     private void initGroupMember(List<GroupMemberBean> groupMemberBeans) {

@@ -85,6 +85,7 @@ class SessionsFragment : BaseFragment() {
                         mSessionMap[updated.to] = updated
                         mSessionList.add(updated)
                         mSessionList.l.endBatchedUpdates()
+                        mRvSessions.smoothScrollToPosition(0)
                     }
                 }
 
@@ -93,6 +94,7 @@ class SessionsFragment : BaseFragment() {
                         val s = SessionViewData.create(session)
                         mSessionMap[s.to] = s
                         mSessionList.add(s)
+                        mRvSessions.smoothScrollToPosition(0)
                     }
                 }
             })

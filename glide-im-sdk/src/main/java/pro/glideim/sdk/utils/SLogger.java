@@ -1,5 +1,6 @@
 package pro.glideim.sdk.utils;
 
+import pro.glideim.sdk.GlideException;
 import pro.glideim.sdk.Logger;
 
 public class SLogger {
@@ -34,5 +35,9 @@ public class SLogger {
 
     public static void e(String tag, Throwable t) {
         l.e(tag, t);
+    }
+
+    public static void e(String tag, String log) {
+        l.e(tag, new GlideException(log));
     }
 }

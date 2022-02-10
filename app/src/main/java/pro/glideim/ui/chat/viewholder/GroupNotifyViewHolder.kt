@@ -18,9 +18,9 @@ class GroupNotifyViewHolder(p: ViewGroup) : AbsViewHolder<GroupNotifyViewData>(p
 
         val uid = data.notify.notify.data.uid
         val l = uid[0]
-        mTvContent.text = when (data.notify.type) {
+        mTvContent.text = when (data.notify.notify.type.toInt()) {
             GroupNotify.TYPE_MEMBER_ADDED -> "$l 已加入群聊"
-            GroupNotify.TYPE_MEMBER_REMOVED -> "你已被移除群聊"
+            GroupNotify.TYPE_MEMBER_REMOVED -> "你已离开群聊"
             else -> "-"
         }
     }

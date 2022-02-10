@@ -16,9 +16,9 @@ public class IMContact {
     public int type;
     private IMAccount account;
 
-    public static IMContact fromContactsBean(ContactsBean contactsBean, IMAccount account) {
+    public static IMContact fromContactsBean(ContactsBean contactsBean, IMContactList contactList, IMAccount account) {
         if (contactsBean.getType() == TYPE_GROUP) {
-            return new IMGroupContact(account, contactsBean);
+            return new IMGroupContact(account, contactList,contactsBean);
         }
         IMContact c = new IMContact();
         c.type = contactsBean.getType();

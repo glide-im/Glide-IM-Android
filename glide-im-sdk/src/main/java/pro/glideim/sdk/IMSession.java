@@ -186,8 +186,9 @@ public class IMSession {
         }
         if (m.getType() == GroupNotify.TYPE_MEMBER_REMOVED) {
             if (m.getData().getUid().get(0) == account.uid) {
-                onNewMessage(new IMGroupNotifyMessage(account, m));
                 existed = true;
+            } else {
+                // the removed member is not me, do not show in message list
                 return;
             }
         }
@@ -251,8 +252,11 @@ public class IMSession {
                 GroupNotifyMemberChanges data = notify.getData();
                 Long uid = data.getUid().get(0);
 
-                if (notify.getType() == GroupNotify.TYPE_MEMBER_REMOVED && uid == account.uid) {
-                    lastMsg = "你已被移除群聊";
+                if (notify.getType() == GroupNotify.TYPE_MEMBER_REMOVED) {
+                    if (uid != account.uid) {
+                        return;
+                    }
+                    lastMsg = "你已离开群聊";
                 } else {
                     lastMsg = data.getUid().get(0) + "已加入群聊";
                 }
