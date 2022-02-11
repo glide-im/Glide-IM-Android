@@ -12,6 +12,10 @@ import pro.glideim.sdk.messages.GroupMessage;
 import pro.glideim.sdk.utils.RxUtils;
 
 public class IMMessage {
+
+    public static final int STATUS_RECALLED = 1;
+    public static final int STATUS_DISABLED = 2;
+
     private final long accountUid;
     public String avatar;
     public String title;
@@ -27,6 +31,8 @@ public class IMMessage {
     private long targetId;
     private int targetType;
     private int state;
+    private int status;
+    private long recallBy;
     private long seq;
 
     public IMMessage(IMAccount account) {
@@ -44,6 +50,7 @@ public class IMMessage {
         m.setCreateAt(message.getcTime());
         m.setContent(message.getContent());
         m.setState(message.getState());
+        m.setState(message.getStatus());
         long id;
         if (m.from == account.uid) {
             id = m.to;
@@ -64,6 +71,7 @@ public class IMMessage {
         m.setSendAt(messageBean.getSendAt());
         m.setCreateAt(messageBean.getCreateAt());
         m.setContent(messageBean.getContent());
+        m.setStatus(messageBean.getStatus());
         long id = 0;
         if (m.from == account.uid) {
             id = m.to;
@@ -84,6 +92,8 @@ public class IMMessage {
         m.setType(messageBean.getType());
         m.setSendAt(messageBean.getSendAt());
         m.setContent(messageBean.getContent());
+        m.setStatus(messageBean.getStatus());
+        m.setRecallBy(messageBean.getRecallBy());
         m.setTarget(Constants.SESSION_TYPE_GROUP, m.to);
         return m;
     }
@@ -98,6 +108,7 @@ public class IMMessage {
         m.setType(message.getType());
         m.setSendAt(message.getSendAt());
         m.setContent(message.getContent());
+        m.setStatus(message.getStatus());
         m.setTarget(Constants.SESSION_TYPE_GROUP, m.to);
         return m;
     }
@@ -112,7 +123,7 @@ public class IMMessage {
             uid = from;
         }
         GlideIM.getUserInfo(uid)
-                .compose(RxUtils.silentScheduler())
+                .compose(RxUtils.silentSchedulerSingle())
                 .subscribe(new SilentObserver<UserInfoBean>() {
                     @Override
                     public void onNext(@NonNull UserInfoBean userInfoBean) {
@@ -120,6 +131,19 @@ public class IMMessage {
                         title = userInfoBean.getNickname();
                     }
                 });
+    }
+
+    public boolean isVisible() {
+        return getType() != Constants.MESSAGE_TYPE_GROUP_NOTIFY
+                && getType() != Constants.MESSAGE_TYPE_RECALL;
+    }
+
+    public long getRecallBy() {
+        return recallBy;
+    }
+
+    public void setRecallBy(long recallBy) {
+        this.recallBy = recallBy;
     }
 
     public long getSeq() {
@@ -152,6 +176,14 @@ public class IMMessage {
         if (o == null || getClass() != o.getClass()) return false;
         IMMessage imMessage = (IMMessage) o;
         return imMessage.mid == this.mid;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
     }
 
     public String getAvatar() {

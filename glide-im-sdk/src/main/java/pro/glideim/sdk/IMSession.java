@@ -2,6 +2,9 @@ package pro.glideim.sdk;
 
 import androidx.annotation.NonNull;
 
+import com.google.gson.reflect.TypeToken;
+
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -9,6 +12,7 @@ import java.util.Objects;
 import java.util.TreeMap;
 
 import io.reactivex.Observable;
+import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.ObservableSource;
 import io.reactivex.Single;
 import io.reactivex.functions.Function;
@@ -23,10 +27,13 @@ import pro.glideim.sdk.api.msg.MessageIDBean;
 import pro.glideim.sdk.api.msg.MsgApi;
 import pro.glideim.sdk.api.msg.SessionBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
+import pro.glideim.sdk.http.RetrofitManager;
 import pro.glideim.sdk.im.IMClient;
+import pro.glideim.sdk.messages.Actions;
 import pro.glideim.sdk.messages.ChatMessage;
 import pro.glideim.sdk.messages.GroupNotify;
 import pro.glideim.sdk.messages.GroupNotifyMemberChanges;
+import pro.glideim.sdk.messages.RecallMessage;
 import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
 
@@ -168,6 +175,19 @@ public class IMSession {
 
     }
 
+    private void onRecallMessage(long mid, long by) {
+        IMMessage message = getMessage(mid);
+        if (message == null) {
+            SLogger.d(TAG, "recall message does not exist");
+            return;
+        }
+        message.setStatus(IMMessage.STATUS_RECALLED);
+        message.setRecallBy(by);
+        messageChangeListener.onChange(mid, message);
+        setLastMessage(message);
+        GlideIM.getDataStorage().storeMessage(message);
+    }
+
     void onOfflineMessage(List<IMMessage> msg) {
         for (IMMessage m : msg) {
             GlideIM.getDataStorage().storeMessage(m);
@@ -199,7 +219,37 @@ public class IMSession {
         if (type == Constants.SESSION_TYPE_GROUP && disabled()) {
             return false;
         }
-        unread++;
+        if (msg.isVisible()) {
+            unread++;
+        }
+
+        // recall message
+        if (msg.getType() == Constants.MESSAGE_TYPE_RECALL) {
+            Type typeToken = new TypeToken<RecallMessage>() {
+            }.getType();
+            RecallMessage recallMessage = RetrofitManager.fromJson(typeToken, msg.getContent());
+            if (recallMessage == null) {
+                return false;
+            }
+            IMMessage messageRecalled = messageTreeMap.get(recallMessage.getMid());
+            if (messageRecalled == null) {
+                return false;
+            }
+            messageRecalled.setStatus(IMMessage.STATUS_RECALLED);
+            messageRecalled.setRecallBy(recallMessage.getReCallBy());
+            if (messageTreeMap.lastKey() == messageRecalled.getMid()) {
+                setLastMessage(messageRecalled);
+                onSessionUpdate();
+            }
+            if (recallMessage.getMid() > lastReadMid && unread > 0) {
+                unread--;
+                onSessionUpdate();
+            }
+            messageChangeListener.onChange(messageRecalled.getMid(), messageRecalled);
+            GlideIM.getDataStorage().storeMessage(messageRecalled);
+            return true;
+        }
+
         setUpdateAt(msg.getSendAt());
         SLogger.d(TAG, "onNewMessage:" + msg);
         long mid = msg.getMid();
@@ -240,31 +290,46 @@ public class IMSession {
     }
 
     private void setLastMessage(IMMessage msg) {
-        switch (msg.getType()) {
-            case Constants.MESSAGE_TYPE_IMAGE:
-                lastMsg = "[图片]";
-                break;
-            case Constants.MESSAGE_TYPE_VOICE:
-                lastMsg = "[语音]";
-                break;
-            case Constants.MESSAGE_TYPE_GROUP_NOTIFY:
-                GroupNotify<GroupNotifyMemberChanges> notify = ((IMGroupNotifyMessage) msg).notify;
-                GroupNotifyMemberChanges data = notify.getData();
-                Long uid = data.getUid().get(0);
-
-                if (notify.getType() == GroupNotify.TYPE_MEMBER_REMOVED) {
-                    if (uid != account.uid) {
-                        return;
-                    }
-                    lastMsg = "你已离开群聊";
+        if (msg.getStatus() == IMMessage.STATUS_RECALLED) {
+            if (msg.getFrom() == msg.getRecallBy()) {
+                if (msg.getFrom() == account.uid) {
+                    lastMsg = "[You recalled a message]";
                 } else {
-                    lastMsg = data.getUid().get(0) + "已加入群聊";
+                    lastMsg = "[" + msg.title + " recalled a message]";
                 }
-                break;
-            default:
-                this.lastMsg = msg.getContent();
-                break;
+            } else {
+                lastMsg = "[Admin recalled a message]";
+            }
+        } else {
+            switch (msg.getType()) {
+                case Constants.MESSAGE_TYPE_RECALL:
+                    return;
+                case Constants.MESSAGE_TYPE_IMAGE:
+                    lastMsg = "[Image]";
+                    break;
+                case Constants.MESSAGE_TYPE_VOICE:
+                    lastMsg = "[Voice]";
+                    break;
+                case Constants.MESSAGE_TYPE_GROUP_NOTIFY:
+                    GroupNotify<GroupNotifyMemberChanges> notify = ((IMGroupNotifyMessage) msg).notify;
+                    GroupNotifyMemberChanges data = notify.getData();
+                    Long uid = data.getUid().get(0);
+
+                    if (notify.getType() == GroupNotify.TYPE_MEMBER_REMOVED) {
+                        if (uid != account.uid) {
+                            return;
+                        }
+                        lastMsg = "You've left the chat";
+                    } else {
+                        lastMsg = data.getUid().get(0) + " join the chat";
+                    }
+                    break;
+                default:
+                    this.lastMsg = msg.getContent();
+                    break;
+            }
         }
+
         this.lastMsgId = msg.getMid();
         this.lastMsgSender = msg.getFrom();
         setUpdateAt(msg.getSendAt());
@@ -365,7 +430,8 @@ public class IMSession {
         switch (type) {
             case Constants.SESSION_TYPE_USER:
                 return GlideIM.getUserInfo(to)
-                        .map(this::setInfo);
+                        .map(this::setInfo)
+                        .toObservable();
             case Constants.SESSION_TYPE_GROUP:
                 return GlideIM.getGroupInfo(to)
                         .map(this::setInfo)
@@ -427,6 +493,26 @@ public class IMSession {
         });
     }
 
+    public Observable<IMMessage> recallMessage(long mid) {
+        IMMessage message = getMessage(mid);
+        if (message == null) {
+            return Observable.error(new GlideException("no such message"));
+        }
+        return Observable
+                .create((ObservableOnSubscribe<String>) emitter -> {
+                    RecallMessage recall = new RecallMessage(account.uid, mid);
+                    String j = RetrofitManager.toJson(recall);
+                    emitter.onNext(j);
+                    emitter.onComplete();
+                }).flatMap((Function<String, ObservableSource<IMMessage>>) s ->
+                        sendMessage(Constants.MESSAGE_TYPE_RECALL, s)
+                ).doOnNext(imMessage -> {
+                    if (imMessage.getState() == ChatMessage.STATE_SRV_RECEIVED) {
+                        onRecallMessage(mid, account.uid);
+                    }
+                });
+    }
+
     public Observable<IMMessage> sendTextMessage(String content) {
         return sendMessage(Constants.SESSION_TYPE_GROUP, content);
     }
@@ -439,6 +525,7 @@ public class IMSession {
             return Observable.error(new NullPointerException("the connection is not init"));
         }
 
+        final boolean recall = type == Constants.MESSAGE_TYPE_RECALL;
         Observable<ChatMessage> creator = createMessage(type, content);
         Observable<MessageIDBean> midRequest = MsgApi.API.getMessageID()
                 .map(RxUtils.bodyConverter());
@@ -455,7 +542,7 @@ public class IMSession {
                             })
                             .flatMap((Function<ChatMessage, ObservableSource<ChatMessage>>) m2 -> {
                                 // send message
-                                Observable<ChatMessage> ob = send(m2);
+                                Observable<ChatMessage> ob = send(recall, m2);
                                 return Observable.concat(Observable.just(m2), ob);
                             });
                     return Observable.concat(init, create);
@@ -496,15 +583,21 @@ public class IMSession {
                 });
     }
 
-    private Observable<ChatMessage> send(ChatMessage m) {
+    private Observable<ChatMessage> send(boolean recall, ChatMessage m) {
         IMClient im = account.getIMClient();
         if (im == null) {
             return Observable.error(new NullPointerException("the im connection is not init"));
         }
         switch (type) {
             case Constants.SESSION_TYPE_USER:
+                if (recall) {
+                    return im.sendMessage(Actions.Srv.ACTION_MESSAGE_CHAT_RECALL, m);
+                }
                 return im.sendChatMessage(m);
             case Constants.SESSION_TYPE_GROUP:
+                if (recall) {
+                    return im.sendMessage(Actions.Srv.ACTION_MESSAGE_GROUP_RECALL, m);
+                }
                 return im.sendGroupMessage(m);
             default:
                 return Observable.error(new IllegalStateException("unknown session type"));

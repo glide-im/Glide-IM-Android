@@ -155,7 +155,7 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
     }
 
     @SuppressWarnings("UnnecessaryLocalVariable")
-    private Observable<ChatMessage> sendMessage(final String action, final ChatMessage message) {
+    public Observable<ChatMessage> sendMessage(final String action, final ChatMessage message) {
         if (!connection.isConnected()) {
             return Observable.error(new Exception("the server is not connected"));
         }
@@ -196,6 +196,9 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
         }
         logger.d(TAG, m.toString());
         switch (m.getAction()) {
+            case Actions.Srv.ACTION_MESSAGE_FAILED:
+                onSendFailed(msg);
+                return;
             case Actions.Srv.ACTION_MESSAGE_CHAT:
                 onChatMessage(msg);
                 return;
@@ -231,6 +234,26 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
                 return;
             default:
                 logger.d(TAG, "UNKNOWN ACTION: " + m.getAction());
+        }
+    }
+
+    private void onSendFailed(Message msg) {
+        Type type = new TypeToken<CommMessage<AckMessage>>() {
+        }.getType();
+        CommMessage<AckMessage> m = deserialize(type, msg);
+        AckMessage ack = m.getData();
+        if (ack == null) {
+            throw new NullPointerException("message data is null");
+        }
+        if (!messageSending.containsKey(ack.getMid())) {
+            logger.d(TAG, "mid not exist");
+            return;
+        }
+        MessageEmitter emitter = messageSending.get(m.getData().getMid());
+        if (emitter != null) {
+            emitter.onFailed(m);
+        } else {
+            logger.d(TAG, "message emitter null");
         }
     }
 
@@ -278,7 +301,7 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
         }
         // ACK
         AckRequest a = new AckRequest(cm.getMid(), cm.getFrom(), 0);
-        send(new CommMessage<>(MESSAGE_VER, Actions.Cli.ACTION_ACK_REQUEST, 0, a));
+        send(new CommMessage<>(MESSAGE_VER, Actions.Cli.ACTION_ACK_GROUP_MSG, 0, a));
     }
 
     @SuppressWarnings("rawtypes")
@@ -338,6 +361,14 @@ public class IMClientImpl implements pro.glideim.sdk.im.IMClient {
                     emitter.onError(new Exception("send message failed due to socket closed"));
                 }
             }
+        }
+
+        void onFailed(CommMessage<AckMessage> m) {
+            if (emitter.isDisposed()) {
+                return;
+            }
+            emitter.onNext(msg.setState(ChatMessage.STATE_SRV_FAILED));
+            emitter.onComplete();
         }
 
         void onAck(CommMessage<AckMessage> a) {

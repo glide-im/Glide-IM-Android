@@ -1,6 +1,5 @@
 package pro.glideim.ui
 
-import pro.glideim.ui.session.SessionsFragment
 import android.content.Context
 import android.content.Intent
 import androidx.core.view.get
@@ -13,6 +12,7 @@ import pro.glideim.base.BaseFragment
 import pro.glideim.sdk.GlideIM
 import pro.glideim.ui.contacts.ContactsFragment
 import pro.glideim.ui.profile.ProfileFragment
+import pro.glideim.ui.session.SessionsFragment
 
 class MainActivity : BaseActivity() {
 
@@ -66,6 +66,20 @@ class MainActivity : BaseActivity() {
 //        val badge = mBnvNav.getOrCreateBadge(R.id.it_messages)
 //        badge.isVisible = true
 //        badge.number = 4
+    }
+
+    fun updateUnread() {
+        account?.imSessionList?.unread?.apply {
+            val b = mBnvNav.getOrCreateBadge(R.id.it_messages)
+            if (this == 0) {
+                b.clearNumber()
+                b.isVisible = false
+                return@apply
+            }
+            b.isVisible = true
+            b.number = this
+        }
+
     }
 
     override fun onDestroy() {

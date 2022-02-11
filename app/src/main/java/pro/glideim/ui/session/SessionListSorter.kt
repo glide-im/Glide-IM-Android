@@ -17,7 +17,8 @@ class SessionListSorter(adapter: SuperAdapter) :
         return oldItem.updateAt == newItem.updateAt &&
                 oldItem.title == newItem.title &&
                 oldItem.unread == newItem.unread &&
-                oldItem.avatar == newItem.avatar
+                oldItem.avatar == newItem.avatar &&
+                oldItem.lastMsg == newItem.lastMsg
     }
 
     override fun areItemsTheSame(item1: SessionViewData, item2: SessionViewData): Boolean {

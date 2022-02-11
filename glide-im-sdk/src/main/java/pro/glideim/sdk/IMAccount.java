@@ -34,6 +34,7 @@ import pro.glideim.sdk.push.NewContactsMessage;
 import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
 import pro.glideim.sdk.ws.WsClient;
+import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 
 public class IMAccount implements MessageListener {
 

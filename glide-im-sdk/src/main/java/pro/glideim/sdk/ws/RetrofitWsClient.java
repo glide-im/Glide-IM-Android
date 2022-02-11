@@ -5,6 +5,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import io.reactivex.Single;
 import okhttp3.Response;
@@ -24,6 +26,7 @@ public class RetrofitWsClient implements WsClient {
     private MessageListener messageListener;
     private int state = WsClient.STATE_CLOSED;
     private int lastNotifyState = 0;
+    private final ExecutorService executors = Executors.newFixedThreadPool(6);
 
     public RetrofitWsClient(String url) {
         this.url = url;
@@ -143,7 +146,7 @@ public class RetrofitWsClient implements WsClient {
         @Override
         public void onMessage(@NotNull WebSocket webSocket, @NotNull String text) {
             if (messageListener != null) {
-                messageListener.onNewMessage(text);
+                executors.submit(() -> messageListener.onNewMessage(text));
             }
         }
 

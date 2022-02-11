@@ -21,9 +21,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".ui.MainActivity" />
-        <activity
-            android:name=".ui.LoginActivity"
-            android:launchMode="singleInstance" />
+        <activity android:name=".ui.LoginActivity" />
         <activity android:name=".ui.RegisterActivity" />
         <activity
             android:name=".ui.chat.ChatActivity"

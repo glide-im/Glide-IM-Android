@@ -3,11 +3,16 @@ package pro.glideim.sdk;
 import androidx.annotation.NonNull;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
@@ -29,6 +34,7 @@ public class IMSessionList {
     private final LinkedHashMap<SessionTag, IMSession> sessionMap = new LinkedHashMap<>();
     private final IMAccount account;
     private SessionUpdateListener sessionUpdateListener;
+    private ReentrantLock lock = new ReentrantLock();
 
     IMSessionList(IMAccount account) {
         this.account = account;
@@ -67,8 +73,10 @@ public class IMSessionList {
     }
 
     private void putSession(IMSession session) {
+        lock.lock();
         sessionMap.remove(session.tag);
         sessionMap.put(session.tag, session);
+        lock.unlock();
         session.addSessionUpdateListener(s -> {
             if (sessionUpdateListener != null) {
                 sessionUpdateListener.onUpdate(session);
@@ -78,11 +86,14 @@ public class IMSessionList {
     }
 
     private IMSession getSession(SessionTag tag) {
-        return sessionMap.get(tag);
+        lock.lock();
+        IMSession s = sessionMap.get(tag);
+        lock.unlock();
+        return s;
     }
 
     public IMSession getOrCreateSession(SessionTag tag) {
-        IMSession session = sessionMap.get(tag);
+        IMSession session = getSession(tag);
         if (session == null) {
             session = IMSession.create(account, tag.id, tag.type);
             if (session.createAt == session.updateAt) {
@@ -94,11 +105,17 @@ public class IMSessionList {
     }
 
     public List<IMSession> getSessions() {
-        return new ArrayList<>(this.sessionMap.values());
+        lock.lock();
+        Collection<IMSession> values = this.sessionMap.values();
+        lock.unlock();
+        return new ArrayList<>(values);
     }
 
     public boolean contain(SessionTag t) {
-        return sessionMap.containsKey(t);
+        lock.lock();
+        boolean b = sessionMap.containsKey(t);
+        lock.unlock();
+        return b;
     }
 
     public void setSessionUpdateListener(SessionUpdateListener sessionUpdateListener) {
@@ -136,6 +153,14 @@ public class IMSessionList {
             return false;
         }
         return session.onNewMessage(message);
+    }
+
+    public int getUnread() {
+        int unread = 0;
+        for (IMSession session : getSessions()) {
+            unread += session.unread;
+        }
+        return unread;
     }
 
     public Observable<IMSession> loadSessionsList() {

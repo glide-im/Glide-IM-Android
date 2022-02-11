@@ -9,6 +9,15 @@ public class MessageBean {
     private long sendAt;
     private long createAt;
     private String content;
+    private int status;
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
+    }
 
     public long getMid() {
         return mid;

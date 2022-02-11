@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -30,6 +31,7 @@ import pro.glideim.sdk.*
 import pro.glideim.sdk.api.group.AddGroupMemberDto
 import pro.glideim.sdk.api.group.GroupApi
 import pro.glideim.sdk.messages.ChatMessage
+import pro.glideim.sdk.messages.GroupNotify
 import pro.glideim.ui.SortedList
 import pro.glideim.ui.chat.viewholder.*
 import pro.glideim.ui.contacts.SelectContactsActivity
@@ -127,9 +129,13 @@ open class ChatActivity : BaseActivity(), IMSession.SessionUpdateListener {
             ChatImageMessageViewHolder::class.java
         )
         mAdapter.addViewHolderForType(
-            GroupNotifyViewData::class.java,
+            NotifyViewData::class.java,
             GroupNotifyViewHolder::class.java
         )
+        mAdapter.setOnItemLongClickListener { _, itemData, position ->
+            onMessageLongClicked(itemData, position)
+            return@setOnItemLongClickListener true
+        }
 
         mRvMessages.scrollBarStyle = View.SCROLLBARS_OUTSIDE_OVERLAY
         mRvMessages.isNestedScrollingEnabled = false
@@ -217,6 +223,24 @@ open class ChatActivity : BaseActivity(), IMSession.SessionUpdateListener {
             }
     }
 
+    private fun onMessageLongClicked(m: Any, position: Int) {
+
+        val mid = when (m) {
+            is ChatImageMessageViewData -> m.message.mid
+            is ChatMessageViewData -> m.message.mid
+            else -> return
+        }
+        mSession.recallMessage(mid)
+            .request2(this) {
+                if (it.state == ChatMessage.STATE_SRV_FAILED) {
+                    toast("recall message failed")
+                }
+                if (it.state == ChatMessage.STATE_SRV_RECEIVED){
+                    toast("Recall message success")
+                }
+            }
+    }
+
     override fun onResume() {
         super.onResume()
         NotificationUtils.cancel(mSession.to.hashCode())
@@ -225,7 +249,9 @@ open class ChatActivity : BaseActivity(), IMSession.SessionUpdateListener {
         mSession.setMessageListener(object :
             MessageChangeListener {
             override fun onChange(mid: Long, message: IMMessage) {
-
+                runOnUiThread {
+                    addMessage(message)
+                }
             }
 
             override fun onInsertMessage(mid: Long, message: IMMessage) {
@@ -253,15 +279,44 @@ open class ChatActivity : BaseActivity(), IMSession.SessionUpdateListener {
     }
 
     private fun addMessage(m: IMMessage) {
-        val c = when (m.type) {
-            Constants.MESSAGE_TYPE_TEXT -> ChatMessageViewData(true, m)
-            Constants.MESSAGE_TYPE_IMAGE -> ChatImageMessageViewData(true, m)
-            Constants.MESSAGE_TYPE_GROUP_NOTIFY -> GroupNotifyViewData(m as IMGroupNotifyMessage)
-            else -> {
-                ChatMessageViewData(true, m, true)
+        val viewData = if (m.status == IMMessage.STATUS_RECALLED) {
+            val msg = if (m.recallBy == m.from) {
+                if (m.from == account?.uid) "你撤回了一条消息" else "${m.title}撤回了一条消息"
+            } else {
+                "管理员撤回了一条消息"
+            }
+            Log.d(TAG, "addMessage: message recalled $m")
+            val notifyViewData = NotifyViewData(m, msg)
+            mMessage.add(notifyViewData)
+            val indexOf = mMessage.indexOf(notifyViewData)
+            mAdapter.notifyItemChanged(indexOf)
+            return
+        } else {
+            when (m.type) {
+                Constants.MESSAGE_TYPE_RECALL -> return
+                Constants.MESSAGE_TYPE_TEXT -> ChatMessageViewData(true, m)
+                Constants.MESSAGE_TYPE_IMAGE -> ChatImageMessageViewData(true, m)
+                Constants.MESSAGE_TYPE_GROUP_NOTIFY -> {
+                    val notify = (m as IMGroupNotifyMessage).notify
+                    GlideIM.getUserInfo(notify.data.uid)
+                        .request2(this) { ui ->
+                            val nicknames = ui?.joinToString(",") { u -> u.nickname } ?: ""
+                            val msg = when (notify.type.toInt()) {
+                                GroupNotify.TYPE_MEMBER_ADDED -> "$nicknames 已加入群聊"
+                                GroupNotify.TYPE_MEMBER_REMOVED -> "你已离开群聊"
+                                else -> "-"
+                            }
+                            val vd = NotifyViewData(m, msg)
+                            mMessage.add(vd)
+                        }
+                    return
+                }
+                else -> {
+                    ChatMessageViewData(true, m, true)
+                }
             }
         }
-        mMessage.add(c)
+        mMessage.add(viewData)
     }
 
     private fun requestData() {

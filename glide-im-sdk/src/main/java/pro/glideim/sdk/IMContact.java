@@ -31,8 +31,7 @@ public class IMContact {
     public Single<? extends IMContact> update() {
         if (type == Constants.SESSION_TYPE_USER) {
             return GlideIM.getUserInfo(id)
-                    .doOnNext(this::setDetail)
-                    .toList()
+                    .doOnSuccess(this::setDetail)
                     .map(userInfoBeans -> IMContact.this);
         }
         SLogger.d("IMContacts", "unknown contacts type " + type);

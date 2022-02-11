@@ -14,8 +14,8 @@ interface UserInfoDao {
     @Update
     suspend fun update(vararg s: UserInfo)
 
-    @Query("SELECT COUNT(*) FROM userinfo WHERE uid=:uid")
-    suspend fun exist(uid: Long): Int
+    @Query("SELECT * FROM userinfo WHERE uid=:uid LIMIT 1")
+    suspend fun exist(uid: Long): List<UserInfo>
 
     @Query("SELECT * FROM userinfo WHERE uid=:uid")
     fun get(uid: Long): UserInfo?

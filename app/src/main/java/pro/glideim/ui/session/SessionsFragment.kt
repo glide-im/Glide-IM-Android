@@ -13,6 +13,7 @@ import pro.glideim.base.BaseFragment
 import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.IMSession
 import pro.glideim.sdk.SessionUpdateListener
+import pro.glideim.ui.MainActivity
 import pro.glideim.ui.SortedList
 import pro.glideim.ui.chat.*
 import pro.glideim.utils.*
@@ -28,7 +29,7 @@ class SessionsFragment : BaseFragment() {
     private val mSessionList = MySortedList<SessionViewData>()
     private val mAdapter = SuperAdapter(mSessionList)
 
-    private val mIMSessionList by lazy { GlideIM.getAccount().imSessionList }
+    private val mIMSessionList get() = account?.imSessionList
 
     companion object {
         private val TAG = SessionsFragment::class.java.simpleName
@@ -56,7 +57,7 @@ class SessionsFragment : BaseFragment() {
             )
         )
 
-        mIMSessionList.sessions.forEach {
+        mIMSessionList?.sessions?.forEach {
             val s = SessionViewData.create(it)
             mSessionMap[s.to] = s
             mSessionList.add(s)
@@ -66,7 +67,7 @@ class SessionsFragment : BaseFragment() {
             requestData()
         }
 
-        mIMSessionList.setSessionUpdateListener(
+        mIMSessionList?.setSessionUpdateListener(
             object : SessionUpdateListener {
                 override fun onUpdate(session: IMSession) {
                     val updated = SessionViewData.create(session)
@@ -86,6 +87,7 @@ class SessionsFragment : BaseFragment() {
                         mSessionList.add(updated)
                         mSessionList.l.endBatchedUpdates()
                         mRvSessions.smoothScrollToPosition(0)
+                        updateUnread()
                     }
                 }
 
@@ -95,6 +97,7 @@ class SessionsFragment : BaseFragment() {
                         mSessionMap[s.to] = s
                         mSessionList.add(s)
                         mRvSessions.smoothScrollToPosition(0)
+                        updateUnread()
                     }
                 }
             })
@@ -103,7 +106,7 @@ class SessionsFragment : BaseFragment() {
     }
 
     override fun onDestroyView() {
-        mIMSessionList.setSessionUpdateListener(null)
+        mIMSessionList?.setSessionUpdateListener(null)
         super.onDestroyView()
     }
 
@@ -113,11 +116,15 @@ class SessionsFragment : BaseFragment() {
     }
 
     private fun requestData() {
-        mIMSessionList.loadSessionsList()
-            .io2main()
-            .request2(this) {
+        mIMSessionList?.loadSessionsList()
+            ?.io2main()
+            ?.request2(this) {
 
             }
+    }
+
+    private fun updateUnread(){
+        (activity as? MainActivity)?.updateUnread()
     }
 
     @SuppressLint("SetTextI18n")

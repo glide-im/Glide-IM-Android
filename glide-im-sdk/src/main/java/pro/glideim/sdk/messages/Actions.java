@@ -20,6 +20,9 @@ public interface Actions {
 
         String ACTION_MESSAGE_CHAT = "message.chat";
         String ACTION_MESSAGE_GROUP = "message.group";
+        String ACTION_MESSAGE_FAILED = "message.failed.send";
+        String ACTION_MESSAGE_CHAT_RECALL = "message.chat.recall";
+        String ACTION_MESSAGE_GROUP_RECALL = "message.group.recall";
     }
 
     interface Cli {

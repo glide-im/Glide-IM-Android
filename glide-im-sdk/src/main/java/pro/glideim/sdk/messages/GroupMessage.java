@@ -9,6 +9,15 @@ public class GroupMessage {
     private int type;
     private String content;
     private long sendAt;
+    private int status;
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
+    }
 
     public long getMid() {
         return mid;

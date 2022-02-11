@@ -20,6 +20,7 @@ public class ChatMessage {
     private int type;
     private String content;
     private long cTime;
+    private int status;
 
     private transient int state;
 
@@ -30,6 +31,14 @@ public class ChatMessage {
     public ChatMessage setState(int state) {
         this.state = state;
         return this;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
     }
 
     public long getFrom() {

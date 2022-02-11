@@ -53,17 +53,24 @@ class MessageListener private constructor(private val context: Application) : IM
     }
 
     override fun onNewMessage(message: IMMessage) {
+        val systemService =
+            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        if (message.type == Constants.MESSAGE_TYPE_RECALL) {
+            // hide notification
+            return
+        }
 
         val s = ChatActivity.getCurrentSession()
         if (s?.to == message.to) {
             return
         }
-
         val intent = ChatActivity.getIntent(context, message.targetId, message.targetType)
         val onClick =
             PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_CANCEL_CURRENT)
 
-        val se = GlideIM.getAccount().imSessionList.getOrCreate(message.targetType, message.targetId)
+        val se =
+            GlideIM.getAccount().imSessionList.getOrCreate(message.targetType, message.targetId)
         val to = se.to
         var unread = se.unread
         if (unread == 0) {
@@ -87,8 +94,6 @@ class MessageListener private constructor(private val context: Application) : IM
             it.setOnlyAlertOnce(true)
             it.setAutoCancel(true)
         }
-        val systemService =
-            context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         systemService.notify(to.hashCode(), notification)
     }
 

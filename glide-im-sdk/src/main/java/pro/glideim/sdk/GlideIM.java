@@ -7,6 +7,7 @@ import java.util.List;
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
 import io.reactivex.Single;
+import io.reactivex.SingleSource;
 import io.reactivex.functions.Function;
 import pro.glideim.sdk.api.Response;
 import pro.glideim.sdk.api.auth.AuthApi;
@@ -120,21 +121,23 @@ public class GlideIM {
         });
     }
 
-    public static Observable<UserInfoBean> getUserInfo(long uid) {
+    public static Single<UserInfoBean> getUserInfo(long uid) {
         if (uid <= 0) {
-            return Observable.error(new IllegalArgumentException("illegal uid"));
+            return Single.error(new IllegalArgumentException("illegal uid"));
         }
-
-        UserInfoBean temp = getDataStorage().loadTempUserInfo(uid);
-        if (temp != null) {
-            return Observable.just(temp);
-        }
-        return UserApi.API.getUserInfo(new GetUserInfoDto(Collections.singletonList(uid)))
-                .map(RxUtils.bodyConverter())
-                .map(userInfoBeans -> {
-                    UserInfoBean g = userInfoBeans.get(0);
-                    getDataStorage().storeTempUserInfo(g);
-                    return g;
+        return Single.just(uid)
+                .flatMap((Function<Long, SingleSource<UserInfoBean>>) aLong -> {
+                    UserInfoBean u = getDataStorage().loadTempUserInfo(aLong);
+                    if (u == null) {
+                        return UserApi.API.getUserInfo(new GetUserInfoDto(Collections.singletonList(uid)))
+                                .map(RxUtils.bodyConverter())
+                                .map(userInfoBeans -> {
+                                    UserInfoBean g = userInfoBeans.get(0);
+                                    getDataStorage().storeTempUserInfo(g);
+                                    return g;
+                                }).toList().map(userInfoBeans -> userInfoBeans.get(0));
+                    }
+                    return Single.just(u);
                 });
     }
 

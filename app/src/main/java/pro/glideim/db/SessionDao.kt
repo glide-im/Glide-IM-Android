@@ -14,8 +14,8 @@ interface SessionDao {
     @Update
     suspend fun update(vararg s: Session)
 
-    @Query("SELECT COUNT(*) FROM session WHERE id=:id")
-    suspend fun exist(id: String): Int
+    @Query("SELECT * FROM session WHERE id=:id LIMIT 1")
+    suspend fun exist(id: String): List<Session>
 
     @Query("SELECT * FROM session WHERE uid=:uid")
     fun get(uid: Long): List<Session>

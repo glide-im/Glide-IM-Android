@@ -2,10 +2,7 @@ package pro.glideim.ui
 
 import android.content.Context
 import android.content.Intent
-import androidx.core.content.edit
-import androidx.core.view.ContentInfoCompat
 import com.blankj.utilcode.util.ActivityUtils
-import com.blankj.utilcode.util.SPUtils
 import com.dengzii.ktx.android.content.update
 import com.dengzii.ktx.android.content.use
 import com.google.android.material.button.MaterialButton
@@ -40,6 +37,11 @@ class LoginActivity : BaseActivity() {
     }
 
     override fun initView() {
+        ActivityUtils.getActivityList().forEach {
+            if (it != this) {
+                it.finish()
+            }
+        }
         needAuth = false
         mBtSubmit.setOnClickListener {
             submit()

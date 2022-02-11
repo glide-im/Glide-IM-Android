@@ -4,14 +4,19 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.ImageView
+import com.bumptech.glide.Glide
 import com.dengzii.ktx.android.antiShakeClick
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textview.MaterialTextView
+import io.reactivex.Single
 import pro.glideim.R
 import pro.glideim.base.BaseFragment
+import pro.glideim.db.GlideIMDatabase
 import pro.glideim.sdk.GlideIM
 import pro.glideim.ui.LoginActivity
+import pro.glideim.ui.MainActivity
 import pro.glideim.utils.loadImageRoundCorners
+import pro.glideim.utils.request2
 
 
 class ProfileFragment : BaseFragment() {
@@ -36,7 +41,12 @@ class ProfileFragment : BaseFragment() {
         }
 
         mBtCleanCache.antiShakeClick {
-            toast("TODO")
+            Single.create<Boolean> {
+                GlideIMDatabase.getDb(requireContext()).clearAllTables()
+                it.onSuccess(true)
+            }.request2(requireActivity() as MainActivity) {
+                toast("Complete!")
+            }
         }
         mBtEditProfile.antiShakeClick {
             toast("TODO")

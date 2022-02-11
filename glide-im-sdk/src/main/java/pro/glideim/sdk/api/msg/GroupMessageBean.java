@@ -9,6 +9,24 @@ public class GroupMessageBean {
     private long seq;
     private long sendAt;
     private String content;
+    private int status;
+    private long recallBy;
+
+    public long getRecallBy() {
+        return recallBy;
+    }
+
+    public void setRecallBy(long recallBy) {
+        this.recallBy = recallBy;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
+    }
 
     public long getSeq() {
         return seq;

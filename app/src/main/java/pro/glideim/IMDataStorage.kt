@@ -65,7 +65,7 @@ class IMDataStorage : DataStorage {
                 val s = UserInfo.fromUserInfoBean(userInfoBean)
                 val exist = userInfoDao.exist(userInfoBean.uid)
                 try {
-                    if (exist != 0) {
+                    if (exist.isNotEmpty()) {
                         userInfoDao.update(s)
                     } else {
                         userInfoDao.add(s)
@@ -113,7 +113,7 @@ class IMDataStorage : DataStorage {
                 val sessionDao = sessionDao()
                 val exist = sessionDao.exist("$uid@${session.to}")
                 val s = Session.fromIMSession(uid, session)
-                if (exist > 0) {
+                if (exist.isNotEmpty()) {
                     sessionDao.update(s)
                 } else {
                     sessionDao.add(s)
@@ -148,7 +148,7 @@ class IMDataStorage : DataStorage {
                 val messageDao = messageDao()
                 val exist = messageDao.exist(message.mid)
                 val s = Message.fromIMMessage(uid, message)
-                if (exist > 0) {
+                if (exist.isNotEmpty()) {
                     messageDao.update(s)
                 } else {
                     try {

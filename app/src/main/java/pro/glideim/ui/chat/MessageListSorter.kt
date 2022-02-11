@@ -4,7 +4,8 @@ import com.dengzii.adapter.SuperAdapter
 import pro.glideim.ui.SortedListAdapterCallback
 import pro.glideim.ui.chat.viewholder.ChatMessageViewData
 
-class MessageListSorter(adapter: SuperAdapter) : SortedListAdapterCallback<ChatMessageViewData>(adapter) {
+class MessageListSorter(adapter: SuperAdapter) :
+    SortedListAdapterCallback<ChatMessageViewData>(adapter) {
 
     override fun compare(o1: ChatMessageViewData, o2: ChatMessageViewData): Int {
         var c1 = o1.message.mid
@@ -19,8 +20,16 @@ class MessageListSorter(adapter: SuperAdapter) : SortedListAdapterCallback<ChatM
         return (c2 - c1).toInt()
     }
 
-    override fun areContentsTheSame(oldItem: ChatMessageViewData, newItem: ChatMessageViewData): Boolean {
-        return oldItem.message.sendAt == newItem.message.sendAt && oldItem.message.content == newItem.message.content
+    override fun areContentsTheSame(
+        oldItem: ChatMessageViewData,
+        newItem: ChatMessageViewData
+    ): Boolean {
+        val om = oldItem.message
+        val nm = newItem.message
+        return (om.sendAt == nm.sendAt
+                && om.content == nm.content
+                && om.status == nm.status
+                && om.state == nm.state)
     }
 
     override fun areItemsTheSame(item1: ChatMessageViewData, item2: ChatMessageViewData): Boolean {
