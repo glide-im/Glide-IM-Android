@@ -1,11 +1,12 @@
 package pro.glideim.sdk;
 
+import androidx.annotation.NonNull;
+
 import com.google.gson.reflect.TypeToken;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TreeMap;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
@@ -34,7 +35,6 @@ import pro.glideim.sdk.push.NewContactsMessage;
 import pro.glideim.sdk.utils.RxUtils;
 import pro.glideim.sdk.utils.SLogger;
 import pro.glideim.sdk.ws.WsClient;
-import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
 
 public class IMAccount implements MessageListener {
 
@@ -108,7 +108,7 @@ public class IMAccount implements MessageListener {
                 .doOnNext(profileBean -> IMAccount.this.profileBean = profileBean);
     }
 
-    public IMContactList getContactsList(){
+    public IMContactList getContactsList() {
         return contactsList;
     }
 
@@ -178,6 +178,7 @@ public class IMAccount implements MessageListener {
                 .flatMap((Function<Boolean, ObservableSource<?>>) aBoolean ->
                         initUserProfile()
                 )
+                .flatMap((Function<Object, ObservableSource<?>>) o -> initAccountAndConn())
                 .map(s -> "auth success");
     }
 
@@ -249,33 +250,46 @@ public class IMAccount implements MessageListener {
 
     @Override
     public void onNewMessage(ChatMessage m) {
-        IMMessage ms = IMMessage.fromChatMessage(this, m);
-        storeMessage(ms);
-        sessionList.onNewMessage(ms);
-        if (imMessageListener != null) {
-            try {
-                imMessageListener.onNewMessage(ms);
-            } catch (Throwable e) {
-                e.printStackTrace();
-            }
-        }
+        IMMessage.fromMessage(this, m, Constants.SESSION_TYPE_USER)
+                .init()
+                .compose(RxUtils.silentSchedulerSingle())
+                .subscribe(new SilentObserver<IMMessage>() {
+                    @Override
+                    public void onNext(@NonNull IMMessage ms) {
+                        storeMessage(ms);
+                        sessionList.onNewMessage(ms);
+                        if (imMessageListener != null) {
+                            try {
+                                imMessageListener.onNewMessage(ms);
+                            } catch (Throwable e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                });
     }
 
     @Override
     public void onGroupMessage(GroupMessage m) {
-        IMMessage ms = IMMessage.fromGroupMessage(this, m);
-        if (!sessionList.onNewMessage(ms)) {
-            // existed
-            return;
-        }
-        storeMessage(ms);
-        if (imMessageListener != null) {
-            try {
-                imMessageListener.onNewMessage(ms);
-            } catch (Throwable e) {
-                e.printStackTrace();
-            }
-        }
+        IMMessage.fromGroupMessage(this, m)
+                .compose(RxUtils.silentSchedulerSingle())
+                .subscribe(new SilentObserver<IMMessage>() {
+                    @Override
+                    public void onNext(@NonNull IMMessage imMessage) {
+                        if (!sessionList.onNewMessage(imMessage)) {
+                            // existed
+                            return;
+                        }
+                        storeMessage(imMessage);
+                        if (imMessageListener != null) {
+                            try {
+                                imMessageListener.onNewMessage(imMessage);
+                            } catch (Throwable e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    }
+                });
     }
 
     public void storeMessage(IMMessage ms) {

@@ -1,15 +1,13 @@
 package pro.glideim.sdk;
 
-import androidx.annotation.NonNull;
-
 import java.util.Objects;
 
+import io.reactivex.Single;
 import pro.glideim.sdk.api.msg.GroupMessageBean;
 import pro.glideim.sdk.api.msg.MessageBean;
 import pro.glideim.sdk.api.user.UserInfoBean;
 import pro.glideim.sdk.messages.ChatMessage;
 import pro.glideim.sdk.messages.GroupMessage;
-import pro.glideim.sdk.utils.RxUtils;
 
 public class IMMessage {
 
@@ -39,7 +37,7 @@ public class IMMessage {
         accountUid = account.uid;
     }
 
-    public static IMMessage fromChatMessage(IMAccount account, ChatMessage message) {
+    public static IMMessage fromMessage(IMAccount account, ChatMessage message, int sessionType) {
         IMMessage m = new IMMessage(account);
         m.setMid(message.getMid());
         m.setCliSeq(message.getcSeq());
@@ -57,11 +55,10 @@ public class IMMessage {
         } else {
             id = m.from;
         }
-        m.setTarget(Constants.SESSION_TYPE_USER, id);
         return m;
     }
 
-    public static IMMessage fromMessage(IMAccount account, MessageBean messageBean) {
+    public static Single<IMMessage> fromMessage(IMAccount account, MessageBean messageBean) {
         IMMessage m = new IMMessage(account);
         m.setMid(messageBean.getMid());
         m.setCliSeq(messageBean.getCliSeq());
@@ -78,11 +75,10 @@ public class IMMessage {
         } else {
             id = m.from;
         }
-        m.setTarget(Constants.SESSION_TYPE_USER, id);
-        return m;
+        return m.setTarget(Constants.SESSION_TYPE_USER, id);
     }
 
-    public static IMMessage fromGroupMessage(IMAccount account, GroupMessageBean messageBean) {
+    public static Single<IMMessage> fromGroupMessage(IMAccount account, GroupMessageBean messageBean) {
         IMMessage m = new IMMessage(account);
         m.setMid(messageBean.getMid());
         m.setCliSeq(0);
@@ -94,11 +90,10 @@ public class IMMessage {
         m.setContent(messageBean.getContent());
         m.setStatus(messageBean.getStatus());
         m.setRecallBy(messageBean.getRecallBy());
-        m.setTarget(Constants.SESSION_TYPE_GROUP, m.to);
-        return m;
+        return m.setTarget(Constants.SESSION_TYPE_GROUP, m.to);
     }
 
-    public static IMMessage fromGroupMessage(IMAccount account, GroupMessage message) {
+    public static Single<IMMessage> fromGroupMessage(IMAccount account, GroupMessage message) {
         IMMessage m = new IMMessage(account);
         m.setMid(message.getMid());
         m.setCliSeq(0);
@@ -109,11 +104,14 @@ public class IMMessage {
         m.setSendAt(message.getSendAt());
         m.setContent(message.getContent());
         m.setStatus(message.getStatus());
-        m.setTarget(Constants.SESSION_TYPE_GROUP, m.to);
-        return m;
+        return m.setTarget(Constants.SESSION_TYPE_GROUP, m.to);
     }
 
-    protected void setTarget(int type, long id) {
+    public Single<IMMessage> init() {
+        return setTarget(targetType, targetId);
+    }
+
+    protected Single<IMMessage> setTarget(int type, long id) {
         this.targetType = type;
         this.targetId = id;
         this.tag = IMSessionList.SessionTag.get(type, id);
@@ -122,15 +120,12 @@ public class IMMessage {
         if (type == Constants.SESSION_TYPE_GROUP) {
             uid = from;
         }
-        GlideIM.getUserInfo(uid)
-                .compose(RxUtils.silentSchedulerSingle())
-                .subscribe(new SilentObserver<UserInfoBean>() {
-                    @Override
-                    public void onNext(@NonNull UserInfoBean userInfoBean) {
-                        avatar = userInfoBean.getAvatar();
-                        title = userInfoBean.getNickname();
-                    }
-                });
+        return GlideIM.getUserInfo(uid)
+                .onErrorReturnItem(new UserInfoBean())
+                .doOnSuccess(userInfoBean -> {
+                    avatar = userInfoBean.getAvatar();
+                    title = userInfoBean.getNickname();
+                }).map(u -> this);
     }
 
     public boolean isVisible() {

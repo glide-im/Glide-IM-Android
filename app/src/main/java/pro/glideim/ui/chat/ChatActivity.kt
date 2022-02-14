@@ -5,10 +5,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
-import android.view.Gravity
-import android.view.MotionEvent
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
+import android.widget.PopupWindow
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.view.children
 import androidx.core.view.isVisible
@@ -132,8 +130,8 @@ open class ChatActivity : BaseActivity(), IMSession.SessionUpdateListener {
             NotifyViewData::class.java,
             GroupNotifyViewHolder::class.java
         )
-        mAdapter.setOnItemLongClickListener { _, itemData, position ->
-            onMessageLongClicked(itemData, position)
+        mAdapter.setOnItemLongClickListener { v, itemData, position ->
+            onMessageLongClicked(v, itemData, position)
             return@setOnItemLongClickListener true
         }
 
@@ -223,22 +221,38 @@ open class ChatActivity : BaseActivity(), IMSession.SessionUpdateListener {
             }
     }
 
-    private fun onMessageLongClicked(m: Any, position: Int) {
+    private fun onMessageLongClicked(v: View, m: Any, position: Int) {
 
         val mid = when (m) {
             is ChatImageMessageViewData -> m.message.mid
             is ChatMessageViewData -> m.message.mid
             else -> return
         }
-        mSession.recallMessage(mid)
-            .request2(this) {
-                if (it.state == ChatMessage.STATE_SRV_FAILED) {
-                    toast("recall message failed")
+        val c = m as? ChatMessageViewData ?: return
+        if (c.message.from != account?.uid) {
+            return
+        }
+        if (System.currentTimeMillis() / 1000 - c.message.sendAt > 120) {
+            return
+        }
+
+        val p = PopupWindow(this)
+        p.contentView = LayoutInflater.from(this).inflate(R.layout.pop_message, null)
+        p.contentView.findViewById<View>(R.id.bt_recall).setOnClickListener {
+            mSession.recallMessage(mid)
+                .request2(this) {
+                    if (it.state == ChatMessage.STATE_SRV_FAILED) {
+                        toast("recall message failed")
+                    }
+                    if (it.state == ChatMessage.STATE_SRV_RECEIVED) {
+                        toast("Recall message success")
+                    }
                 }
-                if (it.state == ChatMessage.STATE_SRV_RECEIVED){
-                    toast("Recall message success")
-                }
-            }
+            p.dismiss()
+        }
+        p.isClippingEnabled = true
+        p.isOutsideTouchable = true
+        p.showAsDropDown(v, 0, -v.measuredHeight)
     }
 
     override fun onResume() {
@@ -280,10 +294,14 @@ open class ChatActivity : BaseActivity(), IMSession.SessionUpdateListener {
 
     private fun addMessage(m: IMMessage) {
         val viewData = if (m.status == IMMessage.STATUS_RECALLED) {
-            val msg = if (m.recallBy == m.from) {
+
+            val msg = if (m.recallBy == m.from && m.recallBy != 0L) {
                 if (m.from == account?.uid) "你撤回了一条消息" else "${m.title}撤回了一条消息"
             } else {
-                "管理员撤回了一条消息"
+                if (mSession.type == Constants.SESSION_TYPE_USER)
+                    if (m.from == account?.uid) "你撤回了一条消息" else "对方撤回了一条消息"
+                else
+                    "管理员撤回了一条消息"
             }
             Log.d(TAG, "addMessage: message recalled $m")
             val notifyViewData = NotifyViewData(m, msg)

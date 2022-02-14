@@ -20,6 +20,8 @@ data class Message(
     val targetId: Long = 0,
     val targetType: Int = 0,
     val state: Int = 0,
+    val status: Int = 0,
+    val recallBy:Long = 0,
     val seq: Long = 0
 ) {
     companion object {
@@ -37,6 +39,8 @@ data class Message(
                 targetId = m.targetId,
                 targetType = m.targetType,
                 state = m.state,
+                status = m.status,
+                recallBy = m.recallBy,
                 seq = m.seq,
             )
         }
@@ -55,7 +59,9 @@ data class Message(
             targetId = this@Message.targetId
             targetType = this@Message.targetType
             state = this@Message.state
+            status = this@Message.status
             seq = this@Message.seq
+            recallBy = this@Message.recallBy
         }
 
     }

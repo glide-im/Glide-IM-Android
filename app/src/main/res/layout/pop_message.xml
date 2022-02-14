@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="60dp"
+    android:layout_height="30dp"
+    android:background="@color/colorForeground"
+    android:orientation="horizontal">
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/bt_recall"
+        style="@style/Widget.Material3.Button.TextButton"
+        android:layout_width="60dp"
+        android:layout_height="30dp"
+        android:padding="0dp"
+        android:text="@string/recall"
+        android:textSize="12sp" />
+
+</LinearLayout>

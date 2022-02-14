@@ -9,10 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
@@ -33,21 +30,25 @@ public class IMSessionList {
 
     private final LinkedHashMap<SessionTag, IMSession> sessionMap = new LinkedHashMap<>();
     private final IMAccount account;
+    private final ReentrantLock lock = new ReentrantLock();
     private SessionUpdateListener sessionUpdateListener;
-    private ReentrantLock lock = new ReentrantLock();
 
     IMSessionList(IMAccount account) {
         this.account = account;
     }
 
     Observable<Boolean> init() {
+
         return Observable.create(emitter -> {
             List<IMSession> imSessions = GlideIM.getDataStorage().loadSessions(account.uid);
             addOrUpdateSession(imSessions.toArray(new IMSession[]{}));
 
             for (IMSession ses : imSessions) {
                 List<IMMessage> messages = GlideIM.getDataStorage().loadMessage(account.uid, ses.type, ses.to);
-                ses.addHistoryMessage(messages);
+                List<IMMessage> inited = Observable.fromIterable(messages)
+                        .flatMapSingle((Function<IMMessage, SingleSource<IMMessage>>) IMMessage::init)
+                        .toList().blockingGet();
+                ses.addHistoryMessage(inited);
             }
             emitter.onNext(true);
             emitter.onComplete();
@@ -157,9 +158,11 @@ public class IMSessionList {
 
     public int getUnread() {
         int unread = 0;
+        lock.lock();
         for (IMSession session : getSessions()) {
             unread += session.unread;
         }
+        lock.unlock();
         return unread;
     }
 
@@ -183,7 +186,9 @@ public class IMSessionList {
                 .map(RxUtils.bodyConverter())
                 .compose(RxUtils.silentScheduler())
                 .flatMap((Function<List<MessageBean>, ObservableSource<MessageBean>>) Observable::fromIterable)
-                .map(messageBean -> IMMessage.fromMessage(account, messageBean))
+                .flatMap((Function<MessageBean, ObservableSource<IMMessage>>) messageBean ->
+                        IMMessage.fromMessage(account, messageBean).toObservable()
+                )
                 .groupBy(imMessage -> imMessage.tag)
                 .flatMapSingle((Function<GroupedObservable<SessionTag, IMMessage>, SingleSource<List<IMMessage>>>) g -> {
                     SessionTag tag = g.getKey();

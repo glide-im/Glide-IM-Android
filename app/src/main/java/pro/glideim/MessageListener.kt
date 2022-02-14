@@ -19,6 +19,7 @@ import pro.glideim.sdk.IMMessageListener
 import pro.glideim.sdk.push.NewContactsMessage
 import pro.glideim.ui.Events
 import pro.glideim.ui.LoginActivity
+import pro.glideim.ui.SplashActivity
 import pro.glideim.ui.chat.ChatActivity
 import pro.glideim.utils.io2main
 import pro.glideim.utils.request
@@ -152,6 +153,9 @@ class MessageListener private constructor(private val context: Application) : IM
 
     override fun onKickOut() {
         ActivityUtils.getTopActivity().let { activity ->
+            if (activity is SplashActivity) {
+                return
+            }
             val apply = MaterialAlertDialogBuilder(activity).apply {
                 setTitle("被迫下线")
                 setMessage("你的账号在另一台设备上登录")

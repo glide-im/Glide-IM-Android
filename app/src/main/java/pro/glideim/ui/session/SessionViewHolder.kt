@@ -38,7 +38,8 @@ class SessionViewHolder(v: ViewGroup) : AbsViewHolder<SessionViewData>(v) {
         }
 
         mTvTitle.text = data.title + "${data.to}"
-        mTvContent.text = data.lastMsg
+//        mTvContent.text = data.lastMsg
+        mTvContent.text = data.s.lastMsg
         if (data.unread > 0) {
             mTvNewMessage.show()
             mTvNewMessage.text = data.unread.toString()

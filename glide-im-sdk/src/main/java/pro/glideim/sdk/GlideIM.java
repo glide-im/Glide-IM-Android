@@ -71,7 +71,7 @@ public class GlideIM {
                     IMAccount account1 = new IMAccount(authBean.getUid());
                     account1.setServers(authBean.getServers());
                     GlideIM.getInstance().account = account1;
-                    return account1.initAccountAndConn().map(aBoolean -> account1);
+                    return Observable.just(account1);
                 })
                 .flatMap((Function<IMAccount, ObservableSource<String>>) IMAccount::auth);
     }

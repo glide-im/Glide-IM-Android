@@ -153,18 +153,79 @@ public class IMSession {
         if (messages.isEmpty() || disabled()) {
             return;
         }
-        long last = 0;
-        if (!messageTreeMap.isEmpty()) {
-            last = messageTreeMap.lastKey();
-        }
+        IMMessage nowLast = getLastVisibleMessage();
+
         for (IMMessage message : messages) {
             GlideIM.getDataStorage().storeMessage(message);
             messageTreeMap.put(message.getMid(), message);
         }
-        if (!messageTreeMap.isEmpty() && messageTreeMap.lastKey() != last) {
-            setLastMessage(messageTreeMap.lastEntry().getValue());
+        IMMessage newLast = getLastVisibleMessage();
+        if (nowLast == null || nowLast.getMid() != newLast.getMid()) {
+            setLastMessage(newLast);
         }
         onSessionUpdate();
+    }
+
+    public IMMessage getLastVisibleMessage() {
+        long last = Long.MAX_VALUE;
+        Map.Entry<Long, IMMessage> lastMsg = messageTreeMap.lowerEntry(last);
+        while (lastMsg != null) {
+            if (lastMsg.getValue().getType() != Constants.MESSAGE_TYPE_RECALL) {
+                break;
+            }
+            last = lastMsg.getKey();
+            lastMsg = messageTreeMap.lowerEntry(last);
+        }
+        if (lastMsg == null) {
+            return null;
+        }
+        return lastMsg.getValue();
+    }
+
+    private void setLastMessage(IMMessage msg) {
+        if (msg.getStatus() == IMMessage.STATUS_RECALLED) {
+            if (msg.getFrom() == msg.getRecallBy()) {
+                if (msg.getFrom() == account.uid) {
+                    lastMsg = "[You recalled a message]";
+                } else {
+                    lastMsg = "[" + msg.title + " recalled a message]";
+                }
+            } else {
+                lastMsg = "[Message recalled]";
+            }
+        } else {
+            switch (msg.getType()) {
+                case Constants.MESSAGE_TYPE_RECALL:
+                    return;
+                case Constants.MESSAGE_TYPE_IMAGE:
+                    lastMsg = "[Image]";
+                    break;
+                case Constants.MESSAGE_TYPE_VOICE:
+                    lastMsg = "[Voice]";
+                    break;
+                case Constants.MESSAGE_TYPE_GROUP_NOTIFY:
+                    GroupNotify<GroupNotifyMemberChanges> notify = ((IMGroupNotifyMessage) msg).notify;
+                    GroupNotifyMemberChanges data = notify.getData();
+                    Long uid = data.getUid().get(0);
+
+                    if (notify.getType() == GroupNotify.TYPE_MEMBER_REMOVED) {
+                        if (uid != account.uid) {
+                            return;
+                        }
+                        lastMsg = "You've left the chat";
+                    } else {
+                        lastMsg = data.getUid().get(0) + " join the chat";
+                    }
+                    break;
+                default:
+                    this.lastMsg = msg.getContent();
+                    break;
+            }
+        }
+
+        this.lastMsgId = msg.getMid();
+        this.lastMsgSender = msg.getFrom();
+        setUpdateAt(msg.getSendAt());
     }
 
     public void addHistoryMessage(IMMessage msg) {
@@ -181,11 +242,15 @@ public class IMSession {
             SLogger.d(TAG, "recall message does not exist");
             return;
         }
+        if (message.getStatus() == IMMessage.STATUS_RECALLED) {
+            return;
+        }
         message.setStatus(IMMessage.STATUS_RECALLED);
         message.setRecallBy(by);
         messageChangeListener.onChange(mid, message);
         setLastMessage(message);
         GlideIM.getDataStorage().storeMessage(message);
+        onSessionUpdate();
     }
 
     void onOfflineMessage(List<IMMessage> msg) {
@@ -268,7 +333,6 @@ public class IMSession {
         return true;
     }
 
-
     private void onMessageSendSuccess(IMMessage message) {
         GlideIM.getDataStorage().storeMessage(message);
         onSessionUpdate();
@@ -287,52 +351,6 @@ public class IMSession {
     private void onMessageReceived(IMMessage message) {
         GlideIM.getDataStorage().storeMessage(message);
 
-    }
-
-    private void setLastMessage(IMMessage msg) {
-        if (msg.getStatus() == IMMessage.STATUS_RECALLED) {
-            if (msg.getFrom() == msg.getRecallBy()) {
-                if (msg.getFrom() == account.uid) {
-                    lastMsg = "[You recalled a message]";
-                } else {
-                    lastMsg = "[" + msg.title + " recalled a message]";
-                }
-            } else {
-                lastMsg = "[Admin recalled a message]";
-            }
-        } else {
-            switch (msg.getType()) {
-                case Constants.MESSAGE_TYPE_RECALL:
-                    return;
-                case Constants.MESSAGE_TYPE_IMAGE:
-                    lastMsg = "[Image]";
-                    break;
-                case Constants.MESSAGE_TYPE_VOICE:
-                    lastMsg = "[Voice]";
-                    break;
-                case Constants.MESSAGE_TYPE_GROUP_NOTIFY:
-                    GroupNotify<GroupNotifyMemberChanges> notify = ((IMGroupNotifyMessage) msg).notify;
-                    GroupNotifyMemberChanges data = notify.getData();
-                    Long uid = data.getUid().get(0);
-
-                    if (notify.getType() == GroupNotify.TYPE_MEMBER_REMOVED) {
-                        if (uid != account.uid) {
-                            return;
-                        }
-                        lastMsg = "You've left the chat";
-                    } else {
-                        lastMsg = data.getUid().get(0) + " join the chat";
-                    }
-                    break;
-                default:
-                    this.lastMsg = msg.getContent();
-                    break;
-            }
-        }
-
-        this.lastMsgId = msg.getMid();
-        this.lastMsgSender = msg.getFrom();
-        setUpdateAt(msg.getSendAt());
     }
 
     public void setMessageListener(MessageChangeListener l) {
@@ -400,7 +418,9 @@ public class IMSession {
                 return MsgApi.API.getChatMessageHistory(getChatHistoryDto)
                         .map(RxUtils.bodyConverter())
                         .flatMap((Function<List<MessageBean>, ObservableSource<MessageBean>>) Observable::fromIterable)
-                        .map(messageBean -> IMMessage.fromMessage(account, messageBean))
+                        .flatMap((Function<MessageBean, ObservableSource<IMMessage>>) messageBean ->
+                                IMMessage.fromMessage(account, messageBean).toObservable()
+                        )
                         .toList()
                         .doOnSuccess(this::addHistoryMessage);
             case Constants.SESSION_TYPE_GROUP:
@@ -415,7 +435,9 @@ public class IMSession {
                 return MsgApi.API.getGroupMessageHistory(dto)
                         .map(RxUtils.bodyConverter())
                         .flatMap((Function<List<GroupMessageBean>, ObservableSource<GroupMessageBean>>) Observable::fromIterable)
-                        .map(messageBean -> IMMessage.fromGroupMessage(account, messageBean))
+                        .flatMap((Function<GroupMessageBean, ObservableSource<IMMessage>>) groupMessageBean ->
+                                IMMessage.fromGroupMessage(account, groupMessageBean).toObservable()
+                        )
                         .toList()
                         .doOnSuccess(this::addHistoryMessage);
             default:
@@ -507,7 +529,8 @@ public class IMSession {
                 }).flatMap((Function<String, ObservableSource<IMMessage>>) s ->
                         sendMessage(Constants.MESSAGE_TYPE_RECALL, s)
                 ).doOnNext(imMessage -> {
-                    if (imMessage.getState() == ChatMessage.STATE_SRV_RECEIVED) {
+                    if (imMessage.getState() == ChatMessage.STATE_SRV_RECEIVED
+                            || imMessage.getState() == ChatMessage.STATE_RCV_RECEIVED) {
                         onRecallMessage(mid, account.uid);
                     }
                 });
@@ -550,7 +573,9 @@ public class IMSession {
                 .map(chatMessage -> {
                     IMMessage r;
                     if (chatMessage.getState() <= ChatMessage.STATE_CREATED) {
-                        r = IMMessage.fromChatMessage(account, chatMessage);
+                        r = IMMessage.fromMessage(account, chatMessage, type);
+                        r.setAvatar(account.getProfile().getAvatar());
+                        r.setTitle(account.getProfile().getNickname());
                     } else {
                         r = getMessage(chatMessage.getMid());
                         r.setState(chatMessage.getState());
