@@ -49,11 +49,15 @@ public class IMMessage {
         m.setContent(message.getContent());
         m.setState(message.getState());
         m.setState(message.getStatus());
-        long id;
-        if (m.from == account.uid) {
-            id = m.to;
+        m.targetType = sessionType;
+        if (sessionType == Constants.SESSION_TYPE_GROUP) {
+            m.targetId = m.to;
         } else {
-            id = m.from;
+            if (m.from == account.uid) {
+                m.targetId = m.to;
+            } else {
+                m.targetId = m.from;
+            }
         }
         return m;
     }

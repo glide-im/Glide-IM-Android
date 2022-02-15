@@ -30,7 +30,7 @@ object UpdateUtils {
         }
         builder.setNegativeButton("Cancel") { d, _ ->
             d.dismiss()
-            callback(false)
+            callback(true)
         }
         builder.create().show()
     }
