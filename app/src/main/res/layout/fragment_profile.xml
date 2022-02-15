@@ -86,7 +86,7 @@
             style="@style/OptionMenuButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Check for Update (v1.0.0)"
+            android:text="Check for Update"
             android:theme="@style/OptionMenuButton"
             app:icon="@drawable/ic_update" />
 

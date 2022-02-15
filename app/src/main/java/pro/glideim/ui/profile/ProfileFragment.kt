@@ -4,17 +4,22 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.ImageView
-import com.bumptech.glide.Glide
 import com.dengzii.ktx.android.antiShakeClick
+import com.dengzii.ktx.android.content.update
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.textview.MaterialTextView
 import io.reactivex.Single
+import pro.glideim.BuildConfig
 import pro.glideim.R
+import pro.glideim.UserConfig
 import pro.glideim.base.BaseFragment
 import pro.glideim.db.GlideIMDatabase
 import pro.glideim.sdk.GlideIM
+import pro.glideim.sdk.api.app.AppApi
+import pro.glideim.sdk.utils.RxUtils
 import pro.glideim.ui.LoginActivity
 import pro.glideim.ui.MainActivity
+import pro.glideim.utils.UpdateUtils
 import pro.glideim.utils.loadImageRoundCorners
 import pro.glideim.utils.request2
 
@@ -24,6 +29,7 @@ class ProfileFragment : BaseFragment() {
     private val mBtCleanCache by lazy { findViewById<MaterialButton>(R.id.bt_clean_cache) }
     private val mBtEditProfile by lazy { findViewById<MaterialButton>(R.id.bt_update_profile) }
     private val mBtSettings by lazy { findViewById<MaterialButton>(R.id.bt_setting) }
+    private val mBtUpdate by lazy { findViewById<MaterialButton>(R.id.bt_update) }
 
     private val mBtLogout by lazy { findViewById<MaterialButton>(R.id.bt_logout) }
     private val mBtUid by lazy { findViewById<MaterialButton>(R.id.bt_uid) }
@@ -40,6 +46,21 @@ class ProfileFragment : BaseFragment() {
             LoginActivity.start(requireContext())
         }
 
+        mBtUpdate.text = "Check for Update (${BuildConfig.VERSION_NAME})"
+        mBtUpdate.antiShakeClick {
+            AppApi.API.releaseInfo
+                .map(RxUtils.bodyConverter())
+                .request2(this) {
+                    UserConfig(requireContext()).update {
+                        lastUpdateCheck = (System.currentTimeMillis() / 1000).toString()
+                    }
+                    if (it.versionCode > BuildConfig.VERSION_CODE) {
+                        UpdateUtils.showUpdate(requireContext(), it) {}
+                    } else {
+                        toast("No new version")
+                    }
+                }
+        }
         mBtCleanCache.antiShakeClick {
             Single.create<Boolean> {
                 GlideIMDatabase.getDb(requireContext()).clearAllTables()
