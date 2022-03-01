@@ -37,11 +37,6 @@ class LoginActivity : BaseActivity() {
     }
 
     override fun initView() {
-        ActivityUtils.getActivityList().forEach {
-            if (it != this) {
-                it.finish()
-            }
-        }
         needAuth = false
         mBtSubmit.setOnClickListener {
             submit()
