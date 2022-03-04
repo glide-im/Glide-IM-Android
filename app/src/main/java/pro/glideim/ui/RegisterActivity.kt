@@ -20,6 +20,7 @@ class RegisterActivity : BaseActivity() {
     private val mEtAccount by lazy { findViewById<TextInputEditText>(R.id.et_account) }
 
 
+
     override val layoutResId = R.layout.activity_register
 
     companion object {
@@ -31,6 +32,7 @@ class RegisterActivity : BaseActivity() {
     }
 
     override fun initView() {
+        needAuth = false
         mBtSubmit.setOnClickListener {
             submit()
         }

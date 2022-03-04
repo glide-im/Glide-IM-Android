@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.appcompat.app.AlertDialog
 import com.dengzii.ktx.format
+import pro.glideim.BuildConfig
 import pro.glideim.sdk.api.app.ReleaseInfoBean
 import java.util.*
 
@@ -17,7 +18,8 @@ object UpdateUtils {
         builder.setCancelable(false)
         builder.setTitle("New Version ${info.versionName}")
         builder.setMessage(
-            "Date: $format\n" +
+            "Current: ${BuildConfig.VERSION_NAME}\n" +
+                    "Date: $format\n" +
                     "What's New: \n" +
                     "${info.description}\n"
         )

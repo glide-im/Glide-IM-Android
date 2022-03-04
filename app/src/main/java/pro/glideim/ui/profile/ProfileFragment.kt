@@ -42,8 +42,8 @@ class ProfileFragment : BaseFragment() {
 
         mBtLogout.antiShakeClick {
             GlideIM.getAccount().logout()
-            activity?.finish()
             LoginActivity.start(requireContext())
+            activity?.finish()
         }
 
         mBtUpdate.text = "Check for Update (${BuildConfig.VERSION_NAME})"

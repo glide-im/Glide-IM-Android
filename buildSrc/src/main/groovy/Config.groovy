@@ -1,5 +1,5 @@
 class Config {
 
-    static version = 142
-    static versionName = "1.4.2"
+    static version = 144
+    static versionName = "1.4.4"
 }

@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.blankj.utilcode.util.ActivityUtils
 import pro.glideim.sdk.GlideIM
 import pro.glideim.sdk.IMAccount
 import pro.glideim.sdk.im.ConnStateListener
