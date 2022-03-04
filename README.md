@@ -16,6 +16,6 @@ Android UI 部分使用 kotlin 实现, IM 封装成了一个 SDK, 使用 Java �
 
 [Download](https://github.com/Glide-IM/Glide-IM-Android/releases)
 
-<img src="https://raw.githubusercontent.com/Glide-IM/Glide-IM-Android/main/img/a.jpg"/>
+<img src="https://raw.githubusercontent.com/Glide-IM/Glide-IM-Android/main/img/3.jpg"/>
 
 <img src="https://raw.githubusercontent.com/Glide-IM/Glide-IM-Android/main/img/b.jpg"/>
