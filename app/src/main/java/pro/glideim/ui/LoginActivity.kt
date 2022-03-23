@@ -13,12 +13,14 @@ import pro.glideim.R
 import pro.glideim.UserConfig
 import pro.glideim.base.BaseActivity
 import pro.glideim.sdk.GlideIM
+import pro.glideim.ui.dev.DevOptionsActivity
 import pro.glideim.utils.io2main
 import pro.glideim.utils.request2
 
 class LoginActivity : BaseActivity() {
 
     private val mBtSubmit by lazy { findViewById<MaterialButton>(R.id.bt_submit) }
+    private val mBtDevOpt by lazy { findViewById<MaterialButton>(R.id.bt_dev_opt) }
     private val mTvSignUp by lazy { findViewById<MaterialTextView>(R.id.tv_sign_up) }
     private val mTvResetPassword by lazy { findViewById<MaterialTextView>(R.id.tv_reset_password) }
     private val mEtPassword by lazy { findViewById<TextInputEditText>(R.id.et_password) }
@@ -30,7 +32,7 @@ class LoginActivity : BaseActivity() {
         @JvmStatic
         fun start(context: Context) {
             val starter = Intent(context, LoginActivity::class.java)
-            starter.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+//            starter.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
             context.startActivity(starter)
             ActivityUtils.finishOtherActivities(LoginActivity::class.java)
         }
@@ -40,6 +42,9 @@ class LoginActivity : BaseActivity() {
         needAuth = false
         mBtSubmit.setOnClickListener {
             submit()
+        }
+        mBtDevOpt.setOnClickListener {
+            DevOptionsActivity.start(this)
         }
         mTvSignUp.setOnClickListener {
             RegisterActivity.start(this)

@@ -15,7 +15,6 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
 
-
         EmojiManager.install(GoogleEmojiProvider())
         IMDataStorage.init(this)
         MessageListener.init(this)
@@ -29,8 +28,12 @@ class App : Application() {
 //                Log.e(tag, "e: ", t)
 //            }
 //        })
-        GlideIM.init(BuildConfig.BASE_URL)
-        GlideIM.getInstance().dataStorage = IMDataStorage.getInstance()
+
+        val userConfig = UserConfig(this)
+        GlideIM.init(userConfig.baseUrl)
+        if (userConfig.enableCache) {
+            GlideIM.getInstance().dataStorage = IMDataStorage.getInstance()
+        }
         GlideIM.getInstance().setDevice(1)
 
         SuperAdapter.addDefaultViewHolderForType(

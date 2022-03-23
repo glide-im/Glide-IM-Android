@@ -9,4 +9,6 @@ class UserConfig(context: Context) : Preferences(context, "user_config") {
     var account by preference("")
     var lastUpdateCheck by preference("0")
     var newestVersion by preference(0)
+    var baseUrl by preference(BuildConfig.BASE_URL)
+    var enableCache by preference(false)
 }

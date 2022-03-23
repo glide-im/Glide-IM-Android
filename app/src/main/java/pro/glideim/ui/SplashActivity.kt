@@ -14,6 +14,7 @@ import pro.glideim.utils.UpdateUtils
 import pro.glideim.utils.io2main
 import pro.glideim.utils.request
 import pro.glideim.utils.request2
+import java.util.concurrent.TimeUnit
 
 class SplashActivity : BaseActivity() {
 
@@ -29,6 +30,7 @@ class SplashActivity : BaseActivity() {
 
         if (spanMinutes > 60) {
             AppApi.API.releaseInfo
+                .timeout(5, TimeUnit.SECONDS)
                 .map(RxUtils.bodyConverter())
                 .doOnError {
                     tryLogin()
@@ -57,7 +59,7 @@ class SplashActivity : BaseActivity() {
             .io2main()
             .request {
                 onStart {
-                    mTvState.text = "Connecting to server"
+                    // mTvState.text = "Connecting to server"
                 }
                 onSuccess {
                     GlideIM.getAccount().setImMessageListener(MessageListener.getInstance())

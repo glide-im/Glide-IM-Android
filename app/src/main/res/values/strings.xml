@@ -37,4 +37,6 @@
     <string name="settings">Settings</string>
     <string name="complete">Complete</string>
     <string name="recall">Recall</string>
+    <string name="api_base_url">Api Base URL</string>
+    <string name="enable_cache">Enable Cache</string>
 </resources>
